@@ -61,6 +61,48 @@ SLIDES = [
             ],
             "image": "/static/images/slide5.jpg"
         }
+    },
+    {
+        "title": "Miro Board Overview",
+        "content": {
+            "bullets": [
+                "View the full concept visually on Miro:",
+                "[Open Miro Board](https://miro.com/app/board/uXxMiroBoardLink/)"
+            ],
+            "image": "/static/images/miro_board.jpg"
+        }
+    },
+    {
+        "title": "User Journey – From Discovery to Delight",
+        "content": {
+            "bullets": [
+                "Discovery: User sees a post or ad on Instagram featuring an artwork. (Curious, inspired)",
+                "Exploration: User visits homepage, browses collections and exhibitions. (Engaged, exploratory)",
+                "Evaluation: User clicks on a specific artwork, reads about it, checks purchase options. (Interested, comparing options)",
+                "Decision: User selects framed print, adds to cart, and checks out. (Excited, ready)",
+                "Fulfillment: Receives confirmation email and tracking details. (Satisfied)",
+                "Sharing: Posts image of artwork on wall or t-shirt on social media. (Proud, joyful)"
+            ],
+            "image": "/static/images/user_journey.jpg"
+        }
+    },
+    {
+        "title": "User Flow – Purchase a Framed Print",
+        "content": {
+            "bullets": [
+                "Visit Home Page",
+                "Click on a Collection",
+                "View Collection Overview",
+                "Click on an Artwork",
+                "Select 'Framed Print' Option",
+                "Add to Cart",
+                "Open Cart",
+                "Proceed to Stripe Checkout",
+                "Receive Order Confirmation",
+                "Receive Delivery / Tracking Info"
+            ],
+            "image": "/static/images/user_flow.jpg"
+        }
     }
 ]
 
