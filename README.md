@@ -70,12 +70,8 @@ Home
 
 ---
 
-## ▲ Deploy on Vercel
+## ▲ Deployed on Vercel
 
-1. [Sign up at Vercel](https://vercel.com/signup) and connect your GitHub repo.
-2. Set the root directory to `sen-commerce-storefront`.
-3. Add your environment variables (see `sen-commerce-storefront/README.md`).
-4. Click **Deploy**.
 
 > **Live URL:** [https://commerce.sen.studio](https://commerce.sen.studio)
 
@@ -99,3 +95,62 @@ This project is a curated e-commerce experience built on React and Medusa. Users
 5. Auto-generated invoice + delivery via POD
 
 </details>
+
+---
+
+## 📋 Working Plan
+
+### 1. Backend Development
+
+#### Priority 1: Artwork Module
+- Build artwork database schema
+- Create CRUD operations for artworks
+- Link artworks to products and collections
+- Implement artwork metadata (title, description, artist, year, etc.)
+- Add image management and optimization
+
+#### Priority 2: Core Backend Services
+- **Stripe Integration**
+  - Payment processing setup
+  - Webhook handlers for payment events
+  - Invoice generation automation
+  - Refund handling
+  
+- **User Authentication & Management**
+  - JWT authentication system
+  - User registration/login
+  - Password reset functionality
+  - User profile management
+  
+- **Order Management**
+  - Order processing workflow
+  - Order status tracking
+  - Email notifications
+  - Order history API
+
+#### Priority 3: Integration Services
+- **Printful API v2 Integration**
+  - Connect product catalog with Printful API v2
+  - Sync product variants and pricing
+  - Handle order fulfillment automation
+  
+- **Digital Downloads Module**
+  - Implement secure download links generation
+  - Add download tracking and limits
+  - Create digital asset management system
+  
+- **Email Service**
+  - Transactional emails (order confirmation, shipping updates)
+  - Email templates
+  - Integration with email provider (SendGrid/Postmark)
+
+### 2. Frontend Development
+- **Single Page Components**
+  - Artwork detail page with zoom functionality
+  - Collection gallery with lazy loading
+  - Shopping cart with real-time updates
+  - Checkout flow with Stripe integration
+  - Order confirmation and download page
+  - User dashboard for order history
+  - Search and filter functionality
+  - Mobile-responsive navigation
