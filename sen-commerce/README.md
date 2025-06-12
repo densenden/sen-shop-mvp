@@ -38,37 +38,6 @@ This starter is compatible with versions >= 2 of `@medusajs/medusa`.
 
 ## Getting Started
 
-### Quick Start for SenCommerce
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Set up your database:**
-   ```bash
-   npx medusa db:migrate
-   ```
-
-3. **Start the server:**
-   ```bash
-   npm run dev
-   ```
-
-4. **Run quick setup guide:**
-   ```bash
-   npx medusa exec ./src/scripts/quick-setup.ts
-   ```
-
-This will show you how to:
-- Create admin users
-- Generate publishable API keys
-- Set up the storefront
-
-For detailed setup instructions, see [SETUP_GUIDE.md](./SETUP_GUIDE.md).
-
-### General Medusa Documentation
-
 Visit the [Quickstart Guide](https://docs.medusajs.com/learn/installation) to set up a server.
 
 Visit the [Docs](https://docs.medusajs.com/learn/installation#get-started) to learn more about our system requirements.

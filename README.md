@@ -106,7 +106,7 @@ This project is a curated e-commerce experience built on React and Medusa. Users
 - Build artwork database schema
 - Create CRUD operations for artworks
 - Link artworks to products and collections
-- Implement artwork metadata (title, description, artist, year, etc.)
+- Implement artwork metadata (title, description, year, version, etc.)
 - Add image management and optimization
 
 #### Priority 2: Core Backend Services
@@ -126,7 +126,7 @@ This project is a curated e-commerce experience built on React and Medusa. Users
   - Order processing workflow
   - Order status tracking
   - Email notifications
-  - Order history API
+  - Order history API#
 
 #### Priority 3: Integration Services
 - **Printful API v2 Integration**
