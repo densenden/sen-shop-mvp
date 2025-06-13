@@ -15,7 +15,7 @@ module.exports = defineConfig({
   },
   modules: {
     artworkModuleService: {
-      resolve: "./modules/artwork-module",
+      resolve: "./src/modules/artwork-module",
     },
   },
 })

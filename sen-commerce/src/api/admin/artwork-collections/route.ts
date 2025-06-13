@@ -1,33 +1,22 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ARTWORK_MODULE } from "../../../modules/artwork-module"
-import { ArtworkModuleService } from "../../../modules/artwork-module/services/artwork-module-service"
-import { CreateArtworkCollectionDTO } from "../../../modules/artwork-module/types"
 
-// GET /admin/artwork-collections
-export const GET = async (
-  req: MedusaRequest,
-  res: MedusaResponse
-) => {
-  const artworkModuleService: ArtworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  
-  const [collections, count] = await artworkModuleService.listAndCountArtworkCollections()
-
-  res.json({
-    collections,
-    count,
-  })
+export async function GET(req: MedusaRequest, res: MedusaResponse) {
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkCollections = await artworkModuleService.listArtworkCollections()
+  res.json(artworkCollections)
 }
 
-// POST /admin/artwork-collections
-export const POST = async (
-  req: MedusaRequest<CreateArtworkCollectionDTO>,
-  res: MedusaResponse
-) => {
-  const artworkModuleService: ArtworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  
-  const collection = await artworkModuleService.createArtworkCollections(req.body)
-
-  res.json({
-    collection,
-  })
+export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const body = req.body
+  console.log('[artwork-collections] POST body:', body)
+  try {
+    const artworkCollection = await artworkModuleService.createArtworkCollections(body)
+    console.log('[artwork-collections] Created:', artworkCollection)
+    res.json(artworkCollection)
+  } catch (error) {
+    console.error('[artwork-collections] Error:', error)
+    res.status(500).json({ code: 'unknown_error', type: 'unknown_error', message: error.message || 'An unknown error occurred.' })
+  }
 } 

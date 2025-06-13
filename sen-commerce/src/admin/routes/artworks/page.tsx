@@ -75,7 +75,7 @@ const ArtworksList = () => {
               </Table.Cell>
               <Table.Cell>{artwork.title}</Table.Cell>
               <Table.Cell>
-                {artwork.artwork_collection?.title || "-"}
+                {artwork.artwork_collection?.name || "-"}
               </Table.Cell>
               <Table.Cell>
                 {artwork.product_ids?.length || 0} products

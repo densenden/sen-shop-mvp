@@ -1,62 +1,194 @@
-<p align="center">
-  <a href="https://www.medusajs.com">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
-    <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
-    </picture>
-  </a>
-</p>
-<h1 align="center">
-  Medusa
-</h1>
 
-<h4 align="center">
-  <a href="https://docs.medusajs.com">Documentation</a> |
-  <a href="https://www.medusajs.com">Website</a>
-</h4>
 
-<p align="center">
-  Building blocks for digital commerce
-</p>
-<p align="center">
-  <a href="https://github.com/medusajs/medusa/blob/master/CONTRIBUTING.md">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
-  </a>
-    <a href="https://www.producthunt.com/posts/medusa"><img src="https://img.shields.io/badge/Product%20Hunt-%231%20Product%20of%20the%20Day-%23DA552E" alt="Product Hunt"></a>
-  <a href="https://discord.gg/xpCwq3Kfn8">
-    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
-  </a>
-  <a href="https://twitter.com/intent/follow?screen_name=medusajs">
-    <img src="https://img.shields.io/twitter/follow/medusajs.svg?label=Follow%20@medusajs" alt="Follow @medusajs" />
-  </a>
-</p>
+# Sen-Commerce Backend
 
-## Compatibility
+## Overview
 
-This starter is compatible with versions >= 2 of `@medusajs/medusa`. 
+Custom Medusa.js v2 backend with artwork management module, file upload capabilities, and extended admin interface.
 
-## Getting Started
+## Architecture
 
-Visit the [Quickstart Guide](https://docs.medusajs.com/learn/installation) to set up a server.
+### Core Components
 
-Visit the [Docs](https://docs.medusajs.com/learn/installation#get-started) to learn more about our system requirements.
+1. **Artwork Module** (`src/modules/artwork-module/`)
+   - Custom module for managing digital artworks
+   - Integrates with Medusa's product system
+   - Supports collections and categorization
 
-## What is Medusa
+2. **API Routes** (`src/api/`)
+   - Admin endpoints for CRUD operations
+   - Store endpoints for public access
+   - File upload endpoint with Multer
 
-Medusa is a set of commerce modules and tools that allow you to build rich, reliable, and performant commerce applications without reinventing core commerce logic. The modules can be customized and used to build advanced ecommerce stores, marketplaces, or any product that needs foundational commerce primitives. All modules are open-source and freely available on npm.
+3. **Admin Extensions** (`src/admin/`)
+   - Custom React pages for artwork management
+   - Integrated file upload with Supabase
+   - Product linking interface
 
-Learn more about [Medusa’s architecture](https://docs.medusajs.com/learn/introduction/architecture) and [commerce modules](https://docs.medusajs.com/learn/fundamentals/modules/commerce-modules) in the Docs.
+## Technical Implementation
 
-## Community & Contributions
+### Module System
 
-The community and core team are available in [GitHub Discussions](https://github.com/medusajs/medusa/discussions), where you can ask for support, discuss roadmap, and share ideas.
+The artwork module follows Medusa v2 patterns:
 
-Join our [Discord server](https://discord.com/invite/medusajs) to meet other community members.
+```typescript
+// Module definition
+export default Module(ARTWORK_MODULE, {
+  imports: [MedusaModule],
+  providers: [ImageUploadService],
+  models: [Artwork, ArtworkCollection],
+})
+```
 
-## Other channels
+### Service Layer
 
-- [GitHub Issues](https://github.com/medusajs/medusa/issues)
-- [Twitter](https://twitter.com/medusajs)
-- [LinkedIn](https://www.linkedin.com/company/medusajs)
-- [Medusa Blog](https://medusajs.com/blog/)
+Using MedusaService for auto-generated CRUD:
+
+```typescript
+class ArtworkModuleService extends MedusaService({
+  Artwork,
+  ArtworkCollection,
+}) {}
+```
+
+This automatically provides:
+- `listArtworks()`, `createArtworks()`, `updateArtworks()`, `deleteArtworks()`
+- `listArtworkCollections()`, `createArtworkCollections()`, etc.
+
+### Database Schema
+
+**Artwork Table:**
+- `id` (uuid)
+- `title` (varchar)
+- `description` (text, nullable)
+- `image_url` (varchar)
+- `artwork_collection_id` (uuid, FK)
+- `product_ids` (text[])
+- `created_at`, `updated_at`, `deleted_at` (timestamps)
+
+**ArtworkCollection Table:**
+- `id` (uuid)
+- `name` (varchar)
+- `description` (text, nullable)
+- `topic` (varchar)
+- `purpose` (varchar)
+- `thumbnail_url` (varchar)
+- `midjourney_version` (varchar)
+- `month_created` (varchar)
+- `created_at`, `updated_at`, `deleted_at` (timestamps)
+
+### File Upload System
+
+Implemented custom upload service:
+
+1. **Multer Middleware**: Handles multipart/form-data
+2. **Supabase Integration**: Stores images in cloud storage
+3. **URL Generation**: Returns public URLs for display
+
+```typescript
+// Upload endpoint
+router.post("/uploads", upload.array("files"), async (req, res) => {
+  const uploadService = req.scope.resolve("imageUploadService")
+  const files = await uploadService.upload(req.files)
+  res.json({ files })
+})
+```
+
+### Admin UI Integration
+
+Extended Medusa admin with custom routes:
+
+```typescript
+// Route configuration
+export const config = defineRouteConfig({
+  label: "Artworks",
+  icon: Photo,
+})
+```
+
+Pages include:
+- `/artworks` - List view with thumbnails
+- `/artworks/new` - Create form with upload
+- `/artworks/[id]` - Edit form
+- `/artwork-collections` - Collection management
+
+## Key Learnings
+
+### 1. Medusa Service Conventions
+- Always use plural method names (e.g., `createArtworks` not `createArtwork`)
+- Methods accept both single objects and arrays
+- Built-in pagination and filtering
+
+### 2. Database Migrations
+- Medusa expects specific columns (timestamps)
+- Manual SQL migrations needed for existing tables
+- Foreign keys managed through decorators
+
+### 3. Module Registration
+- Modules must be registered in `medusa-config.ts`
+- Path must be relative to project root
+- Module exports must follow specific structure
+
+### 4. API Development
+- Admin routes require authentication
+- Use `req.scope.resolve()` for dependency injection
+- Always include `credentials: "include"` in frontend
+
+## Environment Setup
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/medusa-db
+
+# Storage
+SUPABASE_URL=https://project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-key
+SUPABASE_BUCKET_NAME=artworks
+
+# Frontend env vars need VITE_ prefix
+VITE_SUPABASE_URL=https://project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+## Development Commands
+
+```bash
+# Start dev server
+npm run dev
+
+# Run migrations
+npx medusa db:migrate
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+## Project Status
+
+### Completed
+- ✅ Artwork CRUD operations
+- ✅ Collection management
+- ✅ File upload to Supabase
+- ✅ Admin UI integration
+- ✅ Product linking
+- ✅ API endpoints
+
+### In Progress
+- 🔄 Collection edit pages
+- 🔄 Bulk operations
+- 🔄 Advanced filtering
+
+### Planned
+- 📋 Image optimization
+- 📋 CDN integration
+- 📋 Caching layer
+- 📋 GraphQL API
+
+---
+
+Built with Medusa.js v2.8.4
+Last updated: January 2025

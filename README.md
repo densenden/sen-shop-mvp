@@ -1,156 +1,221 @@
-<!-- Project Badges -->
-<p align="center">
-  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-000?logo=nextdotjs&logoColor=white" alt="Next.js" /></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232a?logo=react&logoColor=61dafb" alt="React" /></a>
-  <a href="https://medusajs.com/"><img src="https://img.shields.io/badge/Medusa-000?logo=medusa&logoColor=white" alt="Medusa" /></a>
-  <a href="https://stripe.com/"><img src="https://img.shields.io/badge/Stripe-635bff?logo=stripe&logoColor=white" alt="Stripe" /></a>
-  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/TailwindCSS-38bdf8?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" /></a>
-  <a href="https://vercel.com/"><img src="https://img.shields.io/badge/Vercel-000?logo=vercel&logoColor=white" alt="Vercel" /></a>
-</p>
 
-# SenShop Commerce
 
-[**Full Idea Statement (PDF) →**](concept/SenShop_idea_statement.pdf)
+# SenShop MVP - Technical Documentation
 
----
+## What I Built
 
-## 🚀 Live Demo
+A custom e-commerce platform for selling digital artworks as both downloads and physical products. The project integrates Medusa.js (commerce backend), Next.js (frontend), and Supabase (file storage) to create a complete artwork marketplace.
 
-**Check it out live:** [https://commerce.sen.studio](https://commerce.sen.studio)
+## Architecture Overview
 
----
-
-## 🛠️ Tech Stack
-- Next.js
-- React
-- Medusa
-- Stripe
-- Tailwind CSS
-- Vercel (Deployment)
-- Printful / Gelato (POD)
-
----
-
-## 📦 Project Structure
-```text
-Home
-├── About
-├── Collections
-│   ├── [Collection Overview Page]
-│   │   ├── Story / Theme
-│   │   └── Artworks Grid
-│   └── [Artwork Page]
-│       ├── Artwork Details
-│       ├── Image Preview
-│       ├── Purchase Options
-│       │   ├── Download
-│       │   ├── Print
-│       │   ├── Framed
-│       │   └── Apparel
-│       └── Add to Cart
-├── Exhibitions (Optional)
-├── Search / Filter
-├── Cart
-├── Checkout (Stripe)
-├── My Orders / Downloads
-└── Legal
-    ├── Terms
-    ├── Privacy
-    └── Imprint
+```
+├── sen-commerce/          # Medusa.js backend
+│   ├── modules/          # Custom modules
+│   ├── api/              # REST endpoints
+│   └── admin/            # Admin UI extensions
+│
+└── frontend/             # Next.js storefront
+    ├── components/
+    └── pages/
 ```
 
+## Key Learning Points
+
+### 1. Medusa.js Module System
+- Medusa v2 uses a modular architecture where functionality is organized into modules
+- Each module contains models, services, and migrations
+- MedusaService auto-generates CRUD operations from entity definitions
+- Module registration happens in `medusa-config.ts`
+
+### 2. Database & ORM
+- Medusa uses MikroORM/TypeORM for database management
+- Entities are defined with decorators (@Entity, @Property, etc.)
+- Relations are handled through @ManyToOne, @OneToMany decorators
+- Migrations are auto-generated but sometimes need manual SQL for existing tables
+
+### 3. Custom Module Implementation
+
+Created an artwork module with two main entities:
+
+**Artwork Model:**
+```typescript
+- id: string (auto-generated)
+- title: string
+- description: text (nullable)
+- image_url: string
+- artwork_collection_id: string (foreign key)
+- product_ids: array<string>
+- timestamps (created_at, updated_at, deleted_at)
+```
+
+**ArtworkCollection Model:**
+```typescript
+- id: string (auto-generated)
+- name: string
+- description: text (nullable)
+- topic: string
+- purpose: enum (artwork, merchandise, present, wallart, other)
+- thumbnail_url: string
+- midjourney_version: string
+- month_created: string
+- timestamps
+```
+
+### 4. API Development
+
+**Admin Routes:**
+- `/admin/artworks` - CRUD operations for artworks
+- `/admin/artwork-collections` - CRUD for collections
+- `/admin/uploads` - File upload endpoint using Multer
+
+**Store Routes:**
+- `/store/artworks` - Public API with product enrichment
+
+### 5. File Upload Integration
+
+Implemented Supabase integration for image storage:
+- Created custom upload service using @supabase/supabase-js
+- Multer middleware for handling multipart/form-data
+- Images stored in Supabase bucket with public URLs
+- Environment variables for secure credential management
+
+### 6. Admin UI Extension
+
+Extended Medusa's admin panel with custom React pages:
+- List views with data tables
+- Create/edit forms with file upload
+- Used Medusa UI components for consistency
+- Route configuration with defineRouteConfig
+
+## Technical Challenges & Solutions
+
+### Challenge 1: Module Service Method Names
+**Issue:** Expected `createArtworkCollection` but Medusa auto-generates `createArtworkCollections` (plural)
+**Solution:** Always use pluralized method names with MedusaService
+
+### Challenge 2: Database Relations
+**Issue:** "Could not resolve 'find'" errors with custom repositories
+**Solution:** Use MedusaService's built-in functionality instead of custom repositories
+
+### Challenge 3: Missing Timestamps
+**Issue:** Tables missing timestamp columns that Medusa expects
+**Solution:** Created SQL migration to add columns to existing tables
+
+### Challenge 4: File Upload in Admin
+**Issue:** No built-in file upload in Medusa admin
+**Solution:** Created custom upload endpoint and integrated with Supabase
+
+## Project Structure Details
+
+### Backend Structure
+```
+src/
+├── modules/artwork-module/
+│   ├── models/
+│   │   ├── artwork.ts
+│   │   └── artwork-collection.ts
+│   ├── services/
+│   │   ├── artwork-module-service.ts
+│   │   └── image-upload-service.ts
+│   └── index.ts
+├── api/
+│   ├── admin/
+│   │   ├── artworks/
+│   │   ├── artwork-collections/
+│   │   └── uploads/
+│   └── store/
+│       └── artworks/
+└── admin/
+    └── routes/
+        ├── artworks/
+        └── artwork-collections/
+```
+
+### Key Technologies Used
+- **Medusa.js v2**: E-commerce backend framework
+- **TypeScript**: Type safety throughout the project
+- **PostgreSQL**: Primary database
+- **Supabase**: File storage and image hosting
+- **React**: Admin UI components
+- **Multer**: File upload middleware
+
+## Environment Configuration
+
+Required environment variables:
+```
+DATABASE_URL=postgres://...
+MEDUSA_ADMIN_ONBOARDING_TYPE=default
+STORE_CORS=http://localhost:8000
+ADMIN_CORS=http://localhost:9000
+AUTH_CORS=http://localhost:9000
+REDIS_URL=redis://localhost:6379
+
+# Supabase for file storage
+SUPABASE_URL=https://[project].supabase.co
+SUPABASE_ANON_KEY=[anon-key]
+SUPABASE_SERVICE_ROLE_KEY=[service-role-key]
+SUPABASE_BUCKET_NAME=artworks
+
+# Frontend needs these prefixed with VITE_
+VITE_SUPABASE_URL=https://[project].supabase.co
+VITE_SUPABASE_ANON_KEY=[anon-key]
+```
+
+## Development Workflow
+
+1. **Backend Development**: Work in `/sen-commerce` directory
+2. **Run Development Server**: `npm run dev` (starts on port 9000)
+3. **Access Admin Panel**: http://localhost:9000/app
+4. **Database Migrations**: Auto-run on server start
+5. **File Uploads**: Handled through `/admin/uploads` endpoint
+
+## Current State
+
+### What's Working
+- ✅ Artwork CRUD operations
+- ✅ Collection management
+- ✅ Image upload to Supabase
+- ✅ Admin UI for managing artworks
+- ✅ Product linking functionality
+- ✅ API endpoints for frontend
+
+### Known Issues
+- Browser console shows "playback state" errors (from dev tools, not app code)
+- Collection edit page not yet implemented
+- No bulk operations yet
+
+## Next Steps
+
+1. **Frontend Development**: Build the customer-facing store
+2. **Product Integration**: Link artworks to actual products
+3. **Payment Processing**: Stripe integration
+4. **Digital Downloads**: Secure download system
+5. **Order Management**: Fulfillment workflows
+
+## Technical Insights
+
+### Medusa Service Pattern
+MedusaService creates methods following this pattern:
+- `list[Entity]s()` - List with filters
+- `create[Entity]s()` - Create (accepts array or single)
+- `update[Entity]s()` - Update by ID
+- `delete[Entity]s()` - Delete by ID
+- `retrieve[Entity]()` - Get single by ID
+
+### Database Conventions
+- All tables need `id`, `created_at`, `updated_at`, `deleted_at`
+- Foreign keys follow pattern: `[entity]_id`
+- Many-to-many through array columns or join tables
+
+### Admin UI Patterns
+- Pages export default component and `config`
+- Use `defineRouteConfig` for route configuration
+- Medusa UI components for consistency
+- API calls need `credentials: "include"`
+
 ---
 
-## 🖼️ Example Artworks
-<p align="center">
-  <img src="concept/images/slide1.jpg" alt="Artwork Example 1" width="250" style="margin:8px;" />
-  <img src="concept/images/slide2.jpg" alt="Artwork Example 2" width="250" style="margin:8px;" />
-  <img src="concept/images/slide3.jpg" alt="Artwork Example 3" width="250" style="margin:8px;" />
-</p>
-
----
-
-## ▲ Deployed on Vercel
+Last Updated: January 2025
+Built with Medusa.js v2.8.4
 
 
-> **Live URL:** [https://commerce.sen.studio](https://commerce.sen.studio)
-
----
-
-<details>
-<summary>📖 <strong>Project Details & User Flow</strong></summary>
-
-# Idea Statement
-
-This project is a curated e-commerce experience built on React and Medusa. Users browse digital art exhibitions and themed collections. Each artwork can be purchased as a digital download or physical product (framed print, apparel) fulfilled by Print-on-Demand partners like Printful or Gelato. The shopping experience focuses on storytelling, visual exploration, and easy checkout via Stripe with automated invoice generation. 
-
-### User Flow
-1. Browse by collection or exhibition
-2. Dive into a specific artwork
-3. Choose purchase format:
-   - Digital Download
-   - Framed Print
-   - T-Shirt / Apparel
-4. Checkout with Stripe
-5. Auto-generated invoice + delivery via POD
-
-</details>
-
----
-
-## 📋 Working Plan
-
-### 1. Backend Development
-
-#### Priority 1: Artwork Module
-- Build artwork database schema
-- Create CRUD operations for artworks
-- Link artworks to products and collections
-- Implement artwork metadata (title, description, year, version, etc.)
-- Add image management and optimization
-
-#### Priority 2: Core Backend Services
-- **Stripe Integration**
-  - Payment processing setup
-  - Webhook handlers for payment events
-  - Invoice generation automation
-  - Refund handling
-  
-- **User Authentication & Management**
-  - JWT authentication system
-  - User registration/login
-  - Password reset functionality
-  - User profile management
-  
-- **Order Management**
-  - Order processing workflow
-  - Order status tracking
-  - Email notifications
-  - Order history API#
-
-#### Priority 3: Integration Services
-- **Printful API v2 Integration**
-  - Connect product catalog with Printful API v2
-  - Sync product variants and pricing
-  - Handle order fulfillment automation
-  
-- **Digital Downloads Module**
-  - Implement secure download links generation
-  - Add download tracking and limits
-  - Create digital asset management system
-  
-- **Email Service**
-  - Transactional emails (order confirmation, shipping updates)
-  - Email templates
-  - Integration with email provider (SendGrid/Postmark)
-
-### 2. Frontend Development
-- **Single Page Components**
-  - Artwork detail page with zoom functionality
-  - Collection gallery with lazy loading
-  - Shopping cart with real-time updates
-  - Checkout flow with Stripe integration
-  - Order confirmation and download page
-  - User dashboard for order history
-  - Search and filter functionality
-  - Mobile-responsive navigation

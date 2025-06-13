@@ -18,10 +18,20 @@ export interface CreateArtworkCollectionDTO {
   title: string
   slug: string
   description?: string
+  topic?: string
+  month_created?: string
+  midjourney_version?: string
+  purpose?: string
+  thumbnail_url?: string
 }
 
 export interface UpdateArtworkCollectionDTO {
   title?: string
   slug?: string
   description?: string
+  topic?: string
+  month_created?: string
+  midjourney_version?: string
+  purpose?: string
+  thumbnail_url?: string
 } 

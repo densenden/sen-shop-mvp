@@ -4,19 +4,14 @@ import { ArtworkModuleService } from "../../../../modules/artwork-module/service
 import { UpdateArtworkDTO } from "../../../../modules/artwork-module/types"
 
 // GET /admin/artworks/:id
-export const GET = async (
+export async function GET(
   req: MedusaRequest,
-  res: MedusaResponse
-) => {
-  const artworkModuleService: ArtworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  
-  const artwork = await artworkModuleService.retrieveArtwork(req.params.id, {
-    relations: ["artwork_collection"],
-  })
-
-  res.json({
-    artwork,
-  })
+  res: MedusaResponse,
+  { params }: { params: { id: string } }
+) {
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artwork = await artworkModuleService.retrieveArtwork(params.id)
+  res.json(artwork)
 }
 
 // PUT /admin/artworks/:id
@@ -34,15 +29,12 @@ export const PUT = async (
 }
 
 // DELETE /admin/artworks/:id
-export const DELETE = async (
+export async function DELETE(
   req: MedusaRequest,
-  res: MedusaResponse
-) => {
-  const artworkModuleService: ArtworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  
-  await artworkModuleService.deleteArtworks(req.params.id)
-
-  res.json({
-    success: true,
-  })
+  res: MedusaResponse,
+  { params }: { params: { id: string } }
+) {
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  await artworkModuleService.deleteArtworks(params.id)
+  res.status(204).end()
 } 

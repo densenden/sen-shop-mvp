@@ -1,38 +1,17 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ARTWORK_MODULE } from "../../../modules/artwork-module"
-import { ArtworkModuleService } from "../../../modules/artwork-module/services/artwork-module-service"
-import { CreateArtworkDTO } from "../../../modules/artwork-module/types"
 
-// GET /admin/artworks
-export const GET = async (
-  req: MedusaRequest,
-  res: MedusaResponse
-) => {
-  const artworkModuleService: ArtworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  
-  const [artworks, count] = await artworkModuleService.listAndCountArtworks(
-    {},
-    {
-      relations: ["artwork_collection"],
-    }
-  )
-
-  res.json({
-    artworks,
-    count,
+export async function GET(req: MedusaRequest, res: MedusaResponse) {
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworks = await artworkModuleService.listArtworks({
+    relations: ["artwork_collection"]
   })
+  res.json({ artworks })
 }
 
-// POST /admin/artworks
-export const POST = async (
-  req: MedusaRequest<CreateArtworkDTO>,
-  res: MedusaResponse
-) => {
-  const artworkModuleService: ArtworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  
-  const artwork = await artworkModuleService.createArtworks(req.body)
-
-  res.json({
-    artwork,
-  })
+export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const body = req.body as any
+  const artwork = await artworkModuleService.createArtworks(body)
+  res.json(artwork)
 } 

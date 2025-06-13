@@ -55,7 +55,8 @@ const ArtworkDetail = () => {
         credentials: "include",
       })
       const data = await response.json()
-      setCollections(data.collections || [])
+      console.log("Collections data:", data)
+      setCollections(Array.isArray(data) ? data : data.collections || [])
     } catch (error) {
       console.error("Error fetching collections:", error)
     }
@@ -174,7 +175,7 @@ const ArtworkDetail = () => {
               <Select.Content>
                 {collections.map((collection: any) => (
                   <Select.Item key={collection.id} value={collection.id}>
-                    {collection.title}
+                    {collection.name}
                   </Select.Item>
                 ))}
               </Select.Content>
