@@ -10,6 +10,12 @@ export const ArtworkCollection = model.define("artwork_collection", {
   purpose: model.text().nullable(),
   thumbnail_url: model.text().nullable(),
   
+  // Editorial Images (4 additional images for showcasing the collection)
+  editorial_image_1: model.text().nullable(),
+  editorial_image_2: model.text().nullable(),
+  editorial_image_3: model.text().nullable(),
+  editorial_image_4: model.text().nullable(),
+  
   // Brand Story & Identity
   brand_story: model.text().nullable(),
   genesis_story: model.text().nullable(),

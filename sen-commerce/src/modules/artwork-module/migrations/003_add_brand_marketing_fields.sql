@@ -11,7 +11,11 @@ ADD COLUMN IF NOT EXISTS target_audience_messaging TEXT,
 ADD COLUMN IF NOT EXISTS brand_tagline TEXT,
 ADD COLUMN IF NOT EXISTS brand_colors JSONB,
 ADD COLUMN IF NOT EXISTS brand_fonts JSONB,
-ADD COLUMN IF NOT EXISTS social_media_tags JSONB;
+ADD COLUMN IF NOT EXISTS social_media_tags JSONB,
+ADD COLUMN IF NOT EXISTS editorial_image_1 TEXT,
+ADD COLUMN IF NOT EXISTS editorial_image_2 TEXT,
+ADD COLUMN IF NOT EXISTS editorial_image_3 TEXT,
+ADD COLUMN IF NOT EXISTS editorial_image_4 TEXT;
 
 -- Add indexes for JSON fields to improve query performance
 CREATE INDEX IF NOT EXISTS idx_artwork_collection_core_values ON artwork_collection USING GIN (core_values);

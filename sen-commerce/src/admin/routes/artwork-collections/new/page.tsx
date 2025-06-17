@@ -23,6 +23,11 @@ const CreateArtworkCollection = () => {
     midjourney_version: "",
     purpose: "",
     thumbnail_url: "",
+    // Editorial images
+    editorial_image_1: "",
+    editorial_image_2: "",
+    editorial_image_3: "",
+    editorial_image_4: "",
     // New fields
     brand_story: "",
     genesis_story: "",
@@ -39,8 +44,10 @@ const CreateArtworkCollection = () => {
   })
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+  const [editorialPreviews, setEditorialPreviews] = useState<(string | null)[]>([null, null, null, null])
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadingEditorial, setUploadingEditorial] = useState<boolean[]>([false, false, false, false])
   
   // Input states for array fields
   const [currentValue, setCurrentValue] = useState({
@@ -72,6 +79,34 @@ const CreateArtworkCollection = () => {
       alert("Failed to upload image. Please try again.")
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleEditorialImageChange = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Update preview
+    const newPreviews = [...editorialPreviews]
+    newPreviews[index] = URL.createObjectURL(file)
+    setEditorialPreviews(newPreviews)
+    
+    // Upload immediately to Supabase
+    const newUploadingState = [...uploadingEditorial]
+    newUploadingState[index] = true
+    setUploadingEditorial(newUploadingState)
+    
+    try {
+      const imageUrl = await uploadImageToSupabase(file)
+      setForm({ ...form, [`editorial_image_${index + 1}`]: imageUrl })
+      newPreviews[index] = imageUrl
+      setEditorialPreviews(newPreviews)
+    } catch (error) {
+      console.error("Error uploading editorial image:", error)
+      alert("Failed to upload image. Please try again.")
+    } finally {
+      newUploadingState[index] = false
+      setUploadingEditorial(newUploadingState)
     }
   }
 
@@ -246,6 +281,39 @@ const CreateArtworkCollection = () => {
                 </span>
               )}
             </label>
+          </div>
+        </div>
+
+        {/* Editorial Images */}
+        <div className="bg-white rounded-lg border p-6 space-y-4">
+          <Heading level="h2" className="text-xl">Editorial Images</Heading>
+          <Text className="text-sm text-gray-600">Upload up to 4 editorial images to showcase the collection</Text>
+          
+          <div className="grid grid-cols-2 gap-4">
+            {[0, 1, 2, 3].map((index) => (
+              <div key={index}>
+                <Label htmlFor={`editorial-${index}`}>Editorial Image {index + 1}</Label>
+                <input
+                  id={`editorial-${index}`}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleEditorialImageChange(index, e)}
+                  className="hidden"
+                />
+                <label
+                  htmlFor={`editorial-${index}`}
+                  className="flex items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400"
+                >
+                  {editorialPreviews[index] ? (
+                    <img src={editorialPreviews[index]!} alt={`Editorial ${index + 1}`} className="h-full w-full object-cover rounded-lg" />
+                  ) : (
+                    <span className="text-gray-500 text-center px-4">
+                      {uploadingEditorial[index] ? "Uploading..." : `Click to upload editorial image ${index + 1}`}
+                    </span>
+                  )}
+                </label>
+              </div>
+            ))}
           </div>
         </div>
 
