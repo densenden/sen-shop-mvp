@@ -6,9 +6,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const { id } = req.params
   
   try {
-    const [collection] = await artworkModuleService.listArtworkCollections({
-      filters: { id }
-    })
+    const collection = await artworkModuleService.retrieveArtworkCollection(id)
     
     if (!collection) {
       return res.status(404).json({ error: "Collection not found" })

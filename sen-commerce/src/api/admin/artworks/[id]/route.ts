@@ -9,16 +9,22 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const { id } = req.params
   
   try {
-    const [artwork] = await artworkModuleService.listArtworks({
-      filters: { id }
-    })
+    // Use retrieveArtwork instead of listArtworks with filters
+    const artwork = await artworkModuleService.retrieveArtwork(id)
     
     if (!artwork) {
       return res.status(404).json({ error: "Artwork not found" })
     }
     
-    res.json({ artwork })
+    // Ensure product_ids is always an array
+    const artworkData = {
+      ...artwork,
+      product_ids: artwork.product_ids || []
+    }
+    
+    res.json({ artwork: artworkData })
   } catch (error) {
+    console.error("Error fetching artwork:", error)
     res.status(500).json({ error: error.message })
   }
 }
@@ -30,9 +36,16 @@ export async function PUT(req: MedusaRequest, res: MedusaResponse) {
   const body = req.body as any
   
   try {
-    const updated = await artworkModuleService.updateArtworks({ id, ...body })
+    // Ensure product_ids is properly formatted for storage
+    const updateData = {
+      ...body,
+      product_ids: body.product_ids || []
+    }
+    
+    const updated = await artworkModuleService.updateArtworks({ id, ...updateData })
     res.json(updated)
   } catch (error) {
+    console.error("Error updating artwork:", error)
     res.status(500).json({ error: error.message })
   }
 }

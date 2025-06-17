@@ -37,13 +37,43 @@ const ArtworkDetail = () => {
 
   const fetchArtwork = async () => {
     try {
+      console.log("Fetching artwork with ID:", id)
       const response = await fetch(`/admin/artworks/${id}`, {
         credentials: "include",
       })
+      
+      console.log("Response status:", response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response:", errorText)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+      }
+      
       const data = await response.json()
-      setArtwork(data.artwork)
+      console.log("Received data:", data)
+      
+      if (!data.artwork) {
+        throw new Error("No artwork data in response")
+      }
+      
+      // Ensure all fields have default values
+      setArtwork({
+        title: data.artwork.title || "",
+        description: data.artwork.description || "",
+        image_url: data.artwork.image_url || "",
+        artwork_collection_id: data.artwork.artwork_collection_id || "",
+        product_ids: data.artwork.product_ids || []
+      })
     } catch (error) {
       console.error("Error fetching artwork:", error)
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        id: id,
+        url: `/admin/artworks/${id}`
+      })
+      alert(`Failed to load artwork: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setLoading(false)
     }
@@ -139,7 +169,7 @@ const ArtworkDetail = () => {
           <div>
             <Label>Description</Label>
             <Textarea
-              value={artwork.description || ""}
+              value={artwork.description}
               onChange={(e) => setArtwork({ ...artwork, description: e.target.value })}
               rows={4}
             />
