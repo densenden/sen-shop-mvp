@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Button, Container, Heading, Table } from "@medusajs/ui"
-import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Link } from "react-router-dom"
+import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { PencilSquare, Trash, Photo } from "@medusajs/icons"
 
 const ArtworkCollectionsPage = () => {
@@ -43,11 +43,23 @@ const ArtworkCollectionsPage = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this collection?")) return
+    
     try {
-      await fetch(`/admin/artwork-collections/${id}`, { method: "DELETE", credentials: "include" })
-      fetchCollections()
-    } catch (err) {
-      console.error("Error deleting collection:", err)
+      const response = await fetch(`/admin/artwork-collections/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+      
+      if (response.ok) {
+        // Refresh the list
+        fetchCollections()
+        fetchArtworks()
+      } else {
+        alert("Failed to delete collection")
+      }
+    } catch (error) {
+      console.error("Error deleting collection:", error)
+      alert("Failed to delete collection")
     }
   }
 
@@ -84,10 +96,20 @@ const ArtworkCollectionsPage = () => {
                       src={col.thumbnail_url} 
                       alt={col.name}
                       className="w-16 h-16 object-cover rounded"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none'
+                      }}
                     />
                   )}
                 </Table.Cell>
-                <Table.Cell>{col.name}</Table.Cell>
+                <Table.Cell>
+                  <Link 
+                    to={`/artwork-collections/${col.id}/overview`} 
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    {col.name}
+                  </Link>
+                </Table.Cell>
                 <Table.Cell>{col.topic || "-"}</Table.Cell>
                 <Table.Cell>{col.purpose || "-"}</Table.Cell>
                 <Table.Cell>
@@ -99,6 +121,9 @@ const ArtworkCollectionsPage = () => {
                           src={a.image_url} 
                           alt={a.title}
                           className="w-8 h-8 object-cover rounded-full border-2 border-white"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                          }}
                         />
                       ))}
                     </div>

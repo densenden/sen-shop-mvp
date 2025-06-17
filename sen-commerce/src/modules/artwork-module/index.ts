@@ -5,5 +5,5 @@ export { ImageUploadService } from "./services/image-upload-service"
 export const ARTWORK_MODULE = "artworkModuleService"
 
 export default Module(ARTWORK_MODULE, {
-  service: ArtworkModuleService,
+  service: ArtworkModuleService
 }) 

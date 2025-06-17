@@ -1,49 +1,44 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ARTWORK_MODULE } from "../../../../modules/artwork-module"
-import { ArtworkModuleService } from "../../../../modules/artwork-module/services/artwork-module-service"
-import { UpdateArtworkDTO } from "../../../../modules/artwork-module/types"
 
-// GET /admin/artworks/:id
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
   const { id } = req.params
   
   try {
-    const [artwork] = await artworkModuleService.listArtworks({
+    const [collection] = await artworkModuleService.listArtworkCollections({
       filters: { id }
     })
     
-    if (!artwork) {
-      return res.status(404).json({ error: "Artwork not found" })
+    if (!collection) {
+      return res.status(404).json({ error: "Collection not found" })
     }
     
-    res.json({ artwork })
+    res.json(collection)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 }
 
-// PUT /admin/artworks/:id
 export async function PUT(req: MedusaRequest, res: MedusaResponse) {
   const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
   const { id } = req.params
   const body = req.body as any
   
   try {
-    const updated = await artworkModuleService.updateArtworks({ id, ...body })
+    const updated = await artworkModuleService.updateArtworkCollections({ id, ...body })
     res.json(updated)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 }
 
-// DELETE /admin/artworks/:id
 export async function DELETE(req: MedusaRequest, res: MedusaResponse) {
   const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
   const { id } = req.params
   
   try {
-    await artworkModuleService.deleteArtworks(id)
+    await artworkModuleService.deleteArtworkCollections(id)
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ error: error.message })

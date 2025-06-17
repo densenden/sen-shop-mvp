@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import multer from "multer"
-import { ImageUploadService } from "../../../modules/artwork-module/services/image-upload-service"
+import { ImageUploadService } from "../../../modules/artwork-module"
 
 // Use Multer to handle file upload in memory
 const upload = multer({ storage: multer.memoryStorage() })
@@ -31,8 +31,9 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   }
   
   try {
-    // Create the upload service (in real project, use DI)
-    const imageUploadService = new ImageUploadService({})
+    // Create the upload service with the container (for DI)
+    const imageUploadService = new ImageUploadService(req.scope)
+    
     const publicUrl = await imageUploadService.uploadImage(
       file.buffer,
       file.originalname,
