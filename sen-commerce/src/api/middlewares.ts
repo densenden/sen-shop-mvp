@@ -38,7 +38,7 @@ const upload = multer({
 export default defineMiddlewares({
   routes: [
     {
-      matcher: "/admin/digital-products",
+      matcher: "/api/admin/digital-products",
       method: "POST",
       middlewares: [upload.single('file')],
     },

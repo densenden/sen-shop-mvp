@@ -50,6 +50,16 @@ export default defineConfig({
         }
         ]
       }
-    }
+    },
+    // SendGrid notification provider
+    // Uncomment when you have SendGrid API key
+    // {
+    //   resolve: "@medusajs/notification-sendgrid",
+    //   options: {
+    //     channels: ["email"],
+    //     api_key: process.env.SENDGRID_API_KEY,
+    //     from: process.env.SENDGRID_FROM,
+    //   }
+    // }
   ]
 });

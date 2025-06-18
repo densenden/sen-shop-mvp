@@ -36,7 +36,7 @@ const DigitalProductDetailPage = () => {
 
   const fetchProduct = async () => {
     try {
-      const response = await fetch(`/admin/digital-products/${id}`, {
+      const response = await fetch(`/api/admin/digital-products/${id}`, {
         credentials: "include",
       })
       if (response.ok) {
@@ -58,7 +58,7 @@ const DigitalProductDetailPage = () => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const response = await fetch(`/admin/digital-products/${id}`, {
+      const response = await fetch(`/api/admin/digital-products/${id}`, {
         method: "PUT",
         credentials: "include",
         headers: {
@@ -88,7 +88,7 @@ const DigitalProductDetailPage = () => {
     }
 
     try {
-      const response = await fetch(`/admin/digital-products/${id}`, {
+      const response = await fetch(`/api/admin/digital-products/${id}`, {
         method: "DELETE",
         credentials: "include",
       })

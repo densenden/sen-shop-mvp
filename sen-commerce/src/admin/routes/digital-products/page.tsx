@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Container, Heading, Button, Table } from "@medusajs/ui"
-import { Plus, CloudArrowDown } from "@medusajs/icons"
+import { Plus, CloudArrowDown, PencilSquare, Trash } from "@medusajs/icons"
 import { Link } from "react-router-dom"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 
@@ -15,7 +15,7 @@ const DigitalProductsPage = () => {
 
   const fetchDigitalProducts = async () => {
     try {
-      const response = await fetch("/admin/digital-products", {
+      const response = await fetch("/api/admin/digital-products", {
         credentials: "include",
       })
       const data = await response.json()
@@ -24,6 +24,20 @@ const DigitalProductsPage = () => {
       console.error("Error fetching digital products:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this digital product?")) return
+
+    try {
+      await fetch(`/api/admin/digital-products/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+      await fetchDigitalProducts()
+    } catch (error) {
+      console.error("Error deleting digital product:", error)
     }
   }
 
@@ -69,11 +83,20 @@ const DigitalProductsPage = () => {
                     {new Date(product.created_at).toLocaleDateString()}
                   </Table.Cell>
                   <Table.Cell>
-                    <Link to={`/digital-products/${product.id}`}>
-                      <Button variant="secondary" size="small">
-                        View
+                    <div className="flex gap-2">
+                      <Link to={`/digital-products/${product.id}`}>
+                        <Button variant="secondary" size="small">
+                          <PencilSquare />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="danger"
+                        size="small"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        <Trash />
                       </Button>
-                    </Link>
+                    </div>
                   </Table.Cell>
                 </Table.Row>
               ))

@@ -29,44 +29,32 @@ const NewDigitalProductPage = () => {
     formData.append("file", file)
 
     try {
-      // Using XMLHttpRequest to track upload progress
+      // Use XMLHttpRequest to track upload progress
       const xhr = new XMLHttpRequest()
       
-      // Track upload progress
       xhr.upload.addEventListener("progress", (event) => {
         if (event.lengthComputable) {
-          const percentComplete = Math.round((event.loaded / event.total) * 100)
-          setUploadProgress(percentComplete)
+          const progress = Math.round((event.loaded / event.total) * 100)
+          setUploadProgress(progress)
         }
       })
       
-      // Handle completion
-      xhr.addEventListener("load", () => {
+      xhr.onload = function() {
         if (xhr.status === 200) {
-          console.log("Digital product uploaded successfully")
           navigate("/digital-products")
         } else {
-          try {
-            const error = JSON.parse(xhr.responseText)
-            alert(`Upload failed: ${error.error || 'Unknown error'}`)
-          } catch {
-            alert("Upload failed")
-          }
+          const response = JSON.parse(xhr.responseText)
+          alert("Upload failed: " + (response.error || "Unknown error"))
+          setUploading(false)
         }
-        setUploading(false)
-        setUploadProgress(0)
-      })
+      }
       
-      // Handle errors
-      xhr.addEventListener("error", () => {
-        console.error("Upload error")
-        alert("Upload failed - network error")
+      xhr.onerror = function() {
+        alert("Upload failed: Network error")
         setUploading(false)
-        setUploadProgress(0)
-      })
+      }
       
-      // Send request
-      xhr.open("POST", "/admin/digital-products")
+      xhr.open("POST", "/api/admin/digital-products")
       xhr.withCredentials = true
       xhr.send(formData)
     } catch (error) {
