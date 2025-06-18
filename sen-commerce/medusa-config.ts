@@ -19,6 +19,13 @@ export default defineConfig({
       alias: "artworkModuleService"
     },
     {
+      resolve: "./src/modules/digital-product",
+      alias: "digitalProductModuleService",
+      definition: {
+        isQueryable: true
+      }
+    },
+    {
       resolve: "@medusajs/medusa/file",
       options: {
         providers: [

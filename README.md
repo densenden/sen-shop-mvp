@@ -11,8 +11,11 @@ A custom e-commerce platform for selling digital artworks as both downloads and 
 ```
 ├── sen-commerce/          # Medusa.js backend
 │   ├── modules/          # Custom modules
+│   │   ├── artwork-module/
+│   │   └── digital-product/
 │   ├── api/              # REST endpoints
-│   └── admin/            # Admin UI extensions
+│   ├── admin/            # Admin UI extensions
+│   └── workflows/        # Business logic workflows
 │
 └── frontend/             # Next.js storefront
     ├── components/
@@ -26,16 +29,24 @@ A custom e-commerce platform for selling digital artworks as both downloads and 
 - Each module contains models, services, and migrations
 - MedusaService auto-generates CRUD operations from entity definitions
 - Module registration happens in `medusa-config.ts`
+- **Important**: MedusaService generates pluralized method names (e.g., `createDigitalProducts` not `createDigitalProduct`)
+- Custom modules must be marked as `isQueryable: true` in config
 
 ### 2. Database & ORM
 - Medusa uses MikroORM/TypeORM for database management
 - Entities are defined with decorators (@Entity, @Property, etc.)
 - Relations are handled through @ManyToOne, @OneToMany decorators
 - Migrations are auto-generated but sometimes need manual SQL for existing tables
+- **Medusa v2 Change**: Models use `model.define()` instead of decorators
+- **Important**: Don't define `created_at` and `updated_at` - they're auto-added
+- Primary keys must be explicitly marked with `.primaryKey()`
 
 ### 3. Custom Module Implementation
 
-Created an artwork module with two main entities:
+Created two custom modules:
+
+#### Artwork Module
+Manages physical artwork collections and images:
 
 **Artwork Model:**
 ```typescript
@@ -61,15 +72,50 @@ Created an artwork module with two main entities:
 - timestamps
 ```
 
+#### Digital Product Module
+Handles downloadable products with secure file management:
+
+**DigitalProduct Model:**
+```typescript
+- id: string (auto-generated)
+- name: string
+- file_url: string (Supabase storage URL)
+- file_key: string (storage path)
+- file_size: number (bytes)
+- mime_type: string
+- description: text (nullable)
+- preview_url: string (nullable)
+- max_downloads: number (default: -1 unlimited)
+- expires_at: date (nullable)
+- timestamps
+```
+
+**DigitalProductDownload Model:**
+```typescript
+- id: string (auto-generated)
+- digital_product_id: string (foreign key)
+- order_id: string
+- customer_id: string
+- token: string (unique, for secure downloads)
+- download_count: number
+- last_downloaded_at: date
+- expires_at: date
+- is_active: boolean
+- timestamps
+```
+
 ### 4. API Development
 
 **Admin Routes:**
 - `/admin/artworks` - CRUD operations for artworks
 - `/admin/artwork-collections` - CRUD for collections
+- `/admin/digital-products` - CRUD for digital products
+- `/admin/products/:id/digital-products` - Link digital products to regular products
 - `/admin/uploads` - File upload endpoint using Multer
 
 **Store Routes:**
 - `/store/artworks` - Public API with product enrichment
+- `/store/download/:token` - Secure digital product download endpoint
 
 ### 5. File Upload Integration
 
@@ -105,30 +151,59 @@ Extended Medusa's admin panel with custom React pages:
 **Issue:** No built-in file upload in Medusa admin
 **Solution:** Created custom upload endpoint and integrated with Supabase
 
+### Challenge 5: Supabase RLS Policies
+**Issue:** "new row violates row-level security policy" error
+**Solution:** Either disable RLS on bucket or create proper policies
+
+### Challenge 6: Module Registration in v2
+**Issue:** "Service digitalProductModuleService was not found"
+**Solution:** Add `isQueryable: true` to module config in medusa-config.ts
+
+### Challenge 7: Model Primary Keys
+**Issue:** "entity is missing @PrimaryKey()"
+**Solution:** Use `.primaryKey()` on id field in model.define()
+
+### Challenge 8: Workflow Syntax
+**Issue:** "WorkflowResponse is not a constructor"
+**Solution:** Return plain object from workflow, not new WorkflowResponse()
+
 ## Project Structure Details
 
 ### Backend Structure
 ```
 src/
-├── modules/artwork-module/
-│   ├── models/
-│   │   ├── artwork.ts
-│   │   └── artwork-collection.ts
-│   ├── services/
-│   │   ├── artwork-module-service.ts
-│   │   └── image-upload-service.ts
-│   └── index.ts
+├── modules/
+│   ├── artwork-module/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── index.ts
+│   └── digital-product/
+│       ├── models/
+│       │   ├── digital-product.ts
+│       │   └── digital-product-download.ts
+│       ├── services/
+│       │   ├── digital-product-module-service.ts
+│       │   └── file-upload-service.ts
+│       └── index.ts
 ├── api/
 │   ├── admin/
 │   │   ├── artworks/
 │   │   ├── artwork-collections/
+│   │   ├── digital-products/
 │   │   └── uploads/
-│   └── store/
-│       └── artworks/
-└── admin/
-    └── routes/
-        ├── artworks/
-        └── artwork-collections/
+│   ├── store/
+│   │   ├── artworks/
+│   │   └── download/[token]/
+│   └── middlewares.ts
+├── admin/
+│   └── routes/
+│       ├── artworks/
+│       ├── artwork-collections/
+│       └── digital-products/
+├── workflows/
+│   └── send-digital-products.ts
+└── subscribers/
+    └── order-completed.ts
 ```
 
 ### Key Technologies Used
@@ -178,19 +253,50 @@ VITE_SUPABASE_ANON_KEY=[anon-key]
 - ✅ Admin UI for managing artworks
 - ✅ Product linking functionality
 - ✅ API endpoints for frontend
+- ✅ Digital product uploads (50MB limit)
+- ✅ File size validation (client & server)
+- ✅ Secure download system with tokens
+- ✅ Digital product listing page
 
 ### Known Issues
+- ❌ Digital product detail/edit page missing
+- ❌ No upload progress indicator
+- ❌ No link between products and digital products UI
+- ❌ Download workflow not integrated with orders
 - Browser console shows "playback state" errors (from dev tools, not app code)
-- Collection edit page not yet implemented
-- No bulk operations yet
+
+## Digital Products Implementation
+
+### Features
+- **File Upload**: Up to 50MB files with real-time validation
+- **Storage**: Supabase bucket integration (public bucket "print")
+- **Security**: Token-based download system
+- **Tracking**: Download count and expiry management
+- **Admin UI**: Upload and manage digital files
+
+### Implementation Details
+- **Multer Middleware**: Handles multipart form uploads
+- **File Types**: PDF, JPG, PNG, ZIP, MP3, MP4, Excel, Word
+- **Download Tokens**: Crypto-generated unique tokens
+- **Expiry**: Default 7-day download links
+
+### Relevant Links
+- Admin Digital Products: http://localhost:9000/app/digital-products
+- Upload New: http://localhost:9000/app/digital-products/new
+- API Docs: See `/admin/digital-products` routes
 
 ## Next Steps
 
-1. **Frontend Development**: Build the customer-facing store
-2. **Product Integration**: Link artworks to actual products
+1. ✅ ~~Frontend Development~~: Build the customer-facing store
+2. ✅ ~~Product Integration~~: Link artworks to actual products
 3. **Payment Processing**: Stripe integration
-4. **Digital Downloads**: Secure download system
-5. **Order Management**: Fulfillment workflows
+4. ✅ ~~Digital Downloads~~: Secure download system (implemented)
+5. **Order Management**: Complete fulfillment workflows
+6. **Digital Product Enhancements**:
+   - Edit page for existing products
+   - Upload progress indicator
+   - Bulk operations
+   - Download analytics dashboard
 
 ## Technical Insights
 
