@@ -60,23 +60,26 @@ export default async function handleDigitalProducts({
       const downloadLinks: any[] = []
       
       for (const digitalProductId of digitalProductIds) {
-        const [digitalProduct] = await digitalProductService.listDigitalProducts({
+        const digitalProducts = await digitalProductService.listDigitalProducts({
           filters: { id: digitalProductId }
         })
+        const digitalProduct = digitalProducts[0]
         
         if (digitalProduct) {
           // Generate secure token
           const token = crypto.randomBytes(32).toString('hex')
           
           // Create download access
-          await digitalProductService.createDigitalProductDownloads({
-            digital_product_id: digitalProduct.id,
-            order_id: order.id,
-            customer_id: order.customer_id || order.email,
-            token,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-            is_active: true
-          })
+          await digitalProductService.createDigitalProductDownloads([
+            {
+              digital_product_id: digitalProduct.id,
+              order_id: order.id,
+              customer_id: order.customer_id ?? order.email ?? undefined,
+              token,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+              is_active: true
+            }
+          ])
           
           downloadLinks.push({
             product_name: digitalProduct.name,
@@ -92,7 +95,7 @@ export default async function handleDigitalProducts({
         
         // TODO: Send email using notification service
         // For now, just log the links
-        logger.info("Download links:", downloadLinks)
+        logger.info(`Download links: ${JSON.stringify(downloadLinks)}`)
       }
     }
     

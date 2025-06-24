@@ -1,4 +1,4 @@
-import { defineMiddlewares } from "@medusajs/medusa"
+import { defineMiddlewares } from "@medusajs/framework/http"
 import multer from "multer"
 
 // Configure multer for file uploads

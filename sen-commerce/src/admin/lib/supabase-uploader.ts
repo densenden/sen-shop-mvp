@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Use process.env for backend compatibility
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
 const bucketName = 'artworks'
 
 if (!supabaseUrl || !supabaseKey) {
@@ -13,7 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 export async function uploadImageToSupabase(file: File): Promise<string> {
   const fileExt = file.name.split('.').pop()
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-  const filePath = fileName  // Remove the "artworks/" prefix since bucket is already "artworks"
+  const filePath = fileName
 
   console.log('[Supabase Upload] Starting upload:', {
     bucketName,

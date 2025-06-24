@@ -52,7 +52,6 @@ export default defineConfig({
       }
     },
     // SendGrid notification provider
-    // Uncomment when you have SendGrid API key
     // {
     //   resolve: "@medusajs/notification-sendgrid",
     //   options: {

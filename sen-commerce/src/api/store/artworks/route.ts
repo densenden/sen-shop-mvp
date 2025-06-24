@@ -24,9 +24,9 @@ export const GET = async (
     artworks.map(async (artwork) => {
       let products: ProductDTO[] = []
       
-      if (artwork.product_ids && artwork.product_ids.length > 0) {
-        const productResult = await productService.listProducts({
-          id: artwork.product_ids,
+      if (Array.isArray(artwork.product_ids) && artwork.product_ids.length > 0) {
+        const productResult: ProductDTO[] = await productService.listProducts({
+          id: artwork.product_ids as string[],
         })
         products = productResult
       }

@@ -4,9 +4,17 @@ import { Plus, CloudArrowDown, PencilSquare, Trash } from "@medusajs/icons"
 import { Link } from "react-router-dom"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 
+type DigitalProduct = {
+  id: string
+  name: string
+  mime_type: string
+  file_size: number
+  created_at: string
+}
+
 // Main page for listing digital products
 const DigitalProductsPage = () => {
-  const [digitalProducts, setDigitalProducts] = useState([])
+  const [digitalProducts, setDigitalProducts] = useState<DigitalProduct[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -69,12 +77,12 @@ const DigitalProductsPage = () => {
           <Table.Body>
             {digitalProducts.length === 0 ? (
               <Table.Row>
-                <Table.Cell colSpan={5} className="text-center text-gray-500">
+                <td colSpan={5} className="text-center text-gray-500">
                   No digital products yet. Click "Add Digital Product" to create one.
-                </Table.Cell>
+                </td>
               </Table.Row>
             ) : (
-              digitalProducts.map((product: any) => (
+              digitalProducts.map((product: DigitalProduct) => (
                 <Table.Row key={product.id}>
                   <Table.Cell>{product.name}</Table.Cell>
                   <Table.Cell>{product.mime_type}</Table.Cell>

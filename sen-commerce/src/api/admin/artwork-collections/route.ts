@@ -1,6 +1,8 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ARTWORK_MODULE } from "../../../modules/artwork-module"
 
+console.log("[Medusa] Loaded /api/admin/artwork-collections route.ts");
+
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
   const artworkCollections = await artworkModuleService.listArtworkCollections()
@@ -9,7 +11,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-  const body = req.body
+  const body = req.body as any
   console.log('[artwork-collections] POST body:', body)
   try {
     const artworkCollection = await artworkModuleService.createArtworkCollections(body)
