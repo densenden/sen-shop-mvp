@@ -1,8 +1,8 @@
-// console.log("[Medusa] Loaded /api/admin/digital-products route.ts");
-// import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-// import { DIGITAL_PRODUCT_MODULE } from "../../../modules/digital-product"
-// import type { DigitalProductModuleService } from "../../../modules/digital-product/services/digital-product-module-service"
-// import { Modules } from "@medusajs/framework/utils"
+console.log("[Medusa] Loaded /api/admin/digital-products route.ts");
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { DIGITAL_PRODUCT_MODULE } from "../../../modules/digital-product"
+import type { DigitalProductModuleService } from "../../../modules/digital-product/services/digital-product-module-service"
+import { Modules } from "@medusajs/framework/utils"
 
 
 console.log("[Medusa] Testing minimal GET handler for /api/admin/digital-products");
