@@ -8,7 +8,4 @@ export const PodProduct = model.define("pod_product", {
   name: model.text(), // Product name
   thumbnail_url: model.text().nullable(), // Product image
   price: model.number().nullable(), // Price (can be null if not set)
-  created_at: model.dateTime().default(new Date()),
-  updated_at: model.dateTime().default(new Date()),
-  deleted_at: model.dateTime().nullable(),
 }) 

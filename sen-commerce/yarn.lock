@@ -8506,6 +8506,11 @@ micromatch@^4.0.4, micromatch@^4.0.8:
     braces "^3.0.3"
     picomatch "^2.3.1"
 
+mikro-orm@^6.4.16:
+  version "6.4.16"
+  resolved "https://registry.npmjs.org/mikro-orm/-/mikro-orm-6.4.16.tgz"
+  integrity sha512-a+19cRuEPEJ3qf5Vpv4HO9TAxo/I6/rP1bZT93ln8YtNzAbCrcLC766EG6upLS6Sf7OLqdq0cXs5mUN9ESQQrg==
+
 mikro-orm@6.4.3:
   version "6.4.3"
   resolved "https://registry.npmjs.org/mikro-orm/-/mikro-orm-6.4.3.tgz"
