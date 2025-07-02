@@ -43,7 +43,15 @@ const NewDigitalProductPage = () => {
         if (xhr.status === 200) {
           navigate("/digital-products")
         } else {
-          const response = JSON.parse(xhr.responseText)
+          let response
+          try {
+            response = JSON.parse(xhr.responseText)
+          } catch (e) {
+            // Not JSON, probably HTML error page
+            alert("Upload failed: Server error (" + xhr.status + "). Please check your backend route and try again.")
+            setUploading(false)
+            return
+          }
           alert("Upload failed: " + (response.error || "Unknown error"))
           setUploading(false)
         }
@@ -54,7 +62,7 @@ const NewDigitalProductPage = () => {
         setUploading(false)
       }
       
-      xhr.open("POST", "/api/admin/digital-products")
+      xhr.open("POST", "/admin/digital-products")
       xhr.withCredentials = true
       xhr.send(formData)
     } catch (error) {

@@ -41,7 +41,7 @@ export function DigitalProductSection({ productId }: DigitalProductSectionProps)
 
   const fetchLinkedProducts = async () => {
     try {
-      const response = await fetch(`/api/admin/products/${productId}/digital-products`, {
+      const response = await fetch(`/admin/products/${productId}/digital-products`, {
         credentials: "include",
       })
       if (response.ok) {
@@ -56,7 +56,7 @@ export function DigitalProductSection({ productId }: DigitalProductSectionProps)
 
   const fetchAllDigitalProducts = async () => {
     try {
-      const response = await fetch("/api/admin/digital-products", {
+      const response = await fetch("/admin/digital-products", {
         credentials: "include",
       })
       if (response.ok) {
@@ -72,7 +72,7 @@ export function DigitalProductSection({ productId }: DigitalProductSectionProps)
 
   const linkDigitalProduct = async (digitalProductId: string) => {
     try {
-      const response = await fetch(`/api/admin/products/${productId}/digital-products`, {
+      const response = await fetch(`/admin/products/${productId}/digital-products`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -95,7 +95,7 @@ export function DigitalProductSection({ productId }: DigitalProductSectionProps)
   const unlinkDigitalProduct = async (digitalProductId: string) => {
     try {
       const response = await fetch(
-        `/api/admin/products/${productId}/digital-products/${digitalProductId}`,
+        `/admin/products/${productId}/digital-products/${digitalProductId}`,
         {
           method: "DELETE",
           credentials: "include",

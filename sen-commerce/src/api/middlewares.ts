@@ -26,7 +26,6 @@ const upload = multer({
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ]
-    
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true)
     } else {
@@ -38,9 +37,9 @@ const upload = multer({
 export default defineMiddlewares({
   routes: [
     {
-      matcher: "/api/admin/digital-products",
+      matcher: "/admin/digital-products",
       method: "POST",
       middlewares: [upload.single('file')],
     },
   ],
-}) 
+})

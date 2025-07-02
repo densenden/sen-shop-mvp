@@ -23,7 +23,7 @@ const DigitalProductsPage = () => {
 
   const fetchDigitalProducts = async () => {
     try {
-      const response = await fetch("/api/admin/digital-products", {
+      const response = await fetch("/admin/digital-products", {
         credentials: "include",
       })
       const data = await response.json()
@@ -39,7 +39,7 @@ const DigitalProductsPage = () => {
     if (!confirm("Are you sure you want to delete this digital product?")) return
 
     try {
-      await fetch(`/api/admin/digital-products/${id}`, {
+      await fetch(`/admin/digital-products/${id}`, {
         method: "DELETE",
         credentials: "include",
       })

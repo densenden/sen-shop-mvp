@@ -27,7 +27,7 @@ Currently, this requires manual API integration:
 
 ```javascript
 // Example API call to link digital product to regular product
-await fetch('/api/admin/products/prod_123/digital-products', {
+await fetch('/admin/products/prod_123/digital-products', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -194,7 +194,7 @@ This endpoint:
 
 ### Link Digital Product to Product
 ```
-POST /api/admin/products/:id/digital-products
+POST /admin/products/:id/digital-products
 {
   "digital_product_id": "dprod_123"
 }
@@ -202,17 +202,17 @@ POST /api/admin/products/:id/digital-products
 
 ### Remove Digital Product Link
 ```
-DELETE /api/admin/products/:id/digital-products/:digital_product_id
+DELETE /admin/products/:id/digital-products/:digital_product_id
 ```
 
 ### Get Product's Digital Products
 ```
-GET /api/admin/products/:id/digital-products
+GET /admin/products/:id/digital-products
 ```
 
 ### Customer Download
 ```
-GET /api/store/download/:token
+GET /store/download/:token
 ```
 
 ---
