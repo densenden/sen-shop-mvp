@@ -1,5 +1,3 @@
-
-
 # Sen-Commerce Backend
 
 ## Overview
@@ -187,6 +185,10 @@ npm start
 - 📋 CDN integration
 - 📋 Caching layer
 - 📋 GraphQL API
+
+## Integrations & API Docs
+
+- [Printful v2 API Integration](./src/modules/artwork-module/README.printful-v2.md)
 
 ---
 
