@@ -8,7 +8,17 @@ import { Modules } from "@medusajs/framework/utils"
 console.log("[Medusa] Testing minimal GET handler for admin/digital-products");
 
 export async function GET(req, res) {
-  res.json({ message: "Hello from digital-products minimal handler!" });
+  try {
+    const digitalProductService = req.scope.resolve(DIGITAL_PRODUCT_MODULE)
+    const digitalProducts = await digitalProductService.listDigitalProducts()
+    res.json({
+      digital_products: digitalProducts || [],
+      count: digitalProducts?.length || 0
+    })
+  } catch (error) {
+    console.error("Error in GET /digital-products:", error)
+    res.status(500).json({ error: error.message || "Failed to list digital products" })
+  }
 }
 
 
@@ -17,7 +27,6 @@ export async function GET(req, res) {
 //   name: string
 //   description?: string
 // }> & {
-//   file?: {
 //     buffer: Buffer
 //     originalname: string
 //     mimetype: string
