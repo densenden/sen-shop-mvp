@@ -9,12 +9,12 @@ export const GET = async (
 ) => {
   try {
     const { id } = req.params
+    console.log("Requested digital product id:", id)
     const digitalProductService: DigitalProductModuleService = 
       req.scope.resolve(DIGITAL_PRODUCT_MODULE)
     
-    const [digitalProduct] = await digitalProductService.listDigitalProducts({
-      filters: { id }
-    })
+    const [digitalProduct] = await digitalProductService.listDigitalProducts({ id })
+    console.log("Result from listDigitalProducts:", digitalProduct)
     
     if (!digitalProduct) {
       return res.status(404).json({ error: "Digital product not found" })

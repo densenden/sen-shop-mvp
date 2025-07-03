@@ -132,9 +132,7 @@ export class DigitalProductModuleService extends MedusaService({
 
   // Delete digital product and its file
   async deleteDigitalProductWithFile(id: string) {
-    const [product] = await this.listDigitalProducts({
-      filters: { id }
-    })
+    const [product] = await this.listDigitalProducts({ id })
     
     if (product && product.file_key) {
       // Delete file from storage
