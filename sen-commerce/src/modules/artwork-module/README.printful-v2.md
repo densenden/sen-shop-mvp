@@ -86,6 +86,32 @@ Enable webhooks for events like:
 
 ---
 
+## 🛒 How Printful Sync and Order Fulfillment Works
+
+### 1. Syncing Printful Products
+- Admin triggers a sync in the dashboard.
+- For each new Printful product, the admin selects an artwork to associate.
+- The system:
+  1. Saves the Printful product in the `pod_product` table (for reference/metadata).
+  2. Creates a new product in the main shop catalog (using the same structure as regular products).
+  3. Updates the selected artwork's `product_ids` to include the new product.
+- The product is now available for sale in the shop frontend, just like any other product.
+
+### 2. Customer Order Flow
+- Customer browses the shop and buys a product (regular or Printful POD).
+- When the order is created, the backend detects if the product is a Printful POD product (by metadata or reference).
+- The backend creates a corresponding order in Printful via the Printful API (`POST /v2/orders`).
+- Printful handles printing and shipping directly to the customer.
+- Webhooks from Printful can update order status in your shop (e.g., shipped, delivered).
+
+### 3. Testing the Flow
+- Sync a new Printful product and associate it with an artwork.
+- Verify the product appears in the shop and is linked to the artwork.
+- Place a test order for the product.
+- Confirm that an order is created at Printful and fulfillment proceeds automatically.
+
+---
+
 ## Summary
 
 With this setup, you can:

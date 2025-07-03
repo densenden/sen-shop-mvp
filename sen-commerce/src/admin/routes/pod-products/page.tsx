@@ -66,26 +66,108 @@ const PodProductEditModal: React.FC<PodProductEditModalProps> = ({ product, onCl
   )
 }
 
+// Modal for artwork selection during sync
+const ArtworkSelectorModal: React.FC<{
+  products: any[]
+  artworks: any[]
+  onConfirm: (mappings: { printfulProductId: string, artworkId: string }[]) => void
+  onClose: () => void
+}> = ({ products, artworks, onConfirm, onClose }) => {
+  const [mappings, setMappings] = useState<{ printfulProductId: string, artworkId: string }[]>(
+    products.map(p => ({ printfulProductId: p.id, artworkId: artworks[0]?.id || "" }))
+  )
+
+  const setArtwork = (idx: number, artworkId: string) => {
+    setMappings(m => m.map((map, i) => i === idx ? { ...map, artworkId } : map))
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Assign Artworks to New POD Products">
+      <div>
+        {products.map((prod, idx) => (
+          <div key={prod.id} style={{ marginBottom: 16, borderBottom: "1px solid #eee", paddingBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <img src={prod.thumbnail_url} width={48} height={48} alt="thumbnail" />
+              <div style={{ flex: 1 }}>
+                <div><b>{prod.name}</b></div>
+                <div style={{ fontSize: 12, color: '#888' }}>{prod.id}</div>
+              </div>
+              <select value={mappings[idx].artworkId} onChange={e => setArtwork(idx, e.target.value)}>
+                {artworks.map(a => (
+                  <option key={a.id} value={a.id}>{a.title}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ))}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={() => onConfirm(mappings)}>Sync</Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // Main POD products list page
 const PodProductsList = () => {
   const [products, setProducts] = useState<any[]>([])
   const [selected, setSelected] = useState<any | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isListLoading, setIsListLoading] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [showArtworkSelector, setShowArtworkSelector] = useState(false)
+  const [newProducts, setNewProducts] = useState<any[]>([])
+  const [artworks, setArtworks] = useState<any[]>([])
 
   // Fetch all POD products
   const fetchProducts = async () => {
-    setIsLoading(true)
+    setIsListLoading(true)
     const res = await fetch("/admin/pod-products", { credentials: "include" })
     const data = await res.json()
     setProducts(data.products || [])
-    setIsLoading(false)
+    setIsListLoading(false)
+  }
+
+  // Fetch all artworks
+  const fetchArtworks = async () => {
+    const res = await fetch("/admin/artworks", { credentials: "include" })
+    const data = await res.json()
+    setArtworks(data.artworks || [])
+  }
+
+  // Fetch new Printful products (not yet in DB)
+  const fetchNewPrintfulProducts = async () => {
+    // For demo, just call the backend to get all Printful products and filter out those already in DB
+    const res = await fetch("/admin/pod-products", { credentials: "include" })
+    const data = await res.json()
+    const existingIds = new Set((data.products || []).map((p: any) => p.printful_product_id))
+    // Simulate fetching from Printful directly (in real app, backend should expose this)
+    const pfRes = await fetch("/api/printful/catalog-products", { credentials: "include" })
+    const pfData = await pfRes.json()
+    return (pfData.products || []).filter((p: any) => !existingIds.has(p.id))
   }
 
   // Sync with Printful
   const syncNow = async () => {
-    setIsLoading(true)
-    await fetch("/admin/pod-products/sync", { method: "POST", credentials: "include" })
+    setIsSyncing(true)
+    await fetchArtworks()
+    const newPfProducts = await fetchNewPrintfulProducts()
+    setNewProducts(newPfProducts)
+    setShowArtworkSelector(true)
+    setIsSyncing(false)
+  }
+
+  const handleSyncConfirm = async (mappings: { printfulProductId: string, artworkId: string }[]) => {
+    setIsSyncing(true)
+    setShowArtworkSelector(false)
+    await fetch("/admin/pod-products/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ mappings }),
+    })
     await fetchProducts()
+    setIsSyncing(false)
   }
 
   useEffect(() => { fetchProducts() }, [])
@@ -93,8 +175,8 @@ const PodProductsList = () => {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h2>POD Products</h2>
-        <Button onClick={syncNow} isLoading={isLoading}>Sync Now</Button>
+        <h2>Printful Products</h2>
+        <Button onClick={syncNow} isLoading={isSyncing}>Sync Now</Button>
       </div>
       <Table>
         <thead>
@@ -125,6 +207,14 @@ const PodProductsList = () => {
           onSave={fetchProducts}
         />
       )}
+      {showArtworkSelector && (
+        <ArtworkSelectorModal
+          products={newProducts}
+          artworks={artworks}
+          onConfirm={handleSyncConfirm}
+          onClose={() => setShowArtworkSelector(false)}
+        />
+      )}
     </div>
   )
 }
@@ -133,6 +223,6 @@ export default PodProductsList
 
 // Add route config for menu integration
 export const config = defineRouteConfig({
-  label: "POD Products",
+  label: "Printful Products",
   icon: CloudArrowDown,
 }) 
