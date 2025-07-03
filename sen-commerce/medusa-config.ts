@@ -60,5 +60,10 @@ export default defineConfig({
     //     from: process.env.SENDGRID_FROM,
     //   }
     // }
+    {
+      resolve: "./src/modules/printful",
+      alias: "printfulModuleService",
+      key: "printful"
+    },
   ]
 });

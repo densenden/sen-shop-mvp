@@ -1,13 +1,14 @@
-import { PodProduct } from "../models/pod-product"
+import { PrintfulProduct } from "../models/printful-product"
 // You may need to adjust import for your ORM/repository usage
 
-// This service handles fetching and importing Printful POD products
+// This service handles fetching and importing Printful products
 export class PrintfulPodProductService {
   private apiToken: string
   private apiBaseUrl: string
+  private printfulProductRepo: any
 
-  constructor() {
-    // Read the Printful API token from environment variables
+  constructor({ printfulProductRepository }) {
+    this.printfulProductRepo = printfulProductRepository
     this.apiToken = process.env.PRINTFUL_API_TOKEN || ""
     this.apiBaseUrl = "https://api.printful.com/v2"
   }
@@ -24,17 +25,15 @@ export class PrintfulPodProductService {
 
   // Import a Printful product, create a shop product, and link to an artwork
   async importProductToArtwork(printfulProduct, artworkId) {
-    // 1. Save to pod_product table (pseudo-code)
-    // await ormRepo.save({ ... })
-    const podProduct = {
+    // 1. Save to printful_product table using the repository
+    const printfulProductRecord = await this.printfulProductRepo.create({
       artwork_id: artworkId,
       printful_product_id: printfulProduct.id,
       name: printfulProduct.name,
       thumbnail_url: printfulProduct.thumbnail_url,
       price: null, // Set if you want to sync price
-    }
+    })
     // 2. Create a main shop product (pseudo-code)
-    // Replace with your real product creation logic/service
     const shopProduct = await this.createProduct({
       title: printfulProduct.name,
       description: printfulProduct.description || '',
@@ -46,7 +45,7 @@ export class PrintfulPodProductService {
     })
     // 3. Update the artwork's product_ids (pseudo-code)
     await this.addProductToArtwork(artworkId, shopProduct.id)
-    return { podProduct, shopProduct }
+    return { printfulProduct: printfulProductRecord, shopProduct }
   }
 
   // Pseudo product creation (replace with real logic)
@@ -63,13 +62,10 @@ export class PrintfulPodProductService {
     return true
   }
 
-  // List all POD products for an artwork
-  async listPodProductsForArtwork(artworkId) {
-    // You need to use your ORM/repository to actually fetch from the database
-    // Example (pseudo-code):
-    // return await ormRepo.find({ artwork_id: artworkId })
-    // Here we just return an empty array for learning
-    return []
+  // List all Printful products for an artwork
+  async listPrintfulProductsForArtwork(artworkId) {
+    // Use the repository to fetch from the database
+    return await this.printfulProductRepo.find({ artwork_id: artworkId })
   }
 
   // Sync all Printful products, prompt for artwork association

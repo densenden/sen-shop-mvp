@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 
-// This model represents a Printful POD product linked to an artwork
-export const PodProduct = model.define("pod_product", {
+// This model represents a Printful product linked to an artwork
+export const PrintfulProduct = model.define("printful_product", {
   id: model.id().primaryKey(),
   artwork_id: model.text(), // Foreign key to artwork
   printful_product_id: model.text(), // ID from Printful
