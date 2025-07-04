@@ -1,14 +1,15 @@
+import { MedusaService } from "@medusajs/framework/utils"
 import { PrintfulProduct } from "../models/printful-product"
-// You may need to adjust import for your ORM/repository usage
 
 // This service handles fetching and importing Printful products
-export class PrintfulPodProductService {
+export class PrintfulPodProductService extends MedusaService({
+  PrintfulProduct,
+}) {
   private apiToken: string
   private apiBaseUrl: string
-  private printfulProductRepo: any
 
-  constructor({ printfulProductRepository }) {
-    this.printfulProductRepo = printfulProductRepository
+  constructor(container: any, options?: any) {
+    super(container, options)
     this.apiToken = process.env.PRINTFUL_API_TOKEN || ""
     this.apiBaseUrl = "https://api.printful.com/v2"
   }
@@ -25,8 +26,8 @@ export class PrintfulPodProductService {
 
   // Import a Printful product, create a shop product, and link to an artwork
   async importProductToArtwork(printfulProduct, artworkId) {
-    // 1. Save to printful_product table using the repository
-    const printfulProductRecord = await this.printfulProductRepo.create({
+    // 1. Save to printful_product table using MedusaService method
+    const printfulProductRecord = await this.createPrintfulProducts({
       artwork_id: artworkId,
       printful_product_id: printfulProduct.id,
       name: printfulProduct.name,
@@ -64,8 +65,8 @@ export class PrintfulPodProductService {
 
   // List all Printful products for an artwork
   async listPrintfulProductsForArtwork(artworkId) {
-    // Use the repository to fetch from the database
-    return await this.printfulProductRepo.find({ artwork_id: artworkId })
+    // Use MedusaService method to fetch from the database
+    return await this.listPrintfulProducts({ artwork_id: artworkId })
   }
 
   // Sync all Printful products, prompt for artwork association

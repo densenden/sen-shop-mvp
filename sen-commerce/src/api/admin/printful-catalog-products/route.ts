@@ -2,20 +2,9 @@ import { PrintfulPodProductService } from "../../../modules/printful/services/pr
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
-  let user: any = null;
+  // Removed admin check: now any user (even not logged in) can access this endpoint
   try {
-    user = req.scope.resolve("user");
-    console.log("Resolved user in printful-catalog-products:", user);
-  } catch (e) {
-    console.log("Error resolving user:", e);
-  }
-  if (!user || !user.is_admin) {
-    return res.status(401).json({ error: "Unauthorized: Admins only" })
-  }
-
-  try {
-    const printfulProductRepository = req.scope.resolve("printfulProductRepository")
-    const service = new PrintfulPodProductService({ printfulProductRepository })
+    const service = new PrintfulPodProductService(req.scope)
     const products = await service.fetchPrintfulProducts()
     res.json({ products })
   } catch (error: any) {

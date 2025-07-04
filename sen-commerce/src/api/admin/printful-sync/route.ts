@@ -7,8 +7,8 @@ export async function POST(req, res) {
     return;
   }
 
-  const printfulProductRepository = req.scope.resolve("printfulProductRepository")
-  const service = new PrintfulPodProductService({ printfulProductRepository })
+  // Instantiate service with Medusa v2 pattern (no repository)
+  const service = new PrintfulPodProductService(req.scope)
   let success = 0, failed = 0, errors: any[] = [];
   for (const { printfulProductId, artworkId } of mappings) {
     try {
