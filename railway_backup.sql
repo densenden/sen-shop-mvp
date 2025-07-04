@@ -2992,7 +2992,7 @@ ALTER TABLE ONLY public.script_migrations ALTER COLUMN id SET DEFAULT nextval('p
 --
 
 COPY public.account_holder (id, provider_id, external_id, email, data, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3002,7 +3002,7 @@ COPY public.account_holder (id, provider_id, external_id, email, data, metadata,
 COPY public.api_key (id, token, salt, redacted, title, type, last_used_at, created_by, created_at, revoked_by, revoked_at, updated_at, deleted_at) FROM stdin;
 apk_01JXAMMM2X4R3QE6TVDJQ703DK	pk_d4b4291c80b78bc6e9f1f52c37f69e13bc45c1754d7ff35103e2fcdbba260c01		pk_d4b***c01	Webshop	publishable	\N		2025-06-09 15:23:43.069+00	\N	\N	2025-06-09 15:23:43.069+00	\N
 apk_01JXB0C1ZBD86HJTAX99GFFWDT	pk_6ef4b1f5d99f740a2d7cab72261b14b435568268768bbc767476067cf1fb4535		pk_6ef***535	Storefront Publishable Key	publishable	\N	system	2025-06-09 18:48:45.291+00	\N	\N	2025-06-09 18:48:45.291+00	\N
-\.
+
 
 
 --
@@ -3010,7 +3010,7 @@ apk_01JXB0C1ZBD86HJTAX99GFFWDT	pk_6ef4b1f5d99f740a2d7cab72261b14b435568268768bbc
 --
 
 COPY public.application_method_buy_rules (application_method_id, promotion_rule_id) FROM stdin;
-\.
+
 
 
 --
@@ -3018,7 +3018,7 @@ COPY public.application_method_buy_rules (application_method_id, promotion_rule_
 --
 
 COPY public.application_method_target_rules (application_method_id, promotion_rule_id) FROM stdin;
-\.
+
 
 
 --
@@ -3029,7 +3029,7 @@ COPY public.artwork (id, title, description, image_url, artwork_collection_id, p
 01JXZEAHZX9Y9MJAPRWQZ8N3XX	Gothic Shelter	Our signature piece where ornate umbrella ribs transform into protective wings, sheltering the elaborate Brobrella script below. Gothic flourishes dance around the canopy like whispered promises between brothers. This design embodies the elegant darkness of true loyalty—beautiful, intricate, and unbreakable. The detailed linework represents how real relationships are built: carefully, deliberately, with attention to every curve and connection.\n"Shelter wrapped in style, protection dressed in elegance."	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750180630742-yfdmi7.jpeg	01JXZE24MHVCJ2SSENQMP1TH70	[]	2025-06-17 17:17:24.862	2025-06-17 17:17:24.862	\N
 01JXZEBV8X8VKJ49R5BJ9X0H24	Storm Breaker	Dynamic energy explodes from this design as the umbrella becomes both shield and weapon against life's chaos. Ink splatters like rain drops, while the umbrella's force field pushes back against the storm. This piece captures the moment when brothers unite to face adversity—not just weathering the storm, but breaking through it together. The explosive composition represents the power of collective strength.\n"When storms come, we don't just endure—we dominate."	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750180666383-x3ea4b.jpeg	01JXZE24MHVCJ2SSENQMP1TH70	[]	2025-06-17 17:18:07.134	2025-06-17 17:18:07.134	\N
 01JXZE99T2ZKRS3TJMSEX6JGSV	Silent Guardian	A lone warrior moves through the storm, umbrella shield raised against life's battles. The flowing ink captures the essence of perseverance—sometimes brotherhood means standing strong alone so others don't have to. The Japanese calligraphy speaks to ancient codes of honor, while the red seal marks authenticity of spirit. This design represents the brother who protects quietly, moves with purpose, and never abandons his post.\n"In silence, strength. In solitude, solidarity."	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750180580076-v6bwbq.jpeg	01JXZE24MHVCJ2SSENQMP1TH70	["prod_01JY1AWA7HJ0CYDSAKX7JRNTC3"]	2025-06-17 17:16:43.716	2025-07-03 11:13:06.087	\N
-\.
+
 
 
 --
@@ -3038,7 +3038,7 @@ COPY public.artwork (id, title, description, image_url, artwork_collection_id, p
 
 COPY public.artwork_collection (id, name, description, topic, month_created, midjourney_version, purpose, thumbnail_url, created_at, updated_at, deleted_at, brand_story, genesis_story, design_philosophy, core_values, visual_themes, lifestyle_concepts, campaign_ideas, target_audience_messaging, brand_tagline, brand_colors, brand_fonts, social_media_tags, editorial_image_1, editorial_image_2, editorial_image_3, editorial_image_4) FROM stdin;
 01JXZE24MHVCJ2SSENQMP1TH70	Brobrella	Born from the streets of Frankfurt and refined by brotherhood, Brobrella emerged in March 2024 as more than just a clothing brand—it's a movement. The name itself tells our story: "Bro" representing the unbreakable bonds between brothers, and "brella" symbolizing the protective umbrella we create for our community.	Urban Streetwear	2024-03	5.1	merchandise	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750180362859-4xkaun.jpg	2025-06-17 17:12:49.044	2025-06-18 10:12:19.443	\N		Born from the streets and refined by brotherhood, Brobrella emerged in May 2023 as more than just a clothing brand—it's a movement. The name itself tells our story: "Bro" representing the unbreakable bonds between brothers, and "brella" symbolizing the protective umbrella we create for our community.	Our designs blend urban grit with Eastern mysticism, creating wearable art that speaks to the modern warrior's soul. From gothic typography that commands respect to minimalist samurai imagery that whispers ancient wisdom, each piece tells a story of strength, loyalty, and brotherhood.	["Brotherhood", "Loyalty", "Protection", "Unity", "Strength", "Honor", "Respect", "Community"]	["Gothic elegance", "Urban samurai", "Street philosophy", "Ancient wisdom meets modern style", "Protective symbols", "Warrior spirit", "Minimalist power", "Cultural fusion"]	["Brothers in arms", "United we stand", "Shelter from the storm", "Modern warriors", "Street nobility", "Sacred bonds", "Protective instinct", "Collective strength"]	[{"title": "Under One Umbrella", "description": "celebrating diversity in unity"}, {"title": "Brothers by Choice", "description": "chosen family narratives"}, {"title": "Ancient Code, Modern Streets", "description": "timeless values in contemporary life"}, {"title": "Shelter Each Other", "description": "mutual protection and support"}, {"title": "The Circle Remains Unbroken", "description": "eternal brotherhood"}]	For those who understand that true strength comes from lifting others up, Brobrella represents the bond that can't be broken, the protection that never fails, and the brotherhood that transcends blood.\n	We don't just wear the brand—we live the brotherhood.	["fff1d7", "343f41"]	["DEN SEN", "Rubik"]	["brobrella"]	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750179866259-v25f8d.jpg	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750179872483-uzevb.jpg	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750179880587-2jr8e.jpg	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/artworks/1750179885460-55qrko.jpg
-\.
+
 
 
 --
@@ -3049,7 +3049,7 @@ COPY public.auth_identity (id, app_metadata, created_at, updated_at, deleted_at)
 authid_01JXAYJ7ZGP3F5W6YAKJBSWHXS	\N	2025-06-09 18:17:10.896+00	2025-06-09 18:17:10.896+00	\N
 authid_01JXCFXX8J1MRNNHHYHFG03TMD	{"user_id": "user_01JXCFXX3B7M95ZGRS4M8D1SS5"}	2025-06-10 08:39:53.362+00	2025-06-10 08:39:53.507+00	\N
 authid_01JXM7PSGH7WXBCBVNZ49V2M44	{"user_id": "user_01JXM7PS9N7GY3E2220RWRJ1M0"}	2025-06-13 08:50:06.993+00	2025-06-13 08:50:07.14+00	\N
-\.
+
 
 
 --
@@ -3057,7 +3057,7 @@ authid_01JXM7PSGH7WXBCBVNZ49V2M44	{"user_id": "user_01JXM7PS9N7GY3E2220RWRJ1M0"}
 --
 
 COPY public.capture (id, amount, raw_amount, payment_id, created_at, updated_at, deleted_at, created_by, metadata) FROM stdin;
-\.
+
 
 
 --
@@ -3065,7 +3065,7 @@ COPY public.capture (id, amount, raw_amount, payment_id, created_at, updated_at,
 --
 
 COPY public.cart (id, region_id, customer_id, sales_channel_id, email, currency_code, shipping_address_id, billing_address_id, metadata, created_at, updated_at, deleted_at, completed_at) FROM stdin;
-\.
+
 
 
 --
@@ -3073,7 +3073,7 @@ COPY public.cart (id, region_id, customer_id, sales_channel_id, email, currency_
 --
 
 COPY public.cart_address (id, customer_id, company, first_name, last_name, address_1, address_2, city, country_code, province, postal_code, phone, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3081,7 +3081,7 @@ COPY public.cart_address (id, customer_id, company, first_name, last_name, addre
 --
 
 COPY public.cart_line_item (id, cart_id, title, subtitle, thumbnail, quantity, variant_id, product_id, product_title, product_description, product_subtitle, product_type, product_collection, product_handle, variant_sku, variant_barcode, variant_title, variant_option_values, requires_shipping, is_discountable, is_tax_inclusive, compare_at_unit_price, raw_compare_at_unit_price, unit_price, raw_unit_price, metadata, created_at, updated_at, deleted_at, product_type_id, is_custom_price, is_giftcard) FROM stdin;
-\.
+
 
 
 --
@@ -3089,7 +3089,7 @@ COPY public.cart_line_item (id, cart_id, title, subtitle, thumbnail, quantity, v
 --
 
 COPY public.cart_line_item_adjustment (id, description, promotion_id, code, amount, raw_amount, provider_id, metadata, created_at, updated_at, deleted_at, item_id) FROM stdin;
-\.
+
 
 
 --
@@ -3097,7 +3097,7 @@ COPY public.cart_line_item_adjustment (id, description, promotion_id, code, amou
 --
 
 COPY public.cart_line_item_tax_line (id, description, tax_rate_id, code, rate, provider_id, metadata, created_at, updated_at, deleted_at, item_id) FROM stdin;
-\.
+
 
 
 --
@@ -3105,7 +3105,7 @@ COPY public.cart_line_item_tax_line (id, description, tax_rate_id, code, rate, p
 --
 
 COPY public.cart_payment_collection (cart_id, payment_collection_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3113,7 +3113,7 @@ COPY public.cart_payment_collection (cart_id, payment_collection_id, id, created
 --
 
 COPY public.cart_promotion (cart_id, promotion_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3121,7 +3121,7 @@ COPY public.cart_promotion (cart_id, promotion_id, id, created_at, updated_at, d
 --
 
 COPY public.cart_shipping_method (id, cart_id, name, description, amount, raw_amount, is_tax_inclusive, shipping_option_id, data, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3129,7 +3129,7 @@ COPY public.cart_shipping_method (id, cart_id, name, description, amount, raw_am
 --
 
 COPY public.cart_shipping_method_adjustment (id, description, promotion_id, code, amount, raw_amount, provider_id, metadata, created_at, updated_at, deleted_at, shipping_method_id) FROM stdin;
-\.
+
 
 
 --
@@ -3137,7 +3137,7 @@ COPY public.cart_shipping_method_adjustment (id, description, promotion_id, code
 --
 
 COPY public.cart_shipping_method_tax_line (id, description, tax_rate_id, code, rate, provider_id, metadata, created_at, updated_at, deleted_at, shipping_method_id) FROM stdin;
-\.
+
 
 
 --
@@ -3145,7 +3145,7 @@ COPY public.cart_shipping_method_tax_line (id, description, tax_rate_id, code, r
 --
 
 COPY public.credit_line (id, cart_id, reference, reference_id, amount, raw_amount, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3273,7 +3273,7 @@ yer	YR	ر.ي.‏	0	0	{"value": "0", "precision": 20}	Yemeni Rial	2025-06-09 14:4
 zar	R	R	2	0	{"value": "0", "precision": 20}	South African Rand	2025-06-09 14:47:27.947+00	2025-06-09 14:47:27.947+00	\N
 zmk	ZK	ZK	0	0	{"value": "0", "precision": 20}	Zambian Kwacha	2025-06-09 14:47:27.947+00	2025-06-09 14:47:27.947+00	\N
 zwl	ZWL$	ZWL$	0	0	{"value": "0", "precision": 20}	Zimbabwean Dollar	2025-06-09 14:47:27.947+00	2025-06-09 14:47:27.947+00	\N
-\.
+
 
 
 --
@@ -3281,7 +3281,7 @@ zwl	ZWL$	ZWL$	0	0	{"value": "0", "precision": 20}	Zimbabwean Dollar	2025-06-09 1
 --
 
 COPY public.customer (id, company_name, first_name, last_name, email, phone, has_account, metadata, created_at, updated_at, deleted_at, created_by) FROM stdin;
-\.
+
 
 
 --
@@ -3289,7 +3289,7 @@ COPY public.customer (id, company_name, first_name, last_name, email, phone, has
 --
 
 COPY public.customer_account_holder (customer_id, account_holder_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3297,7 +3297,7 @@ COPY public.customer_account_holder (customer_id, account_holder_id, id, created
 --
 
 COPY public.customer_address (id, customer_id, address_name, is_default_shipping, is_default_billing, company, first_name, last_name, address_1, address_2, city, country_code, province, postal_code, phone, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3305,7 +3305,7 @@ COPY public.customer_address (id, customer_id, address_name, is_default_shipping
 --
 
 COPY public.customer_group (id, name, metadata, created_by, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3313,7 +3313,7 @@ COPY public.customer_group (id, name, metadata, created_by, created_at, updated_
 --
 
 COPY public.customer_group_customer (id, customer_id, customer_group_id, metadata, created_at, updated_at, created_by, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3324,7 +3324,7 @@ COPY public.digital_product (id, name, file_url, file_key, file_size, mime_type,
 01JY16H72STHK05CWMQ0YY18MH	Brobrella\tGothic Shelter 2	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/print/digital-products/1750239579176-51hvac.jpg	digital-products/1750239579176-51hvac.jpg	12861814	image/jpeg	second file	\N	-1	\N	2025-06-18 09:39:43.322	2025-06-18 09:39:43.322	\N
 01JY1AYDP33FTPGMQZDQG1DYB1	Brobrella\tGothic Shelter	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/print/digital-products/1750244206272-w6e14i.jpg	digital-products/1750244206272-w6e14i.jpg	12861814	image/jpeg		\N	-1	\N	2025-06-18 10:56:50.371	2025-06-18 10:56:50.371	\N
 01JZ5BBTGPMZFHV6H18F9ZQN9Q	Brobrella\tGothic Shelter	https://vewahhcqqozacsodvhlb.supabase.co/storage/v1/object/public/print/digital-products/1751452605551-1nxhnw.jpg	digital-products/1751452605551-1nxhnw.jpg	12861814	image/jpeg	first file	\N	-1	\N	2025-07-02 10:36:49.048	2025-07-02 10:36:49.048	\N
-\.
+
 
 
 --
@@ -3332,7 +3332,7 @@ COPY public.digital_product (id, name, file_url, file_key, file_size, mime_type,
 --
 
 COPY public.digital_product_download (id, digital_product_id, order_id, customer_id, token, download_count, last_downloaded_at, expires_at, is_active, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3340,7 +3340,7 @@ COPY public.digital_product_download (id, digital_product_id, order_id, customer
 --
 
 COPY public.fulfillment (id, location_id, packed_at, shipped_at, delivered_at, canceled_at, data, provider_id, shipping_option_id, metadata, delivery_address_id, created_at, updated_at, deleted_at, marked_shipped_by, created_by, requires_shipping) FROM stdin;
-\.
+
 
 
 --
@@ -3348,7 +3348,7 @@ COPY public.fulfillment (id, location_id, packed_at, shipped_at, delivered_at, c
 --
 
 COPY public.fulfillment_address (id, company, first_name, last_name, address_1, address_2, city, country_code, province, postal_code, phone, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3356,7 +3356,7 @@ COPY public.fulfillment_address (id, company, first_name, last_name, address_1, 
 --
 
 COPY public.fulfillment_item (id, title, sku, barcode, quantity, raw_quantity, line_item_id, inventory_item_id, fulfillment_id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3364,7 +3364,7 @@ COPY public.fulfillment_item (id, title, sku, barcode, quantity, raw_quantity, l
 --
 
 COPY public.fulfillment_label (id, tracking_number, tracking_url, label_url, fulfillment_id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3373,7 +3373,7 @@ COPY public.fulfillment_label (id, tracking_number, tracking_url, label_url, ful
 
 COPY public.fulfillment_provider (id, is_enabled, created_at, updated_at, deleted_at) FROM stdin;
 manual_manual	t	2025-06-09 14:47:28.624+00	2025-06-09 14:47:28.624+00	\N
-\.
+
 
 
 --
@@ -3382,7 +3382,7 @@ manual_manual	t	2025-06-09 14:47:28.624+00	2025-06-09 14:47:28.624+00	\N
 
 COPY public.fulfillment_set (id, name, type, metadata, created_at, updated_at, deleted_at) FROM stdin;
 fuset_01JXAMMK2XQBJ873SN5ER2WVBV	European Warehouse delivery	shipping	\N	2025-06-09 15:23:42.045+00	2025-06-09 15:23:42.045+00	\N
-\.
+
 
 
 --
@@ -3397,7 +3397,7 @@ fgz_01JXAMMK2WPGP6HZ0DW08FZPP1	country	se	\N	\N	serzo_01JXAMMK2XSA44DCWPBKWH9ARG
 fgz_01JXAMMK2W8VQETB7ZC12EMKR9	country	fr	\N	\N	serzo_01JXAMMK2XSA44DCWPBKWH9ARG	\N	\N	2025-06-09 15:23:42.045+00	2025-06-09 15:23:42.045+00	\N
 fgz_01JXAMMK2WM5JHK50KFHDH4N51	country	es	\N	\N	serzo_01JXAMMK2XSA44DCWPBKWH9ARG	\N	\N	2025-06-09 15:23:42.045+00	2025-06-09 15:23:42.045+00	\N
 fgz_01JXAMMK2W7EF99DP5MW9ZSXBK	country	it	\N	\N	serzo_01JXAMMK2XSA44DCWPBKWH9ARG	\N	\N	2025-06-09 15:23:42.045+00	2025-06-09 15:23:42.045+00	\N
-\.
+
 
 
 --
@@ -3415,7 +3415,7 @@ img_01JXAMMMF7JZ727HK5GR11JYVD	https://medusa-public-images.s3.eu-west-1.amazona
 img_01JXAMMMF7RGMRX41Z1HF4BM98	https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N	1	prod_01JXAMMMF49R0QH2W6GCH0JD6G
 img_01JXAMMMF80RT2FH1A5NE8SQV6	https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N	0	prod_01JXAMMMF49CW46V7F9MNXZKFJ
 img_01JXAMMMF80V9V5WS4KD5A0C2N	https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N	1	prod_01JXAMMMF49CW46V7F9MNXZKFJ
-\.
+
 
 
 --
@@ -3443,7 +3443,7 @@ iitem_01JXAMMN3RAJ3J914V8DH4D09N	2025-06-09 15:23:44.121+00	2025-06-09 15:23:44.
 iitem_01JXAMMN3RQ373Y6Z17QHXF64P	2025-06-09 15:23:44.121+00	2025-06-09 15:23:44.121+00	\N	SHORTS-M	\N	\N	\N	\N	\N	\N	\N	\N	t	M	M	\N	\N
 iitem_01JXAMMN3RAT5H5W4AG240J6DG	2025-06-09 15:23:44.121+00	2025-06-09 15:23:44.121+00	\N	SHORTS-L	\N	\N	\N	\N	\N	\N	\N	\N	t	L	L	\N	\N
 iitem_01JXAMMN3RPD4BR6JP9668HEPR	2025-06-09 15:23:44.121+00	2025-06-09 15:23:44.121+00	\N	SHORTS-XL	\N	\N	\N	\N	\N	\N	\N	\N	t	XL	XL	\N	\N
-\.
+
 
 
 --
@@ -3471,7 +3471,7 @@ ilev_01JXAMMNRAPVZAF2QTZ2NKCRAX	2025-06-09 15:23:44.779+00	2025-06-09 15:23:44.7
 ilev_01JXAMMNRA0VHEETRCPMS7TKC1	2025-06-09 15:23:44.779+00	2025-06-09 15:23:44.779+00	\N	iitem_01JXAMMN3RQ373Y6Z17QHXF64P	sloc_01JXAMMJVTM5SJDG6GENDJQ450	1000000	0	0	\N	{"value": "1000000", "precision": 20}	{"value": "0", "precision": 20}	{"value": "0", "precision": 20}
 ilev_01JXAMMNRA2NS8QSFG331KQNB2	2025-06-09 15:23:44.779+00	2025-06-09 15:23:44.779+00	\N	iitem_01JXAMMN3RQ98PW3G0TGK679VC	sloc_01JXAMMJVTM5SJDG6GENDJQ450	1000000	0	0	\N	{"value": "1000000", "precision": 20}	{"value": "0", "precision": 20}	{"value": "0", "precision": 20}
 ilev_01JXAMMNRAVET949M0K24CP4WW	2025-06-09 15:23:44.779+00	2025-06-09 15:23:44.779+00	\N	iitem_01JXAMMN3RRYE7RAYDRFFG4F1B	sloc_01JXAMMJVTM5SJDG6GENDJQ450	1000000	0	0	\N	{"value": "1000000", "precision": 20}	{"value": "0", "precision": 20}	{"value": "0", "precision": 20}
-\.
+
 
 
 --
@@ -3480,7 +3480,7 @@ ilev_01JXAMMNRAVET949M0K24CP4WW	2025-06-09 15:23:44.779+00	2025-06-09 15:23:44.7
 
 COPY public.invite (id, email, accepted, token, expires_at, metadata, created_at, updated_at, deleted_at) FROM stdin;
 invite_01JXB2NMCQJ2S4DPRBRK03VMNR	newemail@sen.studio	f	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Imludml0ZV8wMUpYQjJOTUNRSjJTNERQUkJSSzAzVk1OUiIsImVtYWlsIjoibmV3ZW1haWxAc2VuLnN0dWRpbyIsImlhdCI6MTc0OTQ5NzMzNiwiZXhwIjoxNzQ5NTgzNzM2LCJqdGkiOiJjNTI3MDdkOS0zMWZmLTQ3MTYtODU3ZC00ODlmNWFlMzM0ZjMifQ._bgBBSl_y2WJcWjVHuoJgCCjpdLnY_QGpc0io1zTAP0	2025-06-10 19:28:56.215+00	\N	2025-06-09 19:28:56.218+00	2025-06-09 19:28:56.218+00	\N
-\.
+
 
 
 --
@@ -3506,7 +3506,7 @@ COPY public.link_module_migrations (id, table_name, link_descriptor, created_at)
 16	shipping_option_price_set	{"toModel": "price_set", "toModule": "pricing", "fromModel": "shipping_option", "fromModule": "fulfillment"}	2025-06-09 14:47:25.264781
 17	product_shipping_profile	{"toModel": "shipping_profile", "toModule": "fulfillment", "fromModel": "product", "fromModule": "product"}	2025-06-09 14:47:25.267909
 18	customer_account_holder	{"toModel": "account_holder", "toModule": "payment", "fromModel": "customer", "fromModule": "customer"}	2025-06-09 14:47:25.271752
-\.
+
 
 
 --
@@ -3515,7 +3515,7 @@ COPY public.link_module_migrations (id, table_name, link_descriptor, created_at)
 
 COPY public.location_fulfillment_provider (stock_location_id, fulfillment_provider_id, id, created_at, updated_at, deleted_at) FROM stdin;
 sloc_01JXAMMJVTM5SJDG6GENDJQ450	manual_manual	locfp_01JXAMMJZ8JKVJ941CY2TE2TK4	2025-06-09 15:23:41.93987+00	2025-06-09 15:23:41.93987+00	\N
-\.
+
 
 
 --
@@ -3524,7 +3524,7 @@ sloc_01JXAMMJVTM5SJDG6GENDJQ450	manual_manual	locfp_01JXAMMJZ8JKVJ941CY2TE2TK4	2
 
 COPY public.location_fulfillment_set (stock_location_id, fulfillment_set_id, id, created_at, updated_at, deleted_at) FROM stdin;
 sloc_01JXAMMJVTM5SJDG6GENDJQ450	fuset_01JXAMMK2XQBJ873SN5ER2WVBV	locfs_01JXAMMK8JYRR3H0ACX827K7D8	2025-06-09 15:23:42.237304+00	2025-06-09 15:23:42.237304+00	\N
-\.
+
 
 
 
@@ -3534,7 +3534,7 @@ sloc_01JXAMMJVTM5SJDG6GENDJQ450	fuset_01JXAMMK2XQBJ873SN5ER2WVBV	locfs_01JXAMMK8
 --
 
 COPY public.notification (id, "to", channel, template, data, trigger_type, resource_id, resource_type, receiver_id, original_notification_id, idempotency_key, external_id, provider_id, created_at, updated_at, deleted_at, status) FROM stdin;
-\.
+
 
 
 --
@@ -3543,7 +3543,7 @@ COPY public.notification (id, "to", channel, template, data, trigger_type, resou
 
 COPY public.notification_provider (id, handle, name, is_enabled, channels, created_at, updated_at, deleted_at) FROM stdin;
 local	local	local	t	{feed}	2025-06-09 14:47:28.832+00	2025-06-09 14:47:28.832+00	\N
-\.
+
 
 
 --
@@ -3551,7 +3551,7 @@ local	local	local	t	{feed}	2025-06-09 14:47:28.832+00	2025-06-09 14:47:28.832+00
 --
 
 COPY public."order" (id, region_id, display_id, customer_id, version, sales_channel_id, status, is_draft_order, email, currency_code, shipping_address_id, billing_address_id, no_notification, metadata, created_at, updated_at, deleted_at, canceled_at) FROM stdin;
-\.
+
 
 
 --
@@ -3559,7 +3559,7 @@ COPY public."order" (id, region_id, display_id, customer_id, version, sales_chan
 --
 
 COPY public.order_address (id, customer_id, company, first_name, last_name, address_1, address_2, city, country_code, province, postal_code, phone, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3567,7 +3567,7 @@ COPY public.order_address (id, customer_id, company, first_name, last_name, addr
 --
 
 COPY public.order_cart (order_id, cart_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3575,7 +3575,7 @@ COPY public.order_cart (order_id, cart_id, id, created_at, updated_at, deleted_a
 --
 
 COPY public.order_change (id, order_id, version, description, status, internal_note, created_by, requested_by, requested_at, confirmed_by, confirmed_at, declined_by, declined_reason, metadata, declined_at, canceled_by, canceled_at, created_at, updated_at, change_type, deleted_at, return_id, claim_id, exchange_id) FROM stdin;
-\.
+
 
 
 --
@@ -3583,7 +3583,7 @@ COPY public.order_change (id, order_id, version, description, status, internal_n
 --
 
 COPY public.order_change_action (id, order_id, version, ordering, order_change_id, reference, reference_id, action, details, amount, raw_amount, internal_note, applied, created_at, updated_at, deleted_at, return_id, claim_id, exchange_id) FROM stdin;
-\.
+
 
 
 --
@@ -3591,7 +3591,7 @@ COPY public.order_change_action (id, order_id, version, ordering, order_change_i
 --
 
 COPY public.order_claim (id, order_id, return_id, order_version, display_id, type, no_notification, refund_amount, raw_refund_amount, metadata, created_at, updated_at, deleted_at, canceled_at, created_by) FROM stdin;
-\.
+
 
 
 --
@@ -3599,7 +3599,7 @@ COPY public.order_claim (id, order_id, return_id, order_version, display_id, typ
 --
 
 COPY public.order_claim_item (id, claim_id, item_id, is_additional_item, reason, quantity, raw_quantity, note, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3607,7 +3607,7 @@ COPY public.order_claim_item (id, claim_id, item_id, is_additional_item, reason,
 --
 
 COPY public.order_claim_item_image (id, claim_item_id, url, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3615,7 +3615,7 @@ COPY public.order_claim_item_image (id, claim_item_id, url, metadata, created_at
 --
 
 COPY public.order_credit_line (id, order_id, reference, reference_id, amount, raw_amount, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3623,7 +3623,7 @@ COPY public.order_credit_line (id, order_id, reference, reference_id, amount, ra
 --
 
 COPY public.order_exchange (id, order_id, return_id, order_version, display_id, no_notification, allow_backorder, difference_due, raw_difference_due, metadata, created_at, updated_at, deleted_at, canceled_at, created_by) FROM stdin;
-\.
+
 
 
 --
@@ -3631,7 +3631,7 @@ COPY public.order_exchange (id, order_id, return_id, order_version, display_id, 
 --
 
 COPY public.order_exchange_item (id, exchange_id, item_id, quantity, raw_quantity, note, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3639,7 +3639,7 @@ COPY public.order_exchange_item (id, exchange_id, item_id, quantity, raw_quantit
 --
 
 COPY public.order_fulfillment (order_id, fulfillment_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3647,7 +3647,7 @@ COPY public.order_fulfillment (order_id, fulfillment_id, id, created_at, updated
 --
 
 COPY public.order_item (id, order_id, version, item_id, quantity, raw_quantity, fulfilled_quantity, raw_fulfilled_quantity, shipped_quantity, raw_shipped_quantity, return_requested_quantity, raw_return_requested_quantity, return_received_quantity, raw_return_received_quantity, return_dismissed_quantity, raw_return_dismissed_quantity, written_off_quantity, raw_written_off_quantity, metadata, created_at, updated_at, deleted_at, delivered_quantity, raw_delivered_quantity, unit_price, raw_unit_price, compare_at_unit_price, raw_compare_at_unit_price) FROM stdin;
-\.
+
 
 
 --
@@ -3655,7 +3655,7 @@ COPY public.order_item (id, order_id, version, item_id, quantity, raw_quantity, 
 --
 
 COPY public.order_line_item (id, totals_id, title, subtitle, thumbnail, variant_id, product_id, product_title, product_description, product_subtitle, product_type, product_collection, product_handle, variant_sku, variant_barcode, variant_title, variant_option_values, requires_shipping, is_discountable, is_tax_inclusive, compare_at_unit_price, raw_compare_at_unit_price, unit_price, raw_unit_price, metadata, created_at, updated_at, deleted_at, is_custom_price, product_type_id, is_giftcard) FROM stdin;
-\.
+
 
 
 --
@@ -3663,7 +3663,7 @@ COPY public.order_line_item (id, totals_id, title, subtitle, thumbnail, variant_
 --
 
 COPY public.order_line_item_adjustment (id, description, promotion_id, code, amount, raw_amount, provider_id, created_at, updated_at, item_id, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3671,7 +3671,7 @@ COPY public.order_line_item_adjustment (id, description, promotion_id, code, amo
 --
 
 COPY public.order_line_item_tax_line (id, description, tax_rate_id, code, rate, raw_rate, provider_id, created_at, updated_at, item_id, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3679,7 +3679,7 @@ COPY public.order_line_item_tax_line (id, description, tax_rate_id, code, rate, 
 --
 
 COPY public.order_payment_collection (order_id, payment_collection_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3687,7 +3687,7 @@ COPY public.order_payment_collection (order_id, payment_collection_id, id, creat
 --
 
 COPY public.order_promotion (order_id, promotion_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3695,7 +3695,7 @@ COPY public.order_promotion (order_id, promotion_id, id, created_at, updated_at,
 --
 
 COPY public.order_shipping (id, order_id, version, shipping_method_id, created_at, updated_at, deleted_at, return_id, claim_id, exchange_id) FROM stdin;
-\.
+
 
 
 --
@@ -3703,7 +3703,7 @@ COPY public.order_shipping (id, order_id, version, shipping_method_id, created_a
 --
 
 COPY public.order_shipping_method (id, name, description, amount, raw_amount, is_tax_inclusive, shipping_option_id, data, metadata, created_at, updated_at, deleted_at, is_custom_amount) FROM stdin;
-\.
+
 
 
 --
@@ -3711,7 +3711,7 @@ COPY public.order_shipping_method (id, name, description, amount, raw_amount, is
 --
 
 COPY public.order_shipping_method_adjustment (id, description, promotion_id, code, amount, raw_amount, provider_id, created_at, updated_at, shipping_method_id, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3719,7 +3719,7 @@ COPY public.order_shipping_method_adjustment (id, description, promotion_id, cod
 --
 
 COPY public.order_shipping_method_tax_line (id, description, tax_rate_id, code, rate, raw_rate, provider_id, created_at, updated_at, shipping_method_id, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3727,7 +3727,7 @@ COPY public.order_shipping_method_tax_line (id, description, tax_rate_id, code, 
 --
 
 COPY public.order_summary (id, order_id, version, totals, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3735,7 +3735,7 @@ COPY public.order_summary (id, order_id, version, totals, created_at, updated_at
 --
 
 COPY public.order_transaction (id, order_id, version, amount, raw_amount, currency_code, reference, reference_id, created_at, updated_at, deleted_at, return_id, claim_id, exchange_id) FROM stdin;
-\.
+
 
 
 --
@@ -3743,7 +3743,7 @@ COPY public.order_transaction (id, order_id, version, amount, raw_amount, curren
 --
 
 COPY public.payment (id, amount, raw_amount, currency_code, provider_id, data, created_at, updated_at, deleted_at, captured_at, canceled_at, payment_collection_id, payment_session_id, metadata) FROM stdin;
-\.
+
 
 
 --
@@ -3751,7 +3751,7 @@ COPY public.payment (id, amount, raw_amount, currency_code, provider_id, data, c
 --
 
 COPY public.payment_collection (id, currency_code, amount, raw_amount, authorized_amount, raw_authorized_amount, captured_amount, raw_captured_amount, refunded_amount, raw_refunded_amount, created_at, updated_at, deleted_at, completed_at, status, metadata) FROM stdin;
-\.
+
 
 
 --
@@ -3759,7 +3759,7 @@ COPY public.payment_collection (id, currency_code, amount, raw_amount, authorize
 --
 
 COPY public.payment_collection_payment_providers (payment_collection_id, payment_provider_id) FROM stdin;
-\.
+
 
 
 --
@@ -3768,7 +3768,7 @@ COPY public.payment_collection_payment_providers (payment_collection_id, payment
 
 COPY public.payment_provider (id, is_enabled, created_at, updated_at, deleted_at) FROM stdin;
 pp_system_default	t	2025-06-09 14:47:28.181+00	2025-06-09 14:47:28.181+00	\N
-\.
+
 
 
 --
@@ -3776,7 +3776,7 @@ pp_system_default	t	2025-06-09 14:47:28.181+00	2025-06-09 14:47:28.181+00	\N
 --
 
 COPY public.payment_session (id, currency_code, amount, raw_amount, provider_id, data, context, status, authorized_at, payment_collection_id, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3784,7 +3784,7 @@ COPY public.payment_session (id, currency_code, amount, raw_amount, provider_id,
 --
 
 COPY public.pod_product (id, artwork_id, printful_product_id, name, thumbnail_url, price) FROM stdin;
-\.
+
 
 
 --
@@ -3838,7 +3838,7 @@ price_01JXAMMNCV8FMF6P9KFF643EBH	\N	pset_01JXAMMNCV2B0Z6B7C8W6HMB8Y	eur	{"value"
 price_01JXAMMNCVDF15A6HCH7AVQ0N4	\N	pset_01JXAMMNCV2B0Z6B7C8W6HMB8Y	usd	{"value": "15", "precision": 20}	0	2025-06-09 15:23:44.413+00	2025-06-09 15:23:44.413+00	\N	\N	15	\N	\N
 price_01JXAMMNCVBJJ68P2AB44GPSYR	\N	pset_01JXAMMNCV2MQ0QDRV9FZRR304	eur	{"value": "10", "precision": 20}	0	2025-06-09 15:23:44.413+00	2025-06-09 15:23:44.413+00	\N	\N	10	\N	\N
 price_01JXAMMNCVSAQ2471Q8G4HRGBA	\N	pset_01JXAMMNCV2MQ0QDRV9FZRR304	usd	{"value": "15", "precision": 20}	0	2025-06-09 15:23:44.413+00	2025-06-09 15:23:44.413+00	\N	\N	15	\N	\N
-\.
+
 
 
 --
@@ -3846,7 +3846,7 @@ price_01JXAMMNCVSAQ2471Q8G4HRGBA	\N	pset_01JXAMMNCV2MQ0QDRV9FZRR304	usd	{"value"
 --
 
 COPY public.price_list (id, status, starts_at, ends_at, rules_count, title, description, type, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -3854,7 +3854,7 @@ COPY public.price_list (id, status, starts_at, ends_at, rules_count, title, desc
 --
 
 COPY public.price_list_rule (id, price_list_id, created_at, updated_at, deleted_at, value, attribute) FROM stdin;
-\.
+
 
 
 --
@@ -3865,7 +3865,7 @@ COPY public.price_preference (id, attribute, value, is_tax_inclusive, created_at
 prpref_01JXAMCRFD9TWHFHTHWC2EEQ5E	currency_code	eur	f	2025-06-09 15:19:25.421+00	2025-06-09 15:19:25.421+00	\N
 prpref_01JXAMMJBZG5119XS18EZW4BX5	currency_code	usd	f	2025-06-09 15:23:41.312+00	2025-06-09 15:23:41.312+00	\N
 prpref_01JXAMMJMCMJ6Q371SRNH6A1C1	region_id	reg_01JXAMMJEW67HVN6167BJ7513K	f	2025-06-09 15:23:41.58+00	2025-06-09 15:23:41.58+00	\N
-\.
+
 
 
 --
@@ -3875,7 +3875,7 @@ prpref_01JXAMMJMCMJ6Q371SRNH6A1C1	region_id	reg_01JXAMMJEW67HVN6167BJ7513K	f	202
 COPY public.price_rule (id, value, priority, price_id, created_at, updated_at, deleted_at, attribute, operator) FROM stdin;
 prule_01JXAMMKPCQKW24BMYW2BS29SW	reg_01JXAMMJEW67HVN6167BJ7513K	0	price_01JXAMMKPCSSR687XF4515053M	2025-06-09 15:23:42.669+00	2025-06-09 15:23:42.669+00	\N	region_id	eq
 prule_01JXAMMKPCRPFJF9ZA6ZZBXRCQ	reg_01JXAMMJEW67HVN6167BJ7513K	0	price_01JXAMMKPC6GB3SF8QN08AC0AB	2025-06-09 15:23:42.669+00	2025-06-09 15:23:42.669+00	\N	region_id	eq
-\.
+
 
 
 --
@@ -3906,7 +3906,7 @@ pset_01JXAMMNCVFTPVNDF329WSPANZ	2025-06-09 15:23:44.412+00	2025-06-09 15:23:44.4
 pset_01JXAMMNCV2B0Z6B7C8W6HMB8Y	2025-06-09 15:23:44.412+00	2025-06-09 15:23:44.412+00	\N
 pset_01JXAMMNCV2MQ0QDRV9FZRR304	2025-06-09 15:23:44.412+00	2025-06-09 15:23:44.412+00	\N
 pset_01JY1AWBK1A66BN2VEP349ZCQZ	2025-06-18 10:55:42.689+00	2025-06-18 10:55:42.689+00	\N
-\.
+
 
 
 --
@@ -3919,7 +3919,7 @@ prod_01JXAMMMF4BGDYXETF8XKA923T	Medusa Sweatshirt	sweatshirt	\N	Reimagine the fe
 prod_01JXAMMMF49R0QH2W6GCH0JD6G	Medusa Sweatpants	sweatpants	\N	Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.	f	published	https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png	400	\N	\N	\N	\N	\N	\N	\N	\N	\N	t	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N	\N
 prod_01JXAMMMF49CW46V7F9MNXZKFJ	Medusa Shorts	shorts	\N	Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.	f	published	https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png	400	\N	\N	\N	\N	\N	\N	\N	\N	\N	t	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N	\N
 prod_01JY1AWA7HJ0CYDSAKX7JRNTC3	Brobrella	bro1	Test Subtitel	es ist das cap	f	published	\N	\N	\N	\N	\N	\N	\N	\N	\N	pcol_01JXJ64T312YQPHXCXH92Q7EKJ	\N	t	\N	2025-06-18 10:55:41.311+00	2025-06-18 10:55:41.311+00	\N	\N
-\.
+
 
 
 --
@@ -3931,7 +3931,7 @@ pcat_01JXAMMM9W590KKEGWZE8BV9KS	Shirts		shirts	pcat_01JXAMMM9W590KKEGWZE8BV9KS	t
 pcat_01JXAMMMAQKH8PT09YEBKR3CG8	Sweatshirts		sweatshirts	pcat_01JXAMMMAQKH8PT09YEBKR3CG8	t	f	1	\N	2025-06-09 15:23:43.371+00	2025-06-09 15:23:43.371+00	\N	\N
 pcat_01JXAMMMBG5DTM1TBQC2NG5N96	Pants		pants	pcat_01JXAMMMBG5DTM1TBQC2NG5N96	t	f	2	\N	2025-06-09 15:23:43.371+00	2025-06-09 15:23:43.371+00	\N	\N
 pcat_01JXAMMMCATGMAAD1Y4BQT34Z4	Merch		merch	pcat_01JXAMMMCATGMAAD1Y4BQT34Z4	t	f	3	\N	2025-06-09 15:23:43.371+00	2025-06-09 15:23:43.371+00	\N	\N
-\.
+
 
 
 --
@@ -3943,7 +3943,7 @@ prod_01JXAMMMF4V08K0HF1N0SW6SNP	pcat_01JXAMMM9W590KKEGWZE8BV9KS
 prod_01JXAMMMF4BGDYXETF8XKA923T	pcat_01JXAMMMAQKH8PT09YEBKR3CG8
 prod_01JXAMMMF49R0QH2W6GCH0JD6G	pcat_01JXAMMMBG5DTM1TBQC2NG5N96
 prod_01JXAMMMF49CW46V7F9MNXZKFJ	pcat_01JXAMMMCATGMAAD1Y4BQT34Z4
-\.
+
 
 
 --
@@ -3952,7 +3952,7 @@ prod_01JXAMMMF49CW46V7F9MNXZKFJ	pcat_01JXAMMMCATGMAAD1Y4BQT34Z4
 
 COPY public.product_collection (id, title, handle, metadata, created_at, updated_at, deleted_at) FROM stdin;
 pcol_01JXJ64T312YQPHXCXH92Q7EKJ	Animal Splash	animal_splash	\N	2025-06-12 13:44:20.296303+00	2025-06-12 13:44:20.296303+00	\N
-\.
+
 
 
 --
@@ -3966,7 +3966,7 @@ opt_01JXAMMMF7AVHMND3DQ99TC033	Size	prod_01JXAMMMF4BGDYXETF8XKA923T	\N	2025-06-0
 opt_01JXAMMMF7QPCW3M86MM2NAXXB	Size	prod_01JXAMMMF49R0QH2W6GCH0JD6G	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N
 opt_01JXAMMMF8QNM9GDEJCBGDFG14	Size	prod_01JXAMMMF49CW46V7F9MNXZKFJ	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N
 opt_01JY1AWA7X52996Z7WDB4FK0WN	Default option	prod_01JY1AWA7HJ0CYDSAKX7JRNTC3	\N	2025-06-18 10:55:41.312+00	2025-06-18 10:55:41.312+00	\N
-\.
+
 
 
 --
@@ -3993,7 +3993,7 @@ optval_01JXAMMMF7PTW0X9PY37AKX7FA	M	opt_01JXAMMMF8QNM9GDEJCBGDFG14	\N	2025-06-09
 optval_01JXAMMMF7CMC2C34PF1D4Q2JS	L	opt_01JXAMMMF8QNM9GDEJCBGDFG14	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N
 optval_01JXAMMMF8G4T3X6AZYS1WJRW9	XL	opt_01JXAMMMF8QNM9GDEJCBGDFG14	\N	2025-06-09 15:23:43.465+00	2025-06-09 15:23:43.465+00	\N
 optval_01JY1AWA7W3F4A9HEWKVF2CQRN	Default option value	opt_01JY1AWA7X52996Z7WDB4FK0WN	\N	2025-06-18 10:55:41.312+00	2025-06-18 10:55:41.312+00	\N
-\.
+
 
 
 --
@@ -4006,7 +4006,7 @@ prod_01JXAMMMF4BGDYXETF8XKA923T	sc_01JXAMCR348KYTM5AK5AG6PHYS	prodsc_01JXAMMMNJN
 prod_01JXAMMMF49R0QH2W6GCH0JD6G	sc_01JXAMCR348KYTM5AK5AG6PHYS	prodsc_01JXAMMMNJF8E8Z3VBTSE00FTK	2025-06-09 15:23:43.677047+00	2025-06-09 15:23:43.677047+00	\N
 prod_01JXAMMMF49CW46V7F9MNXZKFJ	sc_01JXAMCR348KYTM5AK5AG6PHYS	prodsc_01JXAMMMNJ9FP42BRWC4SSKPYM	2025-06-09 15:23:43.677047+00	2025-06-09 15:23:43.677047+00	\N
 prod_01JY1AWA7HJ0CYDSAKX7JRNTC3	sc_01JXAMCR348KYTM5AK5AG6PHYS	prodsc_01JY1AWADQKPQKF22BNDM4343J	2025-06-18 10:55:41.488891+00	2025-06-18 10:55:41.488891+00	\N
-\.
+
 
 
 --
@@ -4019,7 +4019,7 @@ prod_01JXAMMMF4BGDYXETF8XKA923T	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	prodsp_01JXAMMMS34
 prod_01JXAMMMF49R0QH2W6GCH0JD6G	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	prodsp_01JXAMMMS3AR6YDMPW35CKCTKV	2025-06-09 15:23:43.788755+00	2025-06-09 15:23:43.788755+00	\N
 prod_01JXAMMMF49CW46V7F9MNXZKFJ	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	prodsp_01JXAMMMS36B7GS2KJ9MEESZ6Y	2025-06-09 15:23:43.788755+00	2025-06-09 15:23:43.788755+00	\N
 prod_01JY1AWA7HJ0CYDSAKX7JRNTC3	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	prodsp_01JY1AWAHZP2HJJ68FVPQJ2YXR	2025-06-18 10:55:41.625971+00	2025-06-18 10:55:41.625971+00	\N
-\.
+
 
 
 --
@@ -4027,7 +4027,7 @@ prod_01JY1AWA7HJ0CYDSAKX7JRNTC3	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	prodsp_01JY1AWAHZP
 --
 
 COPY public.product_tag (id, value, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4035,7 +4035,7 @@ COPY public.product_tag (id, value, metadata, created_at, updated_at, deleted_at
 --
 
 COPY public.product_tags (product_id, product_tag_id) FROM stdin;
-\.
+
 
 
 --
@@ -4043,7 +4043,7 @@ COPY public.product_tags (product_id, product_tag_id) FROM stdin;
 --
 
 COPY public.product_type (id, value, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4072,7 +4072,7 @@ variant_01JXAMMMY1V2QMC2MAT6QY163R	M	SHORTS-M	\N	\N	\N	f	t	\N	\N	\N	\N	\N	\N	\N	
 variant_01JXAMMMY1XQG820P3PT71DY84	L	SHORTS-L	\N	\N	\N	f	t	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	prod_01JXAMMMF49CW46V7F9MNXZKFJ	2025-06-09 15:23:43.938+00	2025-06-09 15:23:43.938+00	\N
 variant_01JXAMMMY1M0FW914A346AMS5M	XL	SHORTS-XL	\N	\N	\N	f	t	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	prod_01JXAMMMF49CW46V7F9MNXZKFJ	2025-06-09 15:23:43.938+00	2025-06-09 15:23:43.938+00	\N
 variant_01JY1AWB1CEPW92WZ573TDTKP7	Default variant	\N	\N	\N	\N	f	f	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	prod_01JY1AWA7HJ0CYDSAKX7JRNTC3	2025-06-18 10:55:42.125+00	2025-06-18 10:55:42.125+00	\N
-\.
+
 
 
 --
@@ -4100,7 +4100,7 @@ variant_01JXAMMMY1W81V5XFQWEN5Z10X	iitem_01JXAMMN3RAJ3J914V8DH4D09N	pvitem_01JXA
 variant_01JXAMMMY1V2QMC2MAT6QY163R	iitem_01JXAMMN3RQ373Y6Z17QHXF64P	pvitem_01JXAMMN9ZKDZQJ0GJH1Q88KQ1	1	2025-06-09 15:23:44.330501+00	2025-06-09 15:23:44.330501+00	\N
 variant_01JXAMMMY1XQG820P3PT71DY84	iitem_01JXAMMN3RAT5H5W4AG240J6DG	pvitem_01JXAMMN9ZMBHHS43H56PZSVE7	1	2025-06-09 15:23:44.330501+00	2025-06-09 15:23:44.330501+00	\N
 variant_01JXAMMMY1M0FW914A346AMS5M	iitem_01JXAMMN3RPD4BR6JP9668HEPR	pvitem_01JXAMMNA0NGGZN0DX8T5YM8X4	1	2025-06-09 15:23:44.330501+00	2025-06-09 15:23:44.330501+00	\N
-\.
+
 
 
 --
@@ -4137,7 +4137,7 @@ variant_01JXAMMMY1V2QMC2MAT6QY163R	optval_01JXAMMMF7PTW0X9PY37AKX7FA
 variant_01JXAMMMY1XQG820P3PT71DY84	optval_01JXAMMMF7CMC2C34PF1D4Q2JS
 variant_01JXAMMMY1M0FW914A346AMS5M	optval_01JXAMMMF8G4T3X6AZYS1WJRW9
 variant_01JY1AWB1CEPW92WZ573TDTKP7	optval_01JY1AWA7W3F4A9HEWKVF2CQRN
-\.
+
 
 
 --
@@ -4166,7 +4166,7 @@ variant_01JXAMMMY1V2QMC2MAT6QY163R	pset_01JXAMMNCVFTPVNDF329WSPANZ	pvps_01JXAMMN
 variant_01JXAMMMY1XQG820P3PT71DY84	pset_01JXAMMNCV2B0Z6B7C8W6HMB8Y	pvps_01JXAMMNJYCH8XK5QVWBQ14C8R	2025-06-09 15:23:44.617596+00	2025-06-09 15:23:44.617596+00	\N
 variant_01JXAMMMY1M0FW914A346AMS5M	pset_01JXAMMNCV2MQ0QDRV9FZRR304	pvps_01JXAMMNJYVQ0CKC9V3EAFK7JS	2025-06-09 15:23:44.617596+00	2025-06-09 15:23:44.617596+00	\N
 variant_01JY1AWB1CEPW92WZ573TDTKP7	pset_01JY1AWBK1A66BN2VEP349ZCQZ	pvps_01JY1AWBRCWSHH4FJ17NC3TCGQ	2025-06-18 10:55:42.854482+00	2025-06-18 10:55:42.854482+00	\N
-\.
+
 
 
 --
@@ -4174,7 +4174,7 @@ variant_01JY1AWB1CEPW92WZ573TDTKP7	pset_01JY1AWBK1A66BN2VEP349ZCQZ	pvps_01JY1AWB
 --
 
 COPY public.promotion (id, code, campaign_id, is_automatic, type, created_at, updated_at, deleted_at, status) FROM stdin;
-\.
+
 
 
 --
@@ -4182,7 +4182,7 @@ COPY public.promotion (id, code, campaign_id, is_automatic, type, created_at, up
 --
 
 COPY public.promotion_application_method (id, value, raw_value, max_quantity, apply_to_quantity, buy_rules_min_quantity, type, target_type, allocation, promotion_id, created_at, updated_at, deleted_at, currency_code) FROM stdin;
-\.
+
 
 
 --
@@ -4190,7 +4190,7 @@ COPY public.promotion_application_method (id, value, raw_value, max_quantity, ap
 --
 
 COPY public.promotion_campaign (id, name, description, campaign_identifier, starts_at, ends_at, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4198,7 +4198,7 @@ COPY public.promotion_campaign (id, name, description, campaign_identifier, star
 --
 
 COPY public.promotion_campaign_budget (id, type, campaign_id, "limit", raw_limit, used, raw_used, created_at, updated_at, deleted_at, currency_code) FROM stdin;
-\.
+
 
 
 --
@@ -4206,7 +4206,7 @@ COPY public.promotion_campaign_budget (id, type, campaign_id, "limit", raw_limit
 --
 
 COPY public.promotion_promotion_rule (promotion_id, promotion_rule_id) FROM stdin;
-\.
+
 
 
 --
@@ -4214,7 +4214,7 @@ COPY public.promotion_promotion_rule (promotion_id, promotion_rule_id) FROM stdi
 --
 
 COPY public.promotion_rule (id, description, attribute, operator, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4222,7 +4222,7 @@ COPY public.promotion_rule (id, description, attribute, operator, created_at, up
 --
 
 COPY public.promotion_rule_value (id, promotion_rule_id, value, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4233,7 +4233,7 @@ COPY public.provider_identity (id, entity_id, provider, auth_identity_id, user_m
 01JXAYJ7ZGPSHEAN0KKCP6DRJ5	admin@sen.studio	emailpass	authid_01JXAYJ7ZGP3F5W6YAKJBSWHXS	\N	{"password": "c2NyeXB0AA8AAAAIAAAAAVHsCP7beUurM+TuHqDmRvdm15URVuu0M/N2TyrEXXqMxf3oZJrTwBmzvbAYsDxLU2yfG/eEExaXHb1ajpD5wZ+J1u4CJGfOkIRZ6wybOk7P"}	2025-06-09 18:17:10.896+00	2025-06-09 18:17:10.896+00	\N
 01JXCFXX8HQQD0Z4WPM35Q70NP	admin@medusajs.com	emailpass	authid_01JXCFXX8J1MRNNHHYHFG03TMD	\N	{"password": "c2NyeXB0AA8AAAAIAAAAAW1jAP/K8HmrLehcSKPn2Mru5veNNpkMkHgRUnAQq0D4yYDVe3CO5Bu3QXgvedh9RWw5r+mjE37DCpzde4AvrFIKHk279cq3jmB1ZoRxWHBN"}	2025-06-10 08:39:53.362+00	2025-06-10 08:39:53.362+00	\N
 01JXM7PSGH91MN1VJAB5B4AV27	youremail@example.com	emailpass	authid_01JXM7PSGH7WXBCBVNZ49V2M44	\N	{"password": "c2NyeXB0AA8AAAAIAAAAAR/Q6HmBaJ5qLHm50sWv6rO1sWPQ05r1cmp7z03S+K2D8xlsxet/czRqJBvRpkH2r4kqMdab4quauToSLlMGSK17OrgcFd6tdvSCnPcCBIQr"}	2025-06-13 08:50:06.993+00	2025-06-13 08:50:06.993+00	\N
-\.
+
 
 
 --
@@ -4242,7 +4242,7 @@ COPY public.provider_identity (id, entity_id, provider, auth_identity_id, user_m
 
 COPY public.publishable_api_key_sales_channel (publishable_key_id, sales_channel_id, id, created_at, updated_at, deleted_at) FROM stdin;
 apk_01JXAMMM2X4R3QE6TVDJQ703DK	sc_01JXAMCR348KYTM5AK5AG6PHYS	pksc_01JXAMMM6BR760JDBW03P8J5RV	2025-06-09 15:23:43.191203+00	2025-06-09 15:23:43.191203+00	\N
-\.
+
 
 
 --
@@ -4250,7 +4250,7 @@ apk_01JXAMMM2X4R3QE6TVDJQ703DK	sc_01JXAMCR348KYTM5AK5AG6PHYS	pksc_01JXAMMM6BR760
 --
 
 COPY public.refund (id, amount, raw_amount, payment_id, created_at, updated_at, deleted_at, created_by, metadata, refund_reason_id, note) FROM stdin;
-\.
+
 
 
 --
@@ -4258,7 +4258,7 @@ COPY public.refund (id, amount, raw_amount, payment_id, created_at, updated_at, 
 --
 
 COPY public.refund_reason (id, label, description, metadata, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4267,7 +4267,7 @@ COPY public.refund_reason (id, label, description, metadata, created_at, updated
 
 COPY public.region (id, name, currency_code, metadata, created_at, updated_at, deleted_at, automatic_taxes) FROM stdin;
 reg_01JXAMMJEW67HVN6167BJ7513K	Europe	eur	\N	2025-06-09 15:23:41.461+00	2025-06-09 15:23:41.461+00	\N	t
-\.
+
 
 
 --
@@ -4525,7 +4525,7 @@ it	ita	380	ITALY	Italy	reg_01JXAMMJEW67HVN6167BJ7513K	\N	2025-06-09 14:47:27.391
 es	esp	724	SPAIN	Spain	reg_01JXAMMJEW67HVN6167BJ7513K	\N	2025-06-09 14:47:27.391+00	2025-06-09 15:23:41.462+00	\N
 se	swe	752	SWEDEN	Sweden	reg_01JXAMMJEW67HVN6167BJ7513K	\N	2025-06-09 14:47:27.391+00	2025-06-09 15:23:41.462+00	\N
 gb	gbr	826	UNITED KINGDOM	United Kingdom	reg_01JXAMMJEW67HVN6167BJ7513K	\N	2025-06-09 14:47:27.391+00	2025-06-09 15:23:41.462+00	\N
-\.
+
 
 
 --
@@ -4534,7 +4534,7 @@ gb	gbr	826	UNITED KINGDOM	United Kingdom	reg_01JXAMMJEW67HVN6167BJ7513K	\N	2025-
 
 COPY public.region_payment_provider (region_id, payment_provider_id, id, created_at, updated_at, deleted_at) FROM stdin;
 reg_01JXAMMJEW67HVN6167BJ7513K	pp_system_default	regpp_01JXAMMJP2BK1G8YC36TZ5RQ3Z	2025-06-09 15:23:41.646236+00	2025-06-09 15:23:41.646236+00	\N
-\.
+
 
 
 --
@@ -4542,7 +4542,7 @@ reg_01JXAMMJEW67HVN6167BJ7513K	pp_system_default	regpp_01JXAMMJP2BK1G8YC36TZ5RQ3
 --
 
 COPY public.reservation_item (id, created_at, updated_at, deleted_at, line_item_id, location_id, quantity, external_id, description, created_by, metadata, inventory_item_id, allow_backorder, raw_quantity) FROM stdin;
-\.
+
 
 
 --
@@ -4550,7 +4550,7 @@ COPY public.reservation_item (id, created_at, updated_at, deleted_at, line_item_
 --
 
 COPY public.return (id, order_id, claim_id, exchange_id, order_version, display_id, status, no_notification, refund_amount, raw_refund_amount, metadata, created_at, updated_at, deleted_at, received_at, canceled_at, location_id, requested_at, created_by) FROM stdin;
-\.
+
 
 
 --
@@ -4558,7 +4558,7 @@ COPY public.return (id, order_id, claim_id, exchange_id, order_version, display_
 --
 
 COPY public.return_fulfillment (return_id, fulfillment_id, id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4566,7 +4566,7 @@ COPY public.return_fulfillment (return_id, fulfillment_id, id, created_at, updat
 --
 
 COPY public.return_item (id, return_id, reason_id, item_id, quantity, raw_quantity, received_quantity, raw_received_quantity, note, metadata, created_at, updated_at, deleted_at, damaged_quantity, raw_damaged_quantity) FROM stdin;
-\.
+
 
 
 --
@@ -4574,7 +4574,7 @@ COPY public.return_item (id, return_id, reason_id, item_id, quantity, raw_quanti
 --
 
 COPY public.return_reason (id, value, label, description, metadata, parent_return_reason_id, created_at, updated_at, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4583,7 +4583,7 @@ COPY public.return_reason (id, value, label, description, metadata, parent_retur
 
 COPY public.sales_channel (id, name, description, is_disabled, metadata, created_at, updated_at, deleted_at) FROM stdin;
 sc_01JXAMCR348KYTM5AK5AG6PHYS	Default Sales Channel	Created by Medusa	f	\N	2025-06-09 15:19:25.029+00	2025-06-09 15:19:25.029+00	\N
-\.
+
 
 
 --
@@ -4592,7 +4592,7 @@ sc_01JXAMCR348KYTM5AK5AG6PHYS	Default Sales Channel	Created by Medusa	f	\N	2025-
 
 COPY public.sales_channel_stock_location (sales_channel_id, stock_location_id, id, created_at, updated_at, deleted_at) FROM stdin;
 sc_01JXAMCR348KYTM5AK5AG6PHYS	sloc_01JXAMMJVTM5SJDG6GENDJQ450	scloc_01JXAMMM08BKD4HB7REKQSDC13	2025-06-09 15:23:42.996787+00	2025-06-09 15:23:42.996787+00	\N
-\.
+
 
 
 --
@@ -4602,7 +4602,7 @@ sc_01JXAMCR348KYTM5AK5AG6PHYS	sloc_01JXAMMJVTM5SJDG6GENDJQ450	scloc_01JXAMMM08BK
 COPY public.script_migrations (id, script_name, created_at, finished_at) FROM stdin;
 1	migrate-product-shipping-profile.js	2025-06-09 14:47:30.621866+00	2025-06-09 14:47:30.800094+00
 2	migrate-tax-region-provider.js	2025-06-09 14:47:30.83911+00	2025-06-09 14:47:30.991887+00
-\.
+
 
 
 --
@@ -4611,7 +4611,7 @@ COPY public.script_migrations (id, script_name, created_at, finished_at) FROM st
 
 COPY public.service_zone (id, name, metadata, fulfillment_set_id, created_at, updated_at, deleted_at) FROM stdin;
 serzo_01JXAMMK2XSA44DCWPBKWH9ARG	Europe	\N	fuset_01JXAMMK2XQBJ873SN5ER2WVBV	2025-06-09 15:23:42.045+00	2025-06-09 15:23:42.045+00	\N
-\.
+
 
 
 --
@@ -4621,7 +4621,7 @@ serzo_01JXAMMK2XSA44DCWPBKWH9ARG	Europe	\N	fuset_01JXAMMK2XQBJ873SN5ER2WVBV	2025
 COPY public.shipping_option (id, name, price_type, service_zone_id, shipping_profile_id, provider_id, data, metadata, shipping_option_type_id, created_at, updated_at, deleted_at) FROM stdin;
 so_01JXAMMKH4A7GE9EFE0APZHDKX	Standard Shipping	flat	serzo_01JXAMMK2XSA44DCWPBKWH9ARG	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	manual_manual	\N	\N	sotype_01JXAMMKH3QXJV3ZP275687FKE	2025-06-09 15:23:42.501+00	2025-06-09 15:23:42.501+00	\N
 so_01JXAMMKH5XND9QPRT9FP3R5TR	Express Shipping	flat	serzo_01JXAMMK2XSA44DCWPBKWH9ARG	sp_01JXAJJAMC9F3TFDVM8SAVWS8W	manual_manual	\N	\N	sotype_01JXAMMKH4GXZN1F2K545225V0	2025-06-09 15:23:42.502+00	2025-06-09 15:23:42.502+00	\N
-\.
+
 
 
 --
@@ -4631,7 +4631,7 @@ so_01JXAMMKH5XND9QPRT9FP3R5TR	Express Shipping	flat	serzo_01JXAMMK2XSA44DCWPBKWH
 COPY public.shipping_option_price_set (shipping_option_id, price_set_id, id, created_at, updated_at, deleted_at) FROM stdin;
 so_01JXAMMKH4A7GE9EFE0APZHDKX	pset_01JXAMMKPC899EGKCW3V71D58F	sops_01JXAMMKXGXWPM2TZ8NCC2QD17	2025-06-09 15:23:42.908203+00	2025-06-09 15:23:42.908203+00	\N
 so_01JXAMMKH5XND9QPRT9FP3R5TR	pset_01JXAMMKPC8H0F5V32HWHA7FRS	sops_01JXAMMKXGV52BJMCBAAF5CWS8	2025-06-09 15:23:42.908203+00	2025-06-09 15:23:42.908203+00	\N
-\.
+
 
 
 --
@@ -4643,7 +4643,7 @@ sorul_01JXAMMKH448EWSB1FE5RSBG0D	enabled_in_store	eq	"true"	so_01JXAMMKH4A7GE9EF
 sorul_01JXAMMKH4RA6TY39CN8A7TB6A	is_return	eq	"false"	so_01JXAMMKH4A7GE9EFE0APZHDKX	2025-06-09 15:23:42.502+00	2025-06-09 15:23:42.502+00	\N
 sorul_01JXAMMKH432Y2XX4KNRB2SDYW	enabled_in_store	eq	"true"	so_01JXAMMKH5XND9QPRT9FP3R5TR	2025-06-09 15:23:42.502+00	2025-06-09 15:23:42.502+00	\N
 sorul_01JXAMMKH4TZNHYAPW1904FYV1	is_return	eq	"false"	so_01JXAMMKH5XND9QPRT9FP3R5TR	2025-06-09 15:23:42.502+00	2025-06-09 15:23:42.502+00	\N
-\.
+
 
 
 --
@@ -4653,7 +4653,7 @@ sorul_01JXAMMKH4TZNHYAPW1904FYV1	is_return	eq	"false"	so_01JXAMMKH5XND9QPRT9FP3R
 COPY public.shipping_option_type (id, label, description, code, created_at, updated_at, deleted_at) FROM stdin;
 sotype_01JXAMMKH3QXJV3ZP275687FKE	Standard	Ship in 2-3 days.	standard	2025-06-09 15:23:42.501+00	2025-06-09 15:23:42.501+00	\N
 sotype_01JXAMMKH4GXZN1F2K545225V0	Express	Ship in 24 hours.	express	2025-06-09 15:23:42.502+00	2025-06-09 15:23:42.502+00	\N
-\.
+
 
 
 --
@@ -4662,7 +4662,7 @@ sotype_01JXAMMKH4GXZN1F2K545225V0	Express	Ship in 24 hours.	express	2025-06-09 1
 
 COPY public.shipping_profile (id, name, type, metadata, created_at, updated_at, deleted_at) FROM stdin;
 sp_01JXAJJAMC9F3TFDVM8SAVWS8W	Default Shipping Profile	default	\N	2025-06-09 14:47:30.701+00	2025-06-09 14:47:30.701+00	\N
-\.
+
 
 
 --
@@ -4671,7 +4671,7 @@ sp_01JXAJJAMC9F3TFDVM8SAVWS8W	Default Shipping Profile	default	\N	2025-06-09 14:
 
 COPY public.stock_location (id, created_at, updated_at, deleted_at, name, address_id, metadata) FROM stdin;
 sloc_01JXAMMJVTM5SJDG6GENDJQ450	2025-06-09 15:23:41.819+00	2025-06-09 15:23:41.819+00	\N	European Warehouse	laddr_01JXAMMJVT68J3TYT3N4WW5BC6	\N
-\.
+
 
 
 --
@@ -4680,7 +4680,7 @@ sloc_01JXAMMJVTM5SJDG6GENDJQ450	2025-06-09 15:23:41.819+00	2025-06-09 15:23:41.8
 
 COPY public.stock_location_address (id, created_at, updated_at, deleted_at, address_1, address_2, company, city, country_code, phone, province, postal_code, metadata) FROM stdin;
 laddr_01JXAMMJVT68J3TYT3N4WW5BC6	2025-06-09 15:23:41.819+00	2025-06-09 15:23:41.819+00	\N		\N	\N	Copenhagen	DK	\N	\N	\N	\N
-\.
+
 
 
 --
@@ -4689,7 +4689,7 @@ laddr_01JXAMMJVT68J3TYT3N4WW5BC6	2025-06-09 15:23:41.819+00	2025-06-09 15:23:41.
 
 COPY public.store (id, name, default_sales_channel_id, default_region_id, default_location_id, metadata, created_at, updated_at, deleted_at) FROM stdin;
 store_01JXAMCR7G1V61XGE3KQDR0W39	Medusa Store	sc_01JXAMCR348KYTM5AK5AG6PHYS	\N	\N	\N	2025-06-09 15:19:25.170196+00	2025-06-09 15:19:25.170196+00	\N
-\.
+
 
 
 --
@@ -4699,7 +4699,7 @@ store_01JXAMCR7G1V61XGE3KQDR0W39	Medusa Store	sc_01JXAMCR348KYTM5AK5AG6PHYS	\N	\
 COPY public.store_currency (id, currency_code, is_default, store_id, created_at, updated_at, deleted_at) FROM stdin;
 stocur_01JXAW32NXVNR66Q3SRPRF67G2	eur	t	store_01JXAMCR7G1V61XGE3KQDR0W39	2025-06-09 17:33:56.771137+00	2025-06-09 17:33:56.771137+00	\N
 stocur_01JXAW32NX578YMF6FBN0B18S5	usd	f	store_01JXAMCR7G1V61XGE3KQDR0W39	2025-06-09 17:33:56.771137+00	2025-06-09 17:33:56.771137+00	\N
-\.
+
 
 
 --
@@ -4708,7 +4708,7 @@ stocur_01JXAW32NX578YMF6FBN0B18S5	usd	f	store_01JXAMCR7G1V61XGE3KQDR0W39	2025-06
 
 COPY public.tax_provider (id, is_enabled, created_at, updated_at, deleted_at) FROM stdin;
 tp_system	t	2025-06-09 14:47:27.76+00	2025-06-09 14:47:27.76+00	\N
-\.
+
 
 
 --
@@ -4716,7 +4716,7 @@ tp_system	t	2025-06-09 14:47:27.76+00	2025-06-09 14:47:27.76+00	\N
 --
 
 COPY public.tax_rate (id, rate, code, name, is_default, is_combinable, tax_region_id, metadata, created_at, updated_at, created_by, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4724,7 +4724,7 @@ COPY public.tax_rate (id, rate, code, name, is_default, is_combinable, tax_regio
 --
 
 COPY public.tax_rate_rule (id, tax_rate_id, reference_id, reference, metadata, created_at, updated_at, created_by, deleted_at) FROM stdin;
-\.
+
 
 
 --
@@ -4739,7 +4739,7 @@ txreg_01JXAMMJRZ7E2PSMGRGJS44W4Q	tp_system	se	\N	\N	\N	2025-06-09 15:23:41.727+0
 txreg_01JXAMMJRZ7CWRBBTT37E5STC8	tp_system	fr	\N	\N	\N	2025-06-09 15:23:41.727+00	2025-06-09 15:23:41.727+00	\N	\N
 txreg_01JXAMMJRZ1K0E59N715Q8TB0R	tp_system	es	\N	\N	\N	2025-06-09 15:23:41.728+00	2025-06-09 15:23:41.728+00	\N	\N
 txreg_01JXAMMJRZPHCA0WF59SJ3VTG9	tp_system	it	\N	\N	\N	2025-06-09 15:23:41.728+00	2025-06-09 15:23:41.728+00	\N	\N
-\.
+
 
 
 --
@@ -4749,7 +4749,7 @@ txreg_01JXAMMJRZPHCA0WF59SJ3VTG9	tp_system	it	\N	\N	\N	2025-06-09 15:23:41.728+0
 COPY public."user" (id, first_name, last_name, email, avatar_url, metadata, created_at, updated_at, deleted_at) FROM stdin;
 user_01JXM7PS9N7GY3E2220RWRJ1M0	\N	\N	youremail@example.com	\N	\N	2025-06-13 08:50:06.773+00	2025-06-13 08:50:06.773+00	\N
 user_01JXCFXX3B7M95ZGRS4M8D1SS5	Denis	Kreuzer	admin@medusajs.com	\N	\N	2025-06-10 08:39:53.195+00	2025-06-13 12:05:43.54+00	\N
-\.
+
 
 
 --
@@ -4757,7 +4757,7 @@ user_01JXCFXX3B7M95ZGRS4M8D1SS5	Denis	Kreuzer	admin@medusajs.com	\N	\N	2025-06-1
 --
 
 COPY public.workflow_execution (id, workflow_id, transaction_id, execution, context, state, created_at, updated_at, deleted_at, retention_time, run_id) FROM stdin;
-\.
+
 
 
 --

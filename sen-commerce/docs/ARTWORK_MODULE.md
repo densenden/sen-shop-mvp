@@ -1,5 +1,7 @@
 # Artwork Module Implementation
 
+> **Note:** This documentation is now Medusa v2 style only. MikroORM is no longer used in this project. All models and migrations should follow Medusa v2 conventions.
+
 ## Overview
 
 Custom Medusa v2 module for managing digital artworks with collections, product linking, and cloud storage integration.
@@ -7,7 +9,7 @@ Custom Medusa v2 module for managing digital artworks with collections, product 
 ## Technical Stack
 
 - **Framework**: Medusa.js v2.8.4
-- **Database**: PostgreSQL with MikroORM
+- **Database**: PostgreSQL (Medusa v2 style)
 - **Storage**: Supabase (cloud file storage)
 - **Admin UI**: React with Medusa UI components
 - **File Upload**: Multer middleware
@@ -30,77 +32,42 @@ artwork-module/
 
 ## Database Design
 
-### Artwork Entity
+### Artwork Entity (Medusa v2 style)
 
 ```typescript
-@Entity({ tableName: "artwork" })
-export class Artwork {
-  @PrimaryKey({ columnType: "text" })
-  id: string
+import { model } from "@medusajs/framework/utils"
 
-  @Property({ columnType: "text" })
-  title: string
-
-  @Property({ columnType: "text", nullable: true })
-  description?: string
-
-  @Property({ columnType: "text" })
-  image_url: string
-
-  @Property({ columnType: "text", nullable: true })
-  artwork_collection_id?: string
-
-  @ManyToOne(() => ArtworkCollection, { nullable: true })
-  artwork_collection?: ArtworkCollection
-
-  @Property({ columnType: "text[]", default: [] })
-  product_ids: string[] = []
-
-  @Property({ columnType: "timestamptz", defaultRaw: "CURRENT_TIMESTAMP" })
-  created_at: Date
-
-  @Property({ columnType: "timestamptz", defaultRaw: "CURRENT_TIMESTAMP", onUpdate: () => new Date() })
-  updated_at: Date
-
-  @Property({ columnType: "timestamptz", nullable: true })
-  deleted_at?: Date | null
-}
+export const Artwork = model.define("artwork", {
+  id: model.id().primaryKey(),
+  title: model.text(),
+  description: model.text().nullable(),
+  image_url: model.text(),
+  artwork_collection_id: model.text(),
+  product_ids: model.json().nullable(),
+  created_at: model.dateTime().default(() => new Date()),
+  updated_at: model.dateTime().default(() => new Date()),
+  deleted_at: model.dateTime().nullable(),
+})
 ```
 
-### ArtworkCollection Entity
+### ArtworkCollection Entity (Medusa v2 style)
 
 ```typescript
-@Entity({ tableName: "artwork_collection" })
-export class ArtworkCollection {
-  @PrimaryKey({ columnType: "text" })
-  id: string
+import { model } from "@medusajs/framework/utils"
 
-  @Property({ columnType: "text" })
-  name: string
-
-  @Property({ columnType: "text", nullable: true })
-  description?: string
-
-  @Property({ columnType: "text", nullable: true })
-  topic?: string
-
-  @Property({ columnType: "text", nullable: true })
-  purpose?: string
-
-  @Property({ columnType: "text", nullable: true })
-  thumbnail_url?: string
-
-  @Property({ columnType: "text", nullable: true })
-  midjourney_version?: string
-
-  @Property({ columnType: "text", nullable: true })
-  month_created?: string
-
-  @OneToMany(() => Artwork, artwork => artwork.artwork_collection)
-  artworks = new Collection<Artwork>(this)
-
-  // Timestamps handled same as Artwork
-}
+export const ArtworkCollection = model.define("artwork_collection", {
+  id: model.id().primaryKey(),
+  name: model.text(),
+  description: model.text().nullable(),
+  topic: model.text().nullable(),
+  purpose: model.text().nullable(),
+  thumbnail_url: model.text().nullable(),
+  midjourney_version: model.text().nullable(),
+  month_created: model.text().nullable(),
+  created_at: model.dateTime().default(() => new Date()),
+  updated_at: model.dateTime().default(() => new Date()),
+  deleted_at: model.dateTime().nullable(),
+})
 ```
 
 ## Service Implementation
@@ -108,6 +75,9 @@ export class ArtworkCollection {
 ### MedusaService Pattern
 
 ```typescript
+import { MedusaService } from "@medusajs/framework/utils"
+import { Artwork, ArtworkCollection } from "../models"
+
 class ArtworkModuleService extends MedusaService({
   Artwork,
   ArtworkCollection,
@@ -237,13 +207,7 @@ Key features:
 
 ## Database Migrations
 
-### Auto-generated Tables
-
-Medusa handles table creation through MikroORM migrations.
-
-### Manual Migration for Timestamps
-
-For existing tables missing timestamps:
+Medusa v2 can generate migrations for you, or you can use plain SQL files. Example for adding timestamps:
 
 ```sql
 ALTER TABLE artwork 

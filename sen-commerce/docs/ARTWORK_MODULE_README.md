@@ -1,5 +1,7 @@
 # Artwork Module - Technical Documentation
 
+> **Note:** This documentation is now Medusa v2 style only. MikroORM is no longer used in this project. All models and migrations should follow Medusa v2 conventions.
+
 ## Module Overview
 
 Custom Medusa v2 module implementing artwork management with Supabase storage integration.
@@ -8,7 +10,7 @@ Custom Medusa v2 module implementing artwork management with Supabase storage in
 
 ### Core Components
 
-1. **Models**: Artwork and ArtworkCollection entities with MikroORM decorators
+1. **Models**: Artwork and ArtworkCollection entities using Medusa v2 `model.define()`
 2. **Services**: MedusaService-based CRUD operations and image upload handling
 3. **API Routes**: Admin and store endpoints for artwork management
 4. **Admin UI**: React-based interface extending Medusa admin panel
@@ -22,7 +24,7 @@ title                 TEXT NOT NULL
 description           TEXT
 image_url             TEXT NOT NULL
 artwork_collection_id TEXT REFERENCES artwork_collection(id)
-product_ids           TEXT[]
+product_ids           JSONB
 created_at            TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 updated_at            TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 deleted_at            TIMESTAMPTZ
@@ -46,18 +48,13 @@ deleted_at     TIMESTAMPTZ
 ### Service Architecture
 
 ```typescript
-// Auto-generated service methods via MedusaService
+import { MedusaService } from "@medusajs/framework/utils"
+import { Artwork, ArtworkCollection } from "../models"
+
 class ArtworkModuleService extends MedusaService({
   Artwork,
   ArtworkCollection,
 }) {}
-
-// Generated methods:
-- listArtworks(filters, config)
-- createArtworks(data)
-- updateArtworks(selector, data)
-- deleteArtworks(ids)
-- retrieveArtwork(id, config)
 ```
 
 ### API Endpoints
@@ -125,61 +122,6 @@ modules: [
     options: {}
   }
 ]
-```
-
-## Technical Challenges Resolved
-
-### 1. MedusaService Method Names
-- **Problem**: Expected singular methods (e.g., `createArtwork`)
-- **Solution**: MedusaService generates plural methods (`createArtworks`)
-
-### 2. Timestamp Columns
-- **Problem**: Medusa expects timestamp columns not auto-created by MikroORM
-- **Solution**: Manual migration to add `created_at`, `updated_at`, `deleted_at`
-
-### 3. Relations Not Loaded
-- **Problem**: Related entities not included in API responses
-- **Solution**: Specify relations in service calls: `{ relations: ["artwork_collection"] }`
-
-### 4. File Upload in Admin
-- **Problem**: No built-in file upload in Medusa admin
-- **Solution**: Custom Multer endpoint + Supabase integration
-
-### 5. Repository Resolution
-- **Problem**: Custom repositories caused "Could not resolve" errors
-- **Solution**: Use MedusaService instead of custom repository pattern
-
-## File Structure
-
-```
-src/modules/artwork-module/
-├── index.ts              # Module definition
-├── models/
-│   ├── artwork.ts        # Artwork entity
-│   ├── artwork-collection.ts  # Collection entity
-│   └── index.ts          # Model exports
-├── services/
-│   ├── artwork-module-service.ts  # CRUD service
-│   └── image-upload-service.ts    # File handling
-└── types/
-    └── index.ts          # TypeScript types
-
-src/api/
-├── admin/
-│   ├── artworks/         # Admin CRUD routes
-│   ├── artwork-collections/  # Collection routes
-│   └── uploads/          # File upload route
-└── store/
-    └── artworks/         # Public API
-
-src/admin/routes/
-├── artworks/
-│   ├── page.tsx          # List view
-│   ├── [id]/page.tsx     # Edit view
-│   └── new/page.tsx      # Create view
-└── artwork-collections/
-    ├── page.tsx          # Collections list
-    └── new/page.tsx      # Create collection
 ```
 
 ## Database Migration Notes
