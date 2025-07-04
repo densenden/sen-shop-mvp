@@ -1,11 +1,14 @@
 import { PrintfulPodProductService } from "../../../modules/printful/services/printful-pod-product-service"
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
-export default async function handler(req: MedusaRequest, res: MedusaResponse) {
+export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let user: any = null;
   try {
     user = req.scope.resolve("user");
-  } catch (e) {}
+    console.log("Resolved user in printful-catalog-products:", user);
+  } catch (e) {
+    console.log("Error resolving user:", e);
+  }
   if (!user || !user.is_admin) {
     return res.status(401).json({ error: "Unauthorized: Admins only" })
   }

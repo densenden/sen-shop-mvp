@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Button, Container, Heading, Table } from "@medusajs/ui"
 import { Link } from "react-router-dom"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { PencilSquare, Trash, Photo } from "@medusajs/icons"
+import { PencilSquare, Trash, Swatch } from "@medusajs/icons"
 
 const ArtworkCollectionsPage = () => {
   const [collections, setCollections] = useState([])
@@ -159,7 +159,7 @@ const ArtworkCollectionsPage = () => {
 
 export const config = defineRouteConfig({
   label: "Artwork Collections",
-  icon: Photo,
+  icon: Swatch,
 })
 
 export default ArtworkCollectionsPage 

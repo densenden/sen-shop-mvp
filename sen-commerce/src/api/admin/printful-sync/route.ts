@@ -1,11 +1,6 @@
 import { PrintfulPodProductService } from "../../../modules/printful/services/printful-pod-product-service"
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
-    return;
-  }
-
+export async function POST(req, res) {
   const { mappings } = req.body;
   if (!Array.isArray(mappings)) {
     res.status(400).json({ error: "Missing or invalid mappings array" });

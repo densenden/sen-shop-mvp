@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Container, Heading, Button, Table } from "@medusajs/ui"
-import { CloudArrowDown, PencilSquare } from "@medusajs/icons"
+import { TruckFast, PencilSquare } from "@medusajs/icons"
 import { useNavigate } from "react-router-dom"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 
@@ -12,7 +12,7 @@ const PrintfulProductsPage = () => {
 
   const fetchProducts = async () => {
     setIsLoading(true)
-    const res = await fetch("/api/admin/printful-catalog-products", { credentials: "include" })
+    const res = await fetch("/admin/printful-catalog-products", { credentials: "include" })
     const data = await res.json()
     setProducts(data.products || [])
     setIsLoading(false)
@@ -20,7 +20,12 @@ const PrintfulProductsPage = () => {
 
   const syncNow = async () => {
     setIsSyncing(true)
-    await fetch("/api/admin/printful-sync", { method: "POST", credentials: "include" })
+    await fetch("/admin/printful-sync", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mappings: [ /* your mapping objects here */ ] })
+    })
     await fetchProducts()
     setIsSyncing(false)
   }
@@ -32,7 +37,7 @@ const PrintfulProductsPage = () => {
       <div className="flex items-center justify-between">
         <Heading>Printful Products</Heading>
         <Button variant="primary" size="small" onClick={syncNow} isLoading={isSyncing}>
-          <CloudArrowDown />
+          <TruckFast />
           Sync
         </Button>
       </div>
@@ -78,7 +83,7 @@ const PrintfulProductsPage = () => {
 
 export const config = defineRouteConfig({
   label: "Printful Products",
-  icon: CloudArrowDown,
+  icon: TruckFast,
 })
 
 export default PrintfulProductsPage 
