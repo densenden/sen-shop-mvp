@@ -7,21 +7,31 @@ export class PrintfulPodProductService extends MedusaService({
 }) {
   private apiToken: string
   private apiBaseUrl: string
+  private container: any
 
   constructor(container: any, options?: any) {
     super(container, options)
+    // Save the container for later use in other methods (for dependency injection)
+    this.container = container
     this.apiToken = process.env.PRINTFUL_API_TOKEN || ""
-    this.apiBaseUrl = "https://api.printful.com/v2"
+    // NOTE: Do not use /v2 for store endpoints, only for catalog endpoints!
+    this.apiBaseUrl = "https://api.printful.com"
   }
 
-  // Fetch all products from Printful v2 catalog
+  // Fetch all products from Printful store (not catalog)
   async fetchPrintfulProducts() {
-    const res = await fetch(`${this.apiBaseUrl}/catalog-products`, {
+    // Debug: print the API token (remove after debugging!)
+    console.log("PRINTFUL_API_TOKEN:", this.apiToken)
+    const res = await fetch(`${this.apiBaseUrl}/store/products`, {
       headers: { Authorization: `Bearer ${this.apiToken}` },
     })
-    if (!res.ok) throw new Error("Failed to fetch products from Printful")
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful API error:", res.status, errorText)
+      throw new Error("Failed to fetch products from Printful store")
+    }
     const data = await res.json()
-    return data.result // Array of products
+    return data.result // Array of store products
   }
 
   // Import a Printful product, create a shop product, and link to an artwork
@@ -51,15 +61,33 @@ export class PrintfulPodProductService extends MedusaService({
 
   // Pseudo product creation (replace with real logic)
   async createProduct(productData) {
-    // TODO: Use Medusa's product service or workflow
-    // Example: await productService.create(productData)
-    return { id: `prod_${Math.random().toString(36).slice(2)}`, ...productData }
+    // This will create a product in your shop using Medusa's workflow system
+    // You need to have access to the container (dependency injection)
+    const { createProductsWorkflow } = require("@medusajs/medusa/core-flows")
+    // Prepare the product input (adjust fields as needed)
+    const input = {
+      products: [productData],
+    }
+    // Run the workflow to create the product
+    const { result } = await createProductsWorkflow(this.container).run({ input })
+    // result is an array of created products
+    return result[0]
   }
 
-  // Pseudo artwork update (replace with real logic)
+  // Update the artwork's product_ids to include the new product
   async addProductToArtwork(artworkId, productId) {
-    // TODO: Fetch artwork, update product_ids array, and save
-    // Example: await artworkService.addProduct(artworkId, productId)
+    // This is a simple example, you may need to use your own artwork service or ORM
+    // For now, let's assume you have an artworkService with an update method
+    const artworkService = this.container.resolve("artworkService")
+    // Fetch the artwork
+    const artwork = await artworkService.retrieve(artworkId)
+    // Add the new productId to the product_ids array (avoid duplicates)
+    const productIds = Array.isArray(artwork.product_ids) ? artwork.product_ids : []
+    if (!productIds.includes(productId)) {
+      productIds.push(productId)
+    }
+    // Update the artwork
+    await artworkService.update(artworkId, { product_ids: productIds })
     return true
   }
 
