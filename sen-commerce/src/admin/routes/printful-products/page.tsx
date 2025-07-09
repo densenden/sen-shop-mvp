@@ -67,7 +67,7 @@ const PrintfulProductsPage = () => {
                   <Table.Cell>{prod.name}</Table.Cell>
                   <Table.Cell>{prod.artwork_title || "Not linked"}</Table.Cell>
                   <Table.Cell>
-                    <Button variant="secondary" size="small" onClick={() => navigate(`/admin/printful-products/${prod.id}`)}>
+                    <Button variant="secondary" size="small" onClick={() => navigate(`/printful-products/${prod.id}`)}>
                       <PencilSquare />
                     </Button>
                   </Table.Cell>
