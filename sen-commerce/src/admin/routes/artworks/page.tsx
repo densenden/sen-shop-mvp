@@ -14,7 +14,7 @@ const ArtworksList = () => {
 
   const fetchArtworks = async () => {
     try {
-      const response = await fetch("/admin/artworks", {
+      const response = await fetch("/api/admin/artworks", {
         credentials: "include",
       })
       const data = await response.json()
@@ -30,7 +30,7 @@ const ArtworksList = () => {
     if (!confirm("Are you sure you want to delete this artwork?")) return
 
     try {
-      await fetch(`/admin/artworks/${id}`, {
+      await fetch(`/api/admin/artworks/${id}`, {
         method: "DELETE",
         credentials: "include",
       })
