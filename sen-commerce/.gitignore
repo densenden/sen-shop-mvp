@@ -23,4 +23,8 @@ build
 !.yarn/sdks
 !.yarn/versions
 
-.medusa
+.medusanode_modules/
+.next/
+dist/
+build/
+*.log
