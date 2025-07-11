@@ -16,7 +16,7 @@ const ArtworkCollectionsPage = () => {
 
   const fetchCollections = async () => {
     try {
-      const res = await fetch("/admin/artwork-collections", { credentials: "include" })
+      const res = await fetch("/api/admin/artwork-collections", { credentials: "include" })
       const data = await res.json()
       console.log("artwork-collections API response:", data)
       if (Array.isArray(data)) {
@@ -33,7 +33,7 @@ const ArtworkCollectionsPage = () => {
 
   const fetchArtworks = async () => {
     try {
-      const res = await fetch("/admin/artworks", { credentials: "include" })
+      const res = await fetch("/api/admin/artworks", { credentials: "include" })
       const data = await res.json()
       setArtworks(data.artworks || [])
     } catch (err) {
@@ -45,7 +45,7 @@ const ArtworkCollectionsPage = () => {
     if (!confirm("Are you sure you want to delete this collection?")) return
     
     try {
-      const response = await fetch(`/admin/artwork-collections/${id}`, {
+      const response = await fetch(`/api/admin/artwork-collections/${id}`, {
         method: "DELETE",
         credentials: "include",
       })
