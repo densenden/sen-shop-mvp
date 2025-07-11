@@ -17,7 +17,13 @@ const ArtworksList = () => {
       const response = await fetch("/admin/artworks", {
         credentials: "include",
       })
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log("Artworks API response:", data)
       setArtworks(data.artworks || [])
     } catch (error) {
       console.error("Error fetching artworks:", error)

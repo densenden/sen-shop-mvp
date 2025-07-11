@@ -3,21 +3,18 @@ import { ARTWORK_MODULE } from "../../../modules/artwork-module"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
+    console.log("Fetching artworks...")
     const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+    console.log("Service resolved:", !!artworkModuleService)
     
+    // Try to get artworks first
     const artworks = await artworkModuleService.listArtworks({})
-    const collections = await artworkModuleService.listArtworkCollections({})
+    console.log("Artworks found:", artworks?.length || 0)
     
-    const collectionsMap = new Map(collections.map(c => [c.id, c]))
-    
-    const artworksWithCollections = artworks.map(artwork => ({
-      ...artwork,
-      artwork_collection: collectionsMap.get(artwork.artwork_collection_id)
-    }))
-    
+    // Return simple response without collections for now
     res.json({ 
-      artworks: artworksWithCollections || [],
-      count: artworksWithCollections?.length || 0
+      artworks: artworks || [],
+      count: artworks?.length || 0
     })
   } catch (error) {
     console.error("Error fetching artworks:", error)

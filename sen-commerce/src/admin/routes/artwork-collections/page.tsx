@@ -17,6 +17,11 @@ const ArtworkCollectionsPage = () => {
   const fetchCollections = async () => {
     try {
       const res = await fetch("/admin/artwork-collections", { credentials: "include" })
+      
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`)
+      }
+      
       const data = await res.json()
       console.log("artwork-collections API response:", data)
       if (Array.isArray(data)) {
