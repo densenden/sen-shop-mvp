@@ -62,8 +62,7 @@ export default defineConfig({
     // }
     {
       resolve: "./src/modules/printful",
-      alias: "printfulModuleService",
-      key: "printful"
+      key: "printfulModule"
     },
   ]
 });

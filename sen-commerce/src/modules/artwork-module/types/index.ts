@@ -3,7 +3,7 @@ export interface CreateArtworkDTO {
   description?: string
   image_url: string
   artwork_collection_id: string
-  product_ids?: string[]
+  product_ids?: string[] | null
 }
 
 export interface UpdateArtworkDTO {
@@ -11,7 +11,7 @@ export interface UpdateArtworkDTO {
   description?: string
   image_url?: string
   artwork_collection_id?: string
-  product_ids?: string[]
+  product_ids?: Record<string, unknown> | null
 }
 
 export interface CreateArtworkCollectionDTO {

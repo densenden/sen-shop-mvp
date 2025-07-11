@@ -1,11 +1,25 @@
-// Printful module entry point
-import { PrintfulProduct } from "./models/printful-product"
+import { Module, MedusaService } from "@medusajs/framework/utils"
+import { 
+  PrintfulProduct, 
+  PrintfulProductVariant,
+  PrintfulProductFile,
+  PrintfulSyncLog,
+  PrintfulOrderTracking,
+  PrintfulWebhookEvent
+} from "./models/printful-product"
 import { PrintfulPodProductService } from "./services/printful-pod-product-service"
 
-export const service = PrintfulPodProductService
+export const PRINTFUL_MODULE = "printfulModule"
 
-export { PrintfulProduct } from "./models/printful-product"
+export default Module(PRINTFUL_MODULE, {
+  service: PrintfulPodProductService
+})
 
-export const repository = PrintfulProduct
-
-export default { service } 
+export {
+  PrintfulProduct,
+  PrintfulProductVariant,
+  PrintfulProductFile,
+  PrintfulSyncLog,
+  PrintfulOrderTracking,
+  PrintfulWebhookEvent
+} 

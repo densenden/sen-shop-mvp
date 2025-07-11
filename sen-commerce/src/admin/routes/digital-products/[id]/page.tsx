@@ -17,6 +17,7 @@ interface DigitalProduct {
   updated_at: string
 }
 
+
 const DigitalProductDetailPage = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
@@ -29,6 +30,7 @@ const DigitalProductDetailPage = () => {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [maxDownloads, setMaxDownloads] = useState(-1)
+  
 
   useEffect(() => {
     fetchProduct()
@@ -54,6 +56,7 @@ const DigitalProductDetailPage = () => {
       setLoading(false)
     }
   }
+
 
   const handleSave = async () => {
     setSaving(true)
@@ -100,6 +103,7 @@ const DigitalProductDetailPage = () => {
       console.error("Error deleting digital product:", error)
     }
   }
+
 
   if (loading) {
     return <Container>Loading...</Container>
@@ -239,6 +243,7 @@ const DigitalProductDetailPage = () => {
               <Text>Updated: {new Date(product.updated_at).toLocaleString()}</Text>
             </div>
           </div>
+
         </div>
       )}
     </Container>

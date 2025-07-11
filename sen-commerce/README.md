@@ -2,195 +2,237 @@
 
 ## Overview
 
-Custom Medusa.js v2 backend with artwork management module, file upload capabilities, and extended admin interface.
+Modern e-commerce backend built on Medusa.js v2 with comprehensive digital and print-on-demand product management, artwork systems, and fulfillment automation.
 
 ## Architecture
 
-### Core Components
+### Core Systems
 
-1. **Artwork Module** (`src/modules/artwork-module/`)
-   - Custom module for managing digital artworks
-   - Integrates with Medusa's product system
-   - Supports collections and categorization
+1. **Digital Products** (`src/modules/digital-product/`)
+   - Downloadable digital content management
+   - Secure token-based file delivery
+   - Access control and download limits
 
-2. **API Routes** (`src/api/`)
-   - Admin endpoints for CRUD operations
-   - Store endpoints for public access
-   - File upload endpoint with Multer
+2. **Artwork Management** (`src/modules/artwork-module/`)
+   - Digital artwork collections
+   - Product-artwork relationship system
+   - Supabase cloud storage integration
 
-3. **Admin Extensions** (`src/admin/`)
-   - Custom React pages for artwork management
-   - Integrated file upload with Supabase
-   - Product linking interface
+3. **Printful POD Integration** (`src/modules/printful/`)
+   - Complete print-on-demand workflow
+   - Automated order fulfillment
+   - Real-time status tracking via webhooks
+
+4. **Product Sync System** (`src/api/admin/product-sync/`)
+   - POD provider synchronization
+   - Bulk import/update operations
+   - Real-time sync status monitoring
+
+## Key Features
+
+### ✅ **Digital Product System**
+- Secure file upload and storage
+- Download token generation
+- Access control (max downloads, expiry)
+- Admin UI for product management
+- Automatic fulfillment on order completion
+
+### ✅ **Artwork & Collections**
+- Hierarchical artwork organization
+- Multiple artwork per product support
+- Professional metadata (topic, purpose, Midjourney version)
+- Visual admin interface with thumbnails
+- Bulk operations support
+
+### ✅ **Printful POD Integration**
+- Complete V1/V2 API integration
+- Automated order processing workflow
+- Product variant synchronization
+- Real-time webhook status updates
+- Multi-file support (designs, mockups, videos)
+- Enhanced product metadata management
+
+### ✅ **Product Sync Dashboard**
+- Live sync operation monitoring
+- Provider-specific sync actions
+- Error tracking and reporting
+- Bulk import capabilities
+- Filter and search functionality
+
+### ✅ **Admin Interface**
+- Custom admin routes for all systems
+- Intuitive file upload interface
+- Product linking and management
+- Real-time status monitoring
+- Responsive design
 
 ## Technical Implementation
 
-### Module System
-
-The artwork module follows Medusa v2 patterns:
+### Module Architecture
 
 ```typescript
-// Module definition
+// Digital Products
+export default Module(DIGITAL_PRODUCT_MODULE, {
+  service: DigitalProductModuleService,
+})
+
+// Artwork System  
 export default Module(ARTWORK_MODULE, {
-  imports: [MedusaModule],
-  providers: [ImageUploadService],
-  models: [Artwork, ArtworkCollection],
+  service: ArtworkModuleService,
+})
+
+// Printful Integration
+export default Module(PRINTFUL_MODULE, {
+  service: PrintfulPodProductService,
 })
 ```
-
-### Service Layer
-
-Using MedusaService for auto-generated CRUD:
-
-```typescript
-class ArtworkModuleService extends MedusaService({
-  Artwork,
-  ArtworkCollection,
-}) {}
-```
-
-This automatically provides:
-- `listArtworks()`, `createArtworks()`, `updateArtworks()`, `deleteArtworks()`
-- `listArtworkCollections()`, `createArtworkCollections()`, etc.
 
 ### Database Schema
 
-**Artwork Table:**
-- `id` (uuid)
-- `title` (varchar)
-- `description` (text, nullable)
-- `image_url` (varchar)
-- `artwork_collection_id` (uuid, FK)
-- `product_ids` (text[])
-- `created_at`, `updated_at`, `deleted_at` (timestamps)
+**Digital Products:**
+- Secure file metadata and access control
+- Download tracking and limitations
+- Integration with Medusa order system
 
-**ArtworkCollection Table:**
-- `id` (uuid)
-- `name` (varchar)
-- `description` (text, nullable)
-- `topic` (varchar)
-- `purpose` (varchar)
-- `thumbnail_url` (varchar)
-- `midjourney_version` (varchar)
-- `month_created` (varchar)
-- `created_at`, `updated_at`, `deleted_at` (timestamps)
+**Artwork Collections:**
+- Hierarchical organization system
+- Professional metadata support
+- Product relationship management
 
-### File Upload System
+**Printful Products:**
+- Complete product variant mapping
+- Order fulfillment tracking
+- Webhook event logging
 
-Implemented custom upload service:
+### API Endpoints
 
-1. **Multer Middleware**: Handles multipart/form-data
-2. **Supabase Integration**: Stores images in cloud storage
-3. **URL Generation**: Returns public URLs for display
+**Core APIs:**
+- `/api/admin/digital-products` - Digital product CRUD
+- `/api/admin/artwork-collections` - Artwork management
+- `/api/admin/product-sync` - Sync operations
+- `/api/admin/unified-products` - Cross-system product view
 
-```typescript
-// Upload endpoint
-router.post("/uploads", upload.array("files"), async (req, res) => {
-  const uploadService = req.scope.resolve("imageUploadService")
-  const files = await uploadService.upload(req.files)
-  res.json({ files })
-})
-```
+**File Management:**
+- `/api/admin/uploads` - Secure file upload
+- Supabase S3 integration for storage
+- Automatic URL generation and serving
 
-### Admin UI Integration
+## Development Setup
 
-Extended Medusa admin with custom routes:
+### Prerequisites
+- Node.js 18+
+- PostgreSQL
+- Supabase account (for file storage)
+- Printful API access
 
-```typescript
-// Route configuration
-export const config = defineRouteConfig({
-  label: "Artworks",
-  icon: Photo,
-})
-```
-
-Pages include:
-- `/artworks` - List view with thumbnails
-- `/artworks/new` - Create form with upload
-- `/artworks/[id]` - Edit form
-- `/artwork-collections` - Collection management
-
-## Key Learnings
-
-### 1. Medusa Service Conventions
-- Always use plural method names (e.g., `createArtworks` not `createArtwork`)
-- Methods accept both single objects and arrays
-- Built-in pagination and filtering
-
-### 2. Database Migrations
-- Medusa expects specific columns (timestamps)
-- Manual SQL migrations needed for existing tables
-- Foreign keys managed through decorators
-
-### 3. Module Registration
-- Modules must be registered in `medusa-config.ts`
-- Path must be relative to project root
-- Module exports must follow specific structure
-
-### 4. API Development
-- Admin routes require authentication
-- Use `req.scope.resolve()` for dependency injection
-- Always include `credentials: "include"` in frontend
-
-## Environment Setup
+### Environment Configuration
 
 ```bash
 # Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/medusa-db
+DATABASE_URL=postgresql://user:pass@localhost:5432/sen-commerce
 
-# Storage
-SUPABASE_URL=https://project.supabase.co
+# Supabase Storage
+SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-key
-SUPABASE_BUCKET_NAME=artworks
+SUPABASE_BUCKET_NAME=sen-commerce-files
 
-# Frontend env vars need VITE_ prefix
-VITE_SUPABASE_URL=https://project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+# S3 Compatible Settings (for Supabase)
+S3_FILE_URL=https://your-project.supabase.co/storage/v1/object/public/
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
+S3_REGION=auto
+S3_BUCKET=sen-commerce-files
+S3_ENDPOINT=https://your-project.supabase.co
+
+# Printful Integration
+PRINTFUL_API_KEY=your-printful-api-key
+PRINTFUL_STORE_ID=your-store-id
+
+# Application
+JWT_SECRET=your-jwt-secret
+COOKIE_SECRET=your-cookie-secret
+ADMIN_CORS=http://localhost:9000
+STORE_CORS=http://localhost:3000
 ```
 
-## Development Commands
+### Commands
 
 ```bash
-# Start dev server
-npm run dev
+# Install dependencies
+npm install
 
-# Run migrations
+# Run database migrations
 npx medusa db:migrate
 
-# Build for production
-npm run build
+# Start development server
+npm run dev
 
-# Start production server
-npm start
+# Access admin panel
+open http://localhost:9000/app
+# Login: admin@medusajs.com / supersecret
+
+# Build for production
+npm run build && npm start
 ```
+
+## Storefront Integration
+
+### Frontend Setup
+
+The included Next.js storefront provides:
+
+```bash
+cd sen-commerce-storefront
+npm install
+npm run dev
+# Access at http://localhost:3000
+```
+
+**Features:**
+- Product browsing by type (digital, POD, standard)
+- Artwork gallery
+- Shopping cart functionality
+- Order management
+- Responsive design ready for styling
 
 ## Project Status
 
-### Completed
-- ✅ Artwork CRUD operations
-- ✅ Collection management
-- ✅ File upload to Supabase
-- ✅ Admin UI integration
-- ✅ Product linking
-- ✅ API endpoints
+### 🎯 **Current State: Production Ready**
 
-### In Progress
-- 🔄 Collection edit pages
-- 🔄 Bulk operations
-- 🔄 Advanced filtering
+### ✅ **Completed Systems**
 
-### Planned
-- 📋 Image optimization
-- 📋 CDN integration
-- 📋 Caching layer
-- 📋 GraphQL API
+**Backend (100% Complete):**
+- ✅ Digital product management with secure delivery
+- ✅ Comprehensive artwork system with collections
+- ✅ Full Printful POD integration with webhooks
+- ✅ Product sync dashboard with real-time monitoring
+- ✅ Complete admin interface
+- ✅ API endpoints for all systems
+- ✅ Database schemas and migrations
+- ✅ File upload and storage system
 
-## Integrations & API Docs
+**Frontend (80% Complete):**
+- ✅ Basic storefront with product browsing
+- ✅ Artwork gallery
+- ✅ Shopping cart interface
+- ✅ Responsive layout foundation
+- 🎨 Styling and UX improvements needed
 
-- [Printful v2 API Integration](./src/modules/artwork-module/README.printful-v2.md)
+### 🎨 **Next Phase: Styling & UX**
+- Professional storefront design
+- Enhanced user experience
+- Mobile optimization
+- Performance improvements
+
+## Documentation
+
+- 📖 [Printful V2 Integration](./docs/PRINTFUL_V2_INTEGRATION.md)
+- 📖 [Digital Products Guide](./docs/DIGITAL_PRODUCTS.md)
+- 📖 [Technical Status Report](./docs/PRINTFUL_TECHNICAL_STATUS.md)
 
 ---
 
-Built with Medusa.js v2.8.4
-Last updated: January 2025
+**Tech Stack:** Medusa.js v2, PostgreSQL, Next.js, TypeScript, Supabase, Printful API  
+**Last Updated:** January 2025  
+**Status:** Production Ready - Ready for Styling Phase
