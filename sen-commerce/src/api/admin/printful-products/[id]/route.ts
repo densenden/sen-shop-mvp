@@ -1,17 +1,22 @@
 import { PrintfulPodProductService } from "../../../../modules/printful/services/printful-pod-product-service"
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
+interface UpdateProductBody {
+  name?: string
+  description?: string
+}
+
 // Handle updating a single Printful product
 export async function PUT(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { id } = req.params
-    const { name, description } = req.body
+    const { name, description } = req.body as UpdateProductBody
     if (!id || !name) {
       return res.status(400).json({ error: "Missing id or name" })
     }
     // Use the service to update the product
     const service = new PrintfulPodProductService(req.scope)
-    const updated = await service.updatePrintfulProduct(id, { name, description })
+    const updated = await service.updatePrintfulProducts({ id, name, description })
     if (!updated) {
       return res.status(404).json({ error: "Product not found" })
     }

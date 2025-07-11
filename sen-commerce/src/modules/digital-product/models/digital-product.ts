@@ -19,4 +19,5 @@ export const DigitalProduct = model.define("digital_product", {
   // Access control
   max_downloads: model.number().default(-1), // -1 = unlimited
   expires_at: model.dateTime().nullable(), // Optional expiry date
+  
 }) 

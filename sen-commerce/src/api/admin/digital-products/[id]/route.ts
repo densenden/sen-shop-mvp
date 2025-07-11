@@ -35,6 +35,7 @@ export const PUT = async (
     name?: string
     description?: string
     max_downloads?: number
+    printful_product_ids?: string[]
   }>,
   res: MedusaResponse
 ) => {
@@ -43,10 +44,11 @@ export const PUT = async (
     const digitalProductService: DigitalProductModuleService = 
       req.scope.resolve(DIGITAL_PRODUCT_MODULE)
     
-    // Update the digital product
+    // Update the digital product  
+    const updateData: any = { ...req.body }
     await digitalProductService.updateDigitalProducts({
       id,
-      ...req.body
+      ...updateData
     })
     
     // Fetch and return updated product

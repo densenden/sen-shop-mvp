@@ -1,7 +1,15 @@
 import { PrintfulPodProductService } from "../../../modules/printful/services/printful-pod-product-service"
+import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
-export async function POST(req, res) {
-  const { mappings } = req.body;
+interface SyncRequestBody {
+  mappings: Array<{
+    printfulProductId: string
+    artworkId: string
+  }>
+}
+
+export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  const { mappings } = req.body as SyncRequestBody;
   if (!Array.isArray(mappings)) {
     res.status(400).json({ error: "Missing or invalid mappings array" });
     return;
@@ -12,12 +20,12 @@ export async function POST(req, res) {
   let success = 0, failed = 0, errors: any[] = [];
   for (const { printfulProductId, artworkId } of mappings) {
     try {
-      const products = await service.fetchPrintfulProducts();
+      const products = await service.fetchStoreProducts();
       const pfProduct = products.find(p => p.id === printfulProductId);
       if (!pfProduct) throw new Error("Product not found in Printful");
-      await service.importProductToArtwork(pfProduct, artworkId);
+      await service.syncPrintfulProduct(pfProduct, artworkId);
       success++;
-    } catch (e) {
+    } catch (e: any) {
       failed++;
       errors.push({ printfulProductId, error: e.message });
     }

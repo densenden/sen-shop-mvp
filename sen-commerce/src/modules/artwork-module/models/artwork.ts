@@ -5,6 +5,6 @@ export const Artwork = model.define("artwork", {
   title: model.text(),
   description: model.text().nullable(),
   image_url: model.text(),
-  artwork_collection_id: model.text(),
+  artwork_collection_id: model.text().nullable(),
   product_ids: model.json().nullable(),
 }) 
