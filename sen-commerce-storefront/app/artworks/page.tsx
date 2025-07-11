@@ -149,104 +149,122 @@ export default function ArtworksPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Artwork Collections</h1>
-        <p className="text-gray-600">Browse our curated collections of digital artworks</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <div className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-light text-gray-900 mb-4">
+              Artwork
+              <span className="block font-medium text-black">Collections</span>
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+              Explore our curated collections of digital artworks, each piece carefully crafted to inspire and captivate.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {collections.length === 0 ? (
-        <div className="text-center py-12">
-          <Palette className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No collections found</p>
-        </div>
-      ) : (
-        <div className="space-y-12">
-          {collections.map((collection) => (
-            <div key={collection.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              {/* Collection Header */}
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-start gap-6">
-                  {collection.thumbnail_url && (
-                    <div className="flex-shrink-0">
-                      <img
-                        src={collection.thumbnail_url}
-                        alt={collection.name}
-                        className="w-24 h-24 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{collection.name}</h2>
-                    <p className="text-gray-600 mb-4">{collection.description}</p>
-                    
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                      {collection.topic && (
-                        <div className="flex items-center gap-1">
-                          <Tag className="w-4 h-4" />
-                          <span>Topic: {collection.topic}</span>
-                        </div>
-                      )}
-                      {collection.purpose && (
-                        <div className="flex items-center gap-1">
-                          <Layers className="w-4 h-4" />
-                          <span>Purpose: {collection.purpose}</span>
-                        </div>
-                      )}
-                      {collection.month_created && (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>Created: {collection.month_created}</span>
-                        </div>
-                      )}
-                      {collection.midjourney_version && (
-                        <div className="flex items-center gap-1">
-                          <span>MJ v{collection.midjourney_version}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">{collection.artworks?.length || 0} artworks</p>
-                  </div>
-                </div>
-              </div>
+      {/* Collections Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-              {/* Artworks Grid */}
-              {collection.artworks && collection.artworks.length > 0 ? (
-                <div className="p-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {collection.artworks.map((artwork) => (
-                      <div
-                        key={artwork.id}
-                        className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
-                        onClick={() => openArtworkModal(artwork, collection)}
-                      >
+        {collections.length === 0 ? (
+          <div className="text-center py-20">
+            <Palette className="w-16 h-16 text-gray-300 mx-auto mb-6" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No collections found</h3>
+            <p className="text-gray-500">We're working on curating amazing artwork collections for you.</p>
+          </div>
+        ) : (
+          <div className="space-y-16">
+            {collections.map((collection) => (
+              <div key={collection.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* Collection Header */}
+                <div className="p-8 lg:p-12">
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-8">
+                    {collection.thumbnail_url && (
+                      <div className="flex-shrink-0">
                         <img
-                          src={artwork.image_url}
-                          alt={artwork.title}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                          src={collection.thumbnail_url}
+                          alt={collection.name}
+                          className="w-32 h-32 lg:w-40 lg:h-40 object-cover rounded-2xl shadow-lg"
                           onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzllYTNhOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=='
+                            e.currentTarget.style.display = 'none'
                           }}
                         />
                       </div>
-                    ))}
+                    )}
+                    <div className="flex-1">
+                      <h2 className="text-3xl lg:text-4xl font-light text-gray-900 mb-4">{collection.name}</h2>
+                      <p className="text-lg text-gray-600 mb-6 leading-relaxed">{collection.description}</p>
+                      
+                      <div className="flex flex-wrap gap-6 text-sm text-gray-500">
+                        {collection.topic && (
+                          <div className="flex items-center gap-2">
+                            <Tag className="w-4 h-4" />
+                            <span>{collection.topic}</span>
+                          </div>
+                        )}
+                        {collection.purpose && (
+                          <div className="flex items-center gap-2">
+                            <Layers className="w-4 h-4" />
+                            <span>{collection.purpose}</span>
+                          </div>
+                        )}
+                        {collection.month_created && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span>{collection.month_created}</span>
+                          </div>
+                        )}
+                        {collection.midjourney_version && (
+                          <div className="flex items-center gap-2">
+                            <span>Midjourney v{collection.midjourney_version}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="bg-black text-white px-4 py-2 rounded-full text-sm font-medium">
+                        {collection.artworks?.length || 0} artworks
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="p-6 text-center text-gray-500">
-                  <Palette className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No artworks in this collection</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+
+                {/* Artworks Grid */}
+                {collection.artworks && collection.artworks.length > 0 ? (
+                  <div className="px-8 lg:px-12 pb-8 lg:pb-12">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {collection.artworks.map((artwork) => (
+                        <div
+                          key={artwork.id}
+                          className="group aspect-square bg-gray-100 rounded-2xl overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                          onClick={() => openArtworkModal(artwork, collection)}
+                        >
+                          <img
+                            src={artwork.image_url}
+                            alt={artwork.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzllYTNhOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=='
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 lg:p-12 text-center text-gray-500">
+                    <Palette className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No artworks in this collection</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
 
       {/* Artwork Modal */}
       {selectedArtwork && currentCollection && (
@@ -343,9 +361,9 @@ export default function ArtworksPage() {
                                 </div>
                               )}
                             </div>
-                            <button className="ml-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">
-                              <ShoppingCart className="w-4 h-4 inline mr-1" />
-                              Add to Cart
+                            <button className="ml-4 bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center space-x-2">
+                              <ShoppingCart className="w-4 h-4" />
+                              <span>Add to Cart</span>
                             </button>
                           </div>
                         </div>
