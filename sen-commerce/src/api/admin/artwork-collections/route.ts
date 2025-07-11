@@ -30,10 +30,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       }
     }
     
-    res.json({
-      collections: collectionsWithArtworks,
-      count: collectionsWithArtworks.length
-    })
+    res.json(collectionsWithArtworks)
   } catch (error) {
     console.error("Error fetching artwork collections:", error)
     res.status(500).json({
