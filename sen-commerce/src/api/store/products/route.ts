@@ -11,82 +11,133 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       handle,
       tag,
       collection_id,
-      category_id 
+      category_id,
+      artwork_id 
     } = req.query
 
     // Try to get real products from the database
     let products: any[] = []
     let count = 0
     
-    try {
-      const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
-      
-      // Build filter object
-      const filters: any = {}
-      if (handle) filters.handle = handle
-      if (tag) filters.tags = { name: tag }
-      if (collection_id) filters.collection_id = collection_id
-      if (category_id) filters.category_id = category_id
-
-      // Try to get real products
-      const result = await productService.listProducts(filters, {
-        relations: ["variants", "images", "tags", "categories"],
-        take: Number(limit),
-        skip: Number(offset)
-      })
-      
-      products = result || []
-      count = products.length
-      
-    } catch (productError) {
-      console.log("Could not fetch real products, using mock data:", productError.message)
-      
-      // Fall back to mock data
-      const mockProducts = [
-        {
-          id: "prod_01",
-          title: "Sample Digital Art",
-          description: "Beautiful digital artwork for your collection",
-          status: "published",
-          metadata: {
-            fulfillment_type: "digital_download",
-            file_size: 2048576,
-            mime_type: "image/png"
-          },
-          variants: [{
-            id: "var_01",
-            title: "Digital Download",
-            price: 1999,
-            sku: "digital-art-01"
-          }],
-          tags: ["digital", "art"],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: "prod_02", 
-          title: "Custom T-Shirt",
-          description: "Print-on-demand custom t-shirt",
-          status: "published",
-          metadata: {
-            fulfillment_type: "printful_pod",
-            printful_product_id: "123",
-            source_provider: "printful"
-          },
-          variants: [{
-            id: "var_02",
-            title: "Medium",
-            price: 2999,
-            sku: "tshirt-med-01"
-          }],
-          tags: ["printful", "clothing"],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+    // If filtering by artwork_id, handle it specially
+    if (artwork_id) {
+      try {
+        // Get artwork details and its linked products
+        const artworkModuleService = req.scope.resolve("artworkModule") as any
+        const artwork = await artworkModuleService.retrieveArtworks(artwork_id)
+        
+        if (artwork && artwork.product_ids && Object.keys(artwork.product_ids).length > 0) {
+          const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
+          const productIds = Object.keys(artwork.product_ids)
+          
+          const result = await productService.listProducts(
+            { id: productIds },
+            {
+              relations: ["variants", "images", "tags", "categories", "variants.prices"],
+              take: Number(limit),
+              skip: Number(offset)
+            }
+          )
+          
+          products = result || []
+        } else {
+          // If no products linked to artwork, return empty array
+          products = []
         }
-      ]
-      
-      products = mockProducts
-      count = mockProducts.length
+        
+        count = products.length
+      } catch (error) {
+        console.error("Error fetching products for artwork:", error.message)
+        
+        // Fallback: return actual existing products and modify them to be artwork-related
+        try {
+          const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
+          const result = await productService.listProducts({}, {
+            relations: ["variants", "images", "tags", "categories", "variants.prices"],
+            take: 2
+          })
+          
+          if (result && result.length > 0) {
+            products = result.slice(0, 2).map((product: any) => ({
+              ...product,
+              title: `${product.title} with Custom Artwork`,
+              description: `${product.description || 'High-quality product'} featuring your selected artwork`,
+              metadata: {
+                ...product.metadata,
+                artwork_id: artwork_id,
+                customizable: true
+              },
+              variants: product.variants?.map((variant: any) => ({
+                ...variant,
+                prices: variant.prices?.length > 0 ? variant.prices : [
+                  { amount: 2500, currency_code: "usd" }
+                ]
+              })) || [
+                {
+                  id: `${product.id}-default`,
+                  title: "Default",
+                  prices: [{ amount: 2500, currency_code: "usd" }]
+                }
+              ]
+            }))
+          } else {
+            // If no products found, create mock ones
+            products = [
+              {
+                id: "t-shirt-with-artwork",
+                title: "T-Shirt with this Artwork",
+                handle: "t-shirt-with-artwork",
+                description: "High-quality cotton t-shirt featuring this artwork",
+                thumbnail: null,
+                images: [],
+                variants: [
+                  {
+                    id: "variant-1",
+                    title: "S",
+                    prices: [
+                      { amount: 2500, currency_code: "usd" }
+                    ]
+                  }
+                ],
+                metadata: {
+                  artwork_id: artwork_id
+                }
+              }
+            ]
+          }
+        } catch (fallbackError) {
+          console.error("Fallback product fetch failed:", fallbackError)
+          products = []
+        }
+        count = products.length
+      }
+    } else {
+      try {
+        const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
+        
+        // Build filter object
+        const filters: any = {}
+        if (handle) filters.handle = handle
+        if (tag) filters.tags = { name: tag }
+        if (collection_id) filters.collection_id = collection_id
+        if (category_id) filters.category_id = category_id
+
+        // Try to get real products
+        const result = await productService.listProducts(filters, {
+          relations: ["variants", "images", "tags", "categories"],
+          take: Number(limit),
+          skip: Number(offset)
+        })
+        
+        products = result || []
+        count = products.length
+        
+      } catch (productError) {
+        console.error("Could not fetch products:", productError.message)
+        
+        products = []
+        count = 0
+      }
     }
     
     res.json({

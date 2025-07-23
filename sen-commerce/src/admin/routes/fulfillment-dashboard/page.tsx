@@ -52,67 +52,28 @@ const FulfillmentDashboardPage = () => {
   const fetchFulfillmentOrders = async () => {
     try {
       setLoading(true)
-      // Mock data for demonstration
-      const mockOrders: FulfillmentOrder[] = [
-        {
-          id: "fo_1",
-          medusa_order_id: "order_123",
-          printful_order_id: "pf_456",
-          provider_type: "printful",
-          status: "processing",
-          customer_email: "customer@example.com",
-          customer_name: "John Doe",
-          total_amount: 29.99,
-          currency: "USD",
-          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "fo_2",
-          medusa_order_id: "order_124",
-          printful_order_id: "pf_457",
-          provider_type: "printful",
-          status: "shipped",
-          tracking_number: "1Z999AA1234567890",
-          tracking_url: "https://www.ups.com/track?tracknum=1Z999AA1234567890",
-          shipped_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          estimated_delivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          customer_email: "jane@example.com",
-          customer_name: "Jane Smith",
-          total_amount: 45.50,
-          currency: "USD",
-          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "fo_3",
-          medusa_order_id: "order_125",
-          printful_order_id: "pf_458",
-          provider_type: "printful",
-          status: "delivered",
-          tracking_number: "1Z999AA1234567891",
-          tracking_url: "https://www.ups.com/track?tracknum=1Z999AA1234567891",
-          shipped_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          delivered_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          customer_email: "mike@example.com",
-          customer_name: "Mike Johnson",
-          total_amount: 22.99,
-          currency: "USD",
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-
-      setOrders(mockOrders)
       
-      // Calculate stats
-      const newStats = mockOrders.reduce((acc, order) => {
-        acc[order.status as keyof StatusStats] = (acc[order.status as keyof StatusStats] || 0) + 1
-        acc.total += 1
-        return acc
-      }, { pending: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0, total: 0 })
-      
-      setStats(newStats)
+      // Fetch real fulfillment orders from API
+      const response = await fetch("/api/admin/fulfillment-orders")
+      if (response.ok) {
+        const data = await response.json()
+        const fulfillmentOrders = data.orders || []
+        
+        setOrders(fulfillmentOrders)
+        
+        // Calculate stats
+        const newStats = fulfillmentOrders.reduce((acc: StatusStats, order: FulfillmentOrder) => {
+          acc[order.status as keyof StatusStats] = (acc[order.status as keyof StatusStats] || 0) + 1
+          acc.total += 1
+          return acc
+        }, { pending: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0, total: 0 })
+        
+        setStats(newStats)
+      } else {
+        // Fallback to empty state if API fails
+        setOrders([])
+        setStats({ pending: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0, total: 0 })
+      }
     } catch (error) {
       console.error("Error fetching fulfillment orders:", error)
     } finally {

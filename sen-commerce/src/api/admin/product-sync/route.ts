@@ -37,10 +37,44 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     // Try to get Printful products
     try {
       const printfulService = req.scope.resolve("printfulModule") as any
-      printfulProducts = await printfulService.fetchStoreProducts()
-      existingPrintfulProducts = await printfulService.listPrintfulProducts()
+      console.log("Printful service resolved:", !!printfulService)
+      
+      if (printfulService) {
+        console.log("Fetching Printful store products...")
+        printfulProducts = await printfulService.fetchStoreProducts()
+        console.log("Printful products fetched:", printfulProducts.length)
+        
+        console.log("Fetching Printful catalog products...")
+        const catalogProducts = await printfulService.fetchCatalogProducts()
+        console.log("Catalog products fetched:", catalogProducts.length)
+        
+        // Add catalog products to the available products list
+        const catalogFormatted = catalogProducts.slice(0, 10).map((product: any) => ({
+          id: `catalog-${product.id}`,
+          name: product.name,
+          description: product.description,
+          thumbnail_url: product.image,
+          status: 'available',
+          provider: 'printful',
+          already_imported: false,
+          product_type: 'catalog'
+        }))
+        
+        // Try to get existing linked products from database
+        try {
+          existingPrintfulProducts = await printfulService.listPrintfulProducts()
+          console.log("Existing Printful products:", existingPrintfulProducts.length)
+        } catch (dbError) {
+          console.log("Database method not available, skipping existing products check")
+          existingPrintfulProducts = []
+        }
+        
+        // Combine store and catalog products
+        printfulProducts = [...printfulProducts, ...catalogFormatted]
+      }
     } catch (error) {
-      console.log("Printful service not available:", error.message)
+      console.error("Printful service error:", error.message)
+      console.error("Printful error stack:", error.stack)
     }
 
     // Try to get digital products
@@ -74,13 +108,16 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     // Format available products for import
     const availableProducts = {
       printful: printfulProducts.map(p => ({
-        id: p.id,
+        id: p.id || p.external_id || `product-${p.name}`,
         name: p.name,
-        description: p.description,
-        thumbnail_url: p.thumbnail_url,
+        description: p.description || `${p.name} - Available for custom printing`,
+        thumbnail_url: p.thumbnail_url || p.image,
         status: 'available',
         provider: 'printful',
-        already_imported: existingPrintfulProducts.some(ep => ep.printful_product_id === p.id)
+        already_imported: existingPrintfulProducts.some(ep => 
+          ep.printful_product_id === p.id || ep.printful_product_id === p.external_id
+        ),
+        product_type: p.product_type || 'store'
       })),
       digital: digitalProducts.map(dp => ({
         id: dp.id,
@@ -212,17 +249,9 @@ async function checkInventory(syncId: string, provider: string) {
 
 async function importProducts(req: MedusaRequest, res: MedusaResponse, provider: string, productIds: string[]) {
   try {
-    // Try to resolve services - use Medusa v2 service resolution
-    let productService
+    // Use Medusa v2 service resolution pattern
     let printfulService
     let digitalProductService
-
-    try {
-      productService = req.scope.resolve(Modules.PRODUCT) // Medusa v2 product service
-    } catch (error) {
-      console.error("Could not resolve product service:", error)
-      return res.status(500).json({ error: "Product service not available" })
-    }
 
     if (provider === "printful") {
       try {
@@ -259,8 +288,10 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
             continue
           }
 
-          // Create Medusa product
-          medusaProduct = await productService.create({
+          // Create Medusa product using the product module service
+          const productModuleService = req.scope.resolve(Modules.PRODUCT)
+          
+          medusaProduct = await productModuleService.createProducts({
             title: printfulProduct.name,
             description: printfulProduct.description,
             status: "draft",
@@ -271,21 +302,15 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
             }
           })
 
-          // Create variants based on Printful variants or default variant
-          const variantData = {
+          // Create product variants
+          await productModuleService.createProductVariants({
             title: "Default",
             sku: `printful-${printfulProduct.id}`,
+            product_id: medusaProduct.id,
             metadata: {
               printful_product_id: printfulProduct.id
             }
-          }
-
-          // Create variant (in v2, variants are created separately)
-          const variantService = req.scope.resolve(Modules.PRODUCT)
-          await variantService.createProductVariants([{
-            ...variantData,
-            product_id: medusaProduct.id
-          }])
+          })
 
         } else if (provider === "digital") {
           // Get digital product details
@@ -296,12 +321,13 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
             continue
           }
 
-          // Create Medusa product
-          medusaProduct = await productService.create({
+          // Create Medusa product using the product module service
+          const productModuleService = req.scope.resolve(Modules.PRODUCT)
+          
+          medusaProduct = await productModuleService.createProducts({
             title: digitalProduct.name,
             description: digitalProduct.description,
             status: "draft",
-            tags: [{ value: "digital" }],
             metadata: {
               fulfillment_type: "digital_download",
               digital_product_id: digitalProduct.id,
@@ -311,21 +337,15 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
             }
           })
 
-          // Create single variant for digital product
-          const variantData = {
+          // Create product variant for digital product
+          await productModuleService.createProductVariants({
             title: "Digital Download",
             sku: `digital-${digitalProduct.id}`,
+            product_id: medusaProduct.id,
             metadata: {
               digital_product_id: digitalProduct.id
             }
-          }
-
-          // Create variant (in v2, variants are created separately)
-          const variantService = req.scope.resolve(Modules.PRODUCT)
-          await variantService.createProductVariants([{
-            ...variantData,
-            product_id: medusaProduct.id
-          }])
+          })
         }
 
         importedProducts.push({
@@ -347,6 +367,7 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
         })
 
       } catch (error) {
+        console.error("Error importing product:", productId, error)
         errors.push({ 
           productId, 
           error: error instanceof Error ? error.message : "Unknown error" 

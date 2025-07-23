@@ -855,4 +855,14 @@ export default async function seedDemoData({ container }: ExecArgs) {
   });
 
   logger.info("Finished seeding inventory levels data.");
+
+  // Seed artwork data
+  logger.info("Seeding artwork data...");
+  try {
+    const seedArtworkData = (await import("./seed-artwork")).default;
+    await seedArtworkData({ container });
+    logger.info("Finished seeding artwork data.");
+  } catch (error) {
+    logger.error("Failed to seed artwork data:", error);
+  }
 }

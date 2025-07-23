@@ -8,6 +8,8 @@ import {
   PrintfulWebhookEvent
 } from "./models/printful-product"
 import { PrintfulPodProductService } from "./services/printful-pod-product-service"
+import { PrintfulFulfillmentService } from "./services/printful-fulfillment-service"
+import { PrintfulOrderService } from "./services/printful-order-service"
 import { PODProviderManager } from "./services/pod-provider-facade"
 
 export const PRINTFUL_MODULE = "printfulModule"
