@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Package, Download, Printer, Eye } from 'lucide-react'
+import { Package, Download, Printer, Eye, Star, Heart, ShoppingBag, Filter } from 'lucide-react'
 
 interface Product {
   id: string

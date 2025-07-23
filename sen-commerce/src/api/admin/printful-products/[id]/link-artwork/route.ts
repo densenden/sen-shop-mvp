@@ -15,7 +15,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
     
     // Resolve the artwork service
-    const artworkService = req.scope.resolve(ARTWORK_MODULE)
+    const artworkService = req.scope.resolve(ARTWORK_MODULE) as any
     
     // Fetch the artwork
     const artwork = await artworkService.retrieveArtwork(artwork_id)

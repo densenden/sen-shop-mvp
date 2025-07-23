@@ -15,7 +15,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     } = req.query
 
     // Try to get real products from the database
-    let products = []
+    let products: any[] = []
     let count = 0
     
     try {

@@ -264,7 +264,6 @@ export default function ArtworksPage() {
           </div>
         )}
       </div>
-    </div>
 
       {/* Artwork Modal */}
       {selectedArtwork && currentCollection && (

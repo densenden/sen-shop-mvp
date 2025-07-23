@@ -6,7 +6,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   console.log("[Store Checkout] POST request received")
   
   try {
-    const { cart_id, shipping_address, payment_method } = req.body
+    const { cart_id, shipping_address, payment_method } = req.body as any
     
     if (!cart_id) {
       return res.status(400).json({ error: "Cart ID is required" })

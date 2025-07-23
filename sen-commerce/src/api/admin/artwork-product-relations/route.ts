@@ -39,7 +39,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
-    const { artwork_id, product_id, product_type, is_primary = false, position = 0 } = req.body
+    const { artwork_id, product_id, product_type, is_primary = false, position = 0 } = req.body as any
 
     if (!artwork_id || !product_id || !product_type) {
       return res.status(400).json({ error: "artwork_id, product_id, and product_type are required" })

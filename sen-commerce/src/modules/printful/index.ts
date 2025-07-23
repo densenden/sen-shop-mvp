@@ -8,6 +8,7 @@ import {
   PrintfulWebhookEvent
 } from "./models/printful-product"
 import { PrintfulPodProductService } from "./services/printful-pod-product-service"
+import { PODProviderManager } from "./services/pod-provider-facade"
 
 export const PRINTFUL_MODULE = "printfulModule"
 
@@ -21,5 +22,6 @@ export {
   PrintfulProductFile,
   PrintfulSyncLog,
   PrintfulOrderTracking,
-  PrintfulWebhookEvent
+  PrintfulWebhookEvent,
+  PODProviderManager
 } 

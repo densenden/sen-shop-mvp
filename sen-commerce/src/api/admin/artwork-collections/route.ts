@@ -6,7 +6,7 @@ console.log("[Medusa] Loaded /admin/artwork-collections route.ts");
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     console.log("Fetching artwork collections...")
-    const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+    const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
     console.log("Service resolved:", !!artworkModuleService)
     
     // Try to list collections without relations first
@@ -42,7 +42,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
-    const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+    const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
     const body = req.body as any
     console.log('[artwork-collections] POST body:', body)
     

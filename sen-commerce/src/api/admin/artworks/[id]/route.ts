@@ -5,7 +5,7 @@ import { UpdateArtworkDTO } from "../../../../modules/artwork-module/types"
 
 // GET /admin/artworks/:id
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
-  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
   
   try {
@@ -31,17 +31,23 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
 // PUT /admin/artworks/:id
 export async function PUT(req: MedusaRequest, res: MedusaResponse) {
-  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
   const body = req.body as any
   
   try {
+    // Handle empty artwork_collection_id
+    if (body.artwork_collection_id === "" || body.artwork_collection_id === null) {
+      body.artwork_collection_id = undefined
+    }
+    
     // Ensure product_ids is properly formatted for storage
     const updateData = {
       ...body,
       product_ids: body.product_ids || []
     }
     
+    console.log("Updating artwork with data:", updateData)
     const updated = await artworkModuleService.updateArtworks({ id, ...updateData })
     res.json(updated)
   } catch (error) {
@@ -52,7 +58,7 @@ export async function PUT(req: MedusaRequest, res: MedusaResponse) {
 
 // DELETE /admin/artworks/:id
 export async function DELETE(req: MedusaRequest, res: MedusaResponse) {
-  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
   
   try {

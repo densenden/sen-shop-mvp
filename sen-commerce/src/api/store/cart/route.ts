@@ -37,7 +37,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
     const cartService: ICartModuleService = req.scope.resolve(Modules.CART)
     
-    const { region_id, currency_code = "USD", ...rest } = req.body
+    const { region_id, currency_code = "USD", ...rest } = req.body as any
     
     const cart = await cartService.createCarts({
       region_id,
@@ -47,7 +47,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     
     // Set cart ID in session
     if (req.session) {
-      req.session.cart_id = cart.id
+      req.session.cart_id = (cart as any).id
     }
     
     res.json({ 
@@ -78,7 +78,7 @@ export const PUT = async (req: MedusaRequest, res: MedusaResponse) => {
       })
     }
     
-    const cart = await cartService.updateCarts(cartId, req.body)
+    const cart = await cartService.updateCarts(cartId, req.body as any)
     
     res.json({ 
       cart,

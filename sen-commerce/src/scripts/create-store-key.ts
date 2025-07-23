@@ -1,9 +1,9 @@
-export default async function createStoreKey() {
+export default async function createStoreKey({ container }: any) {
   console.log("Creating store publishable API key...")
   
   try {
     // This will be run via medusa exec and will have access to the medusa container
-    const publishableApiKeyService = req.scope.resolve("publishableApiKeyService")
+    const publishableApiKeyService = container.resolve("publishableApiKeyService")
     
     const key = await publishableApiKeyService.create({
       title: "Storefront API Key",

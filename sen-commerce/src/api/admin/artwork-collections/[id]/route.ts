@@ -2,7 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ARTWORK_MODULE } from "../../../../modules/artwork-module"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
-  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
   
   try {
@@ -19,7 +19,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 }
 
 export async function PUT(req: MedusaRequest, res: MedusaResponse) {
-  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
   const body = req.body as any
   
@@ -32,7 +32,7 @@ export async function PUT(req: MedusaRequest, res: MedusaResponse) {
 }
 
 export async function DELETE(req: MedusaRequest, res: MedusaResponse) {
-  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+  const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
   
   try {

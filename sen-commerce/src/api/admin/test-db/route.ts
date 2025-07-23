@@ -5,16 +5,16 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     console.log("Testing database connection...")
     
-    const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
+    const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
     console.log("Artwork module service resolved:", !!artworkModuleService)
     
     // Check what methods are available on the service
     const serviceMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(artworkModuleService))
     console.log("Available service methods:", serviceMethods)
     
-    let collections = []
-    let artworks = []
-    let error_info = null
+    let collections: any[] = []
+    let artworks: any[] = []
+    let error_info: any = null
     
     // Try to list collections
     try {

@@ -4,7 +4,7 @@ import { ARTWORK_MODULE } from "../modules/artwork-module";
 
 export default async function seedArtworkData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const artworkModuleService = container.resolve(ARTWORK_MODULE);
+  const artworkModuleService = container.resolve(ARTWORK_MODULE) as any;
 
   logger.info("Seeding artwork collections...");
 
@@ -39,7 +39,7 @@ export default async function seedArtworkData({ container }: ExecArgs) {
     }
   ];
 
-  const createdCollections = [];
+  const createdCollections: any[] = [];
   for (const collection of collections) {
     try {
       const created = await artworkModuleService.createArtworkCollections(collection);
@@ -59,42 +59,42 @@ export default async function seedArtworkData({ container }: ExecArgs) {
       description: "A vibrant geometric composition with flowing lines and bold colors",
       image_url: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=800&h=800&fit=crop",
       artwork_collection_id: createdCollections[0]?.id,
-      product_ids: []
+      product_ids: {} as any
     },
     {
       title: "Color Symphony",
       description: "An explosive array of colors arranged in geometric harmony",
       image_url: "https://images.unsplash.com/photo-1567359781514-3b964e2b04d6?w=800&h=800&fit=crop",
       artwork_collection_id: createdCollections[0]?.id,
-      product_ids: []
+      product_ids: {} as any
     },
     {
       title: "Mountain Vista",
       description: "A breathtaking mountain landscape at golden hour",
       image_url: "https://images.unsplash.com/photo-1464822759844-d150065273e8?w=800&h=800&fit=crop",
       artwork_collection_id: createdCollections[1]?.id,
-      product_ids: []
+      product_ids: {} as any
     },
     {
       title: "Forest Reflection",
       description: "Peaceful forest scene reflected in still water",
       image_url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=800&fit=crop",
       artwork_collection_id: createdCollections[1]?.id,
-      product_ids: []
+      product_ids: {} as any
     },
     {
       title: "Modern Face",
       description: "Contemporary minimalist portrait with clean lines",
       image_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop",
       artwork_collection_id: createdCollections[2]?.id,
-      product_ids: []
+      product_ids: {} as any
     },
     {
       title: "Elegant Silhouette",
       description: "A striking silhouette portrait with dramatic lighting",
       image_url: "https://images.unsplash.com/photo-1494790108755-2616c047f21a?w=800&h=800&fit=crop",
       artwork_collection_id: createdCollections[2]?.id,
-      product_ids: []
+      product_ids: {} as any
     }
   ];
 

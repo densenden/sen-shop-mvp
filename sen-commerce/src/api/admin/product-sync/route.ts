@@ -36,7 +36,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
     // Try to get Printful products
     try {
-      const printfulService = req.scope.resolve("printfulModule")
+      const printfulService = req.scope.resolve("printfulModule") as any
       printfulProducts = await printfulService.fetchStoreProducts()
       existingPrintfulProducts = await printfulService.listPrintfulProducts()
     } catch (error) {
@@ -45,8 +45,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
     // Try to get digital products
     try {
-      const digitalProductService = req.scope.resolve("digitalProductModuleService")
-      digitalProducts = await digitalProductService.list({})
+      const digitalProductService = req.scope.resolve("digitalProductModuleService") as any
+      digitalProducts = await digitalProductService.listDigitalProducts({})
     } catch (error) {
       console.log("Digital product service not available:", error.message)
     }
@@ -226,7 +226,7 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
 
     if (provider === "printful") {
       try {
-        printfulService = req.scope.resolve("printfulModule")
+        printfulService = req.scope.resolve("printfulModule") as any
       } catch (error) {
         console.error("Could not resolve printfulModule:", error)
         return res.status(500).json({ error: "Printful service not available" })
@@ -235,15 +235,15 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
 
     if (provider === "digital") {
       try {
-        digitalProductService = req.scope.resolve("digitalProductModuleService")
+        digitalProductService = req.scope.resolve("digitalProductModuleService") as any
       } catch (error) {
         console.error("Could not resolve digitalProductModuleService:", error)
         return res.status(500).json({ error: "Digital product service not available" })
       }
     }
     
-    const importedProducts = []
-    const errors = []
+    const importedProducts: any[] = []
+    const errors: any[] = []
 
     for (const productId of productIds) {
       try {
@@ -282,7 +282,7 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
 
           // Create variant (in v2, variants are created separately)
           const variantService = req.scope.resolve(Modules.PRODUCT)
-          await variantService.createVariants([{
+          await variantService.createProductVariants([{
             ...variantData,
             product_id: medusaProduct.id
           }])
@@ -322,7 +322,7 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
 
           // Create variant (in v2, variants are created separately)
           const variantService = req.scope.resolve(Modules.PRODUCT)
-          await variantService.createVariants([{
+          await variantService.createProductVariants([{
             ...variantData,
             product_id: medusaProduct.id
           }])
