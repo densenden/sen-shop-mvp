@@ -16,7 +16,10 @@ export default defineConfig({
   modules: [
     {
       resolve: "./src/modules/artwork-module",
-      alias: "artworkModuleService"
+      alias: "artworkModuleService",
+      definition: {
+        isQueryable: true
+      }
     },
     {
       resolve: "./src/modules/digital-product",
@@ -62,7 +65,10 @@ export default defineConfig({
     // }
     {
       resolve: "./src/modules/printful",
-      key: "printfulModule"
+      alias: "podProviderManager",
+      definition: {
+        isQueryable: true
+      }
     },
   ]
 });

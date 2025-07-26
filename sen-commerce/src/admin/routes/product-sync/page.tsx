@@ -64,7 +64,7 @@ const ProductSyncPage = () => {
   const fetchSyncLogs = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/admin/product-sync")
+      const response = await fetch("/admin/product-sync")
       const data = await response.json()
       
       setSyncLogs(data.logs || [])
@@ -80,7 +80,7 @@ const ProductSyncPage = () => {
   const startAction = async (action: string) => {
     setSyncing(true)
     try {
-      const response = await fetch("/api/admin/product-sync", {
+      const response = await fetch("/admin/product-sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -130,7 +130,7 @@ const ProductSyncPage = () => {
 
     setImporting(true)
     try {
-      const response = await fetch("/api/admin/product-sync", {
+      const response = await fetch("/admin/product-sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

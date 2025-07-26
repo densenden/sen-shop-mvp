@@ -1,50 +1,38 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { addToCartWorkflow } from "@medusajs/medusa/core-flows"
-import { ICartModuleService } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
+import { createCartWorkflow, addToCartWorkflow } from "@medusajs/medusa/core-flows"
 
-// POST /store/carts/{id}/line-items - Add line item to cart using workflow (Medusa v2 standard)
+// POST /api/store/carts/[id]/line-items - Add line item to cart (Medusa v2 standard)
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
     const cartId = req.params.id
-    
-    if (!cartId) {
-      return res.status(400).json({ 
-        error: "Cart ID required",
-        message: "Cart ID must be provided in URL path" 
-      })
-    }
-    
-    const { variant_id, quantity = 1, unit_price, metadata = {} } = req.body as any
+    const { variant_id, quantity = 1 } = req.body as any
     
     if (!variant_id) {
       return res.status(400).json({
-        error: "Missing required fields",
+        error: "Missing variant_id",
         message: "variant_id is required"
       })
     }
     
-    // Use addToCartWorkflow instead of direct service calls
+    console.log(`Adding item to cart ${cartId}: variant ${variant_id}, quantity ${quantity}`)
+    
+    // Use Medusa's standard add to cart workflow
     const { result } = await addToCartWorkflow(req.scope).run({
       input: {
         cart_id: cartId,
-        items: [{
-          variant_id,
-          quantity,
-          unit_price: unit_price || 2000, // Default price of $20 if no custom price
-          metadata
-        }]
+        items: [
+          {
+            variant_id,
+            quantity
+          }
+        ]
       }
     })
     
-    // Retrieve updated cart with relations
-    const cartService: ICartModuleService = req.scope.resolve(Modules.CART)
-    const cart = await cartService.retrieveCart(cartId, {
-      relations: ["items", "items.variant", "items.product", "shipping_address", "billing_address"]
-    })
+    console.log("Add to cart result:", result)
     
     res.json({ 
-      cart,
+      cart: result,
       message: "Item added to cart successfully" 
     })
     

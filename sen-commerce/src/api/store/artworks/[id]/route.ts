@@ -25,10 +25,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       })
     }
 
-    // Get artwork by ID
-    const artwork = await artworkModuleService.retrieveArtwork(id, {
-      relations: ["artwork_collection"]
-    })
+    // Get artwork by ID (without relations since artwork_collection is just an ID)
+    const artwork = await artworkModuleService.retrieveArtwork(id)
 
     if (!artwork) {
       console.log(`[Store API] Artwork not found with ID: ${id}`)
@@ -42,14 +40,48 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     // Get related products for this artwork
     let relatedProducts: ProductDTO[] = []
     try {
-      if (Array.isArray(artwork.product_ids) && artwork.product_ids.length > 0) {
-        const productResult: ProductDTO[] = await productService.listProducts({
-          id: artwork.product_ids as string[],
-        }, {
-          relations: ["variants", "variants.prices"]
+      console.log(`[Store API] artwork.product_ids:`, artwork.product_ids, 'type:', typeof artwork.product_ids)
+      
+      // Handle different formats of product_ids (same as in list API)
+      let productIds: string[] = []
+      if (artwork.product_ids) {
+        if (Array.isArray(artwork.product_ids)) {
+          productIds = artwork.product_ids.filter(id => typeof id === 'string')
+        } else if (typeof artwork.product_ids === 'string') {
+          try {
+            const parsed = JSON.parse(artwork.product_ids)
+            productIds = Array.isArray(parsed) ? parsed : []
+          } catch {
+            productIds = [artwork.product_ids]
+          }
+        }
+      }
+      
+      console.log(`[Store API] Resolved product IDs for artwork ${id}:`, productIds)
+      
+      if (productIds.length > 0) {
+        console.log(`[Store API] Attempting to fetch products with IDs:`, productIds)
+        
+        // Try to fetch each product individually
+        const productPromises = productIds.map(async (productId) => {
+          try {
+            const product = await productService.retrieveProduct(productId, {
+              relations: ["variants", "variants.prices"]
+            })
+            return product
+          } catch (error) {
+            console.log(`[Store API] Could not fetch product ${productId}:`, error.message)
+            return null
+          }
         })
-        relatedProducts = productResult || []
+        
+        const productResults = await Promise.all(productPromises)
+        relatedProducts = productResults.filter(p => p !== null)
+        
         console.log(`[Store API] Found ${relatedProducts.length} related products`)
+        if (relatedProducts.length > 0) {
+          console.log(`[Store API] Product details:`, relatedProducts.map(p => ({ id: p.id, title: p.title })))
+        }
       } else {
         console.log(`[Store API] No product_ids found for artwork ${id}`)
       }

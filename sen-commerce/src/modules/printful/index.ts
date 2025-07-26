@@ -15,7 +15,7 @@ import { PODProviderManager } from "./services/pod-provider-facade"
 export const PRINTFUL_MODULE = "printfulModule"
 
 export default Module(PRINTFUL_MODULE, {
-  service: PrintfulPodProductService
+  service: PODProviderManager
 })
 
 export {
@@ -26,4 +26,4 @@ export {
   PrintfulOrderTracking,
   PrintfulWebhookEvent,
   PODProviderManager
-} 
+}

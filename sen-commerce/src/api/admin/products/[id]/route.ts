@@ -39,6 +39,25 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           formatted.thumbnail = product.images[0].url
         }
         
+        // Find linked artworks
+        try {
+          const artworkModuleService = req.scope.resolve("artworkModuleService")
+          const allArtworks = await artworkModuleService.listArtworks()
+          
+          // Filter artworks that have this product ID in their product_ids array
+          const linkedArtworks = allArtworks.filter((artwork: any) => {
+            if (!artwork.product_ids) return false
+            const productIds = Array.isArray(artwork.product_ids) ? artwork.product_ids : []
+            return productIds.includes(product.id)
+          })
+          
+          formatted.linked_artworks = linkedArtworks || []
+          console.log(`Found ${linkedArtworks.length} artworks linked to product ${product.id}`)
+        } catch (artworkError) {
+          console.log("Could not fetch linked artworks:", artworkError.message)
+          formatted.linked_artworks = []
+        }
+        
         product = formatted
       }
       

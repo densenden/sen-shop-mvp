@@ -1,0 +1,18 @@
+import { asClass } from "awilix"
+import { PrintfulFulfillmentService } from "../modules/printful/services/printful-fulfillment-service"
+import { PrintfulOrderService } from "../modules/printful/services/printful-order-service"
+import { PODProviderManager } from "../modules/printful/services/pod-provider-facade"
+
+export default async function printfulServicesLoader({ container }) {
+  try {
+    container.register({
+      podProviderManager: asClass(PODProviderManager).singleton(),
+      printfulFulfillmentService: asClass(PrintfulFulfillmentService).singleton(),
+      printfulOrderService: asClass(PrintfulOrderService).singleton()
+    })
+    
+    console.log("Printful services registered successfully")
+  } catch (error) {
+    console.error("Failed to register Printful services:", error)
+  }
+}

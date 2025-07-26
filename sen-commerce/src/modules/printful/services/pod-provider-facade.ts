@@ -139,6 +139,10 @@ export class PrintfulProvider implements PODProvider {
     this.fulfillmentService = new PrintfulFulfillmentService(container)
   }
 
+  getInternalProductService(): PrintfulPodProductService {
+    return this.productService;
+  }
+
   async fetchProducts(): Promise<PODProduct[]> {
     const products = await this.productService.fetchStoreProducts()
     return products.map(this.mapPrintfulToPODProduct)
@@ -423,5 +427,21 @@ export class PODProviderManager extends MedusaService({}) {
 
   async processWebhook(payload: string, signature?: string, providerName?: string): Promise<{ success: boolean; message?: string }> {
     return await this.getProvider(providerName).processWebhook(payload, signature)
+  }
+
+  async fetchCatalogProducts(providerName?: string): Promise<any[]> {
+    const provider = this.getProvider(providerName)
+    if (provider instanceof PrintfulProvider) {
+      return await provider.getInternalProductService().fetchCatalogProducts()
+    }
+    throw new Error(`Catalog products not supported for provider '${provider.name}'`)
+  }
+
+  async listPrintfulProducts(options?: any): Promise<any[]> {
+    const provider = this.getProvider('printful')
+    if (provider instanceof PrintfulProvider) {
+      return await provider.getInternalProductService().listPrintfulProducts(options)
+    }
+    throw new Error(`listPrintfulProducts is only supported for Printful provider`)
   }
 }

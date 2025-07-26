@@ -1,10 +1,37 @@
 
 
-# SenShop MVP - Technical Documentation
+# SenShop MVP - Digital Art & Print-on-Demand Platform
 
-## What I Built
+A modern e-commerce platform built with Medusa.js v2 and Next.js, specializing in digital artworks with print-on-demand integration.
 
-A custom e-commerce platform for selling digital artworks as both downloads and physical products. The project integrates Medusa.js (commerce backend), Next.js (frontend), and Supabase (file storage) to create a complete artwork marketplace.
+## 🚀 Features
+
+### Core E-commerce
+- ✅ **Product Catalog** - Browse artworks and products with filtering
+- ✅ **Shopping Cart** - Add, remove, and manage cart items
+- ✅ **Checkout Flow** - Complete order processing with Stripe
+- ✅ **Order Management** - Track orders and download digital products
+- ✅ **User Authentication** - Account creation and management
+
+### Artwork Management
+- ✅ **Digital Artworks** - Upload and manage artwork collections
+- ✅ **Product Sync** - Automatic product creation from artworks
+- ✅ **Collection Organization** - Group artworks by topic and purpose
+- ✅ **Metadata Management** - Rich artwork information and tagging
+
+### Print-on-Demand
+- ✅ **Printful Integration** - Automatic POD product creation
+- ✅ **Mockup Generation** - Product previews with artwork
+- ✅ **Order Fulfillment** - Automatic order forwarding to Printful
+- ✅ **Webhook Handling** - Real-time order status updates
+
+### Digital Downloads
+- ✅ **Secure Downloads** - Token-based file access
+- ✅ **File Management** - Supabase storage integration
+- ✅ **Download Tracking** - Monitor download usage
+- ✅ **Format Options** - Multiple file format support
+
+## 🏗️ Architecture
 
 ## Architecture Overview
 

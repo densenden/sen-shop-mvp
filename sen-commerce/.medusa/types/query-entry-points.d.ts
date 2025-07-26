@@ -1949,33 +1949,6 @@ export type DigitalProductDownload = {
   deleted_at: Maybe<Scalars['DateTime']['output']>;
 };
 
-export type PrintfulProduct = {
-  __typename?: 'PrintfulProduct';
-  id: Scalars['ID']['output'];
-  artwork_id: Maybe<Scalars['String']['output']>;
-  printful_product_id: Scalars['String']['output'];
-  name: Scalars['String']['output'];
-  description: Maybe<Scalars['String']['output']>;
-  thumbnail_url: Maybe<Scalars['String']['output']>;
-  video_url: Maybe<Scalars['String']['output']>;
-  additional_images: Maybe<Scalars['JSON']['output']>;
-  metadata: Maybe<Scalars['JSON']['output']>;
-  status: Scalars['String']['output'];
-  provider_type: Scalars['String']['output'];
-  seo_title: Maybe<Scalars['String']['output']>;
-  seo_description: Maybe<Scalars['String']['output']>;
-  tags: Maybe<Scalars['JSON']['output']>;
-  category: Maybe<Scalars['String']['output']>;
-  base_price: Maybe<Scalars['Int']['output']>;
-  sale_price: Maybe<Scalars['Int']['output']>;
-  currency: Scalars['String']['output'];
-  in_stock: Scalars['Boolean']['output'];
-  price: Maybe<Scalars['Int']['output']>;
-  created_at: Scalars['DateTime']['output'];
-  updated_at: Scalars['DateTime']['output'];
-  deleted_at: Maybe<Scalars['DateTime']['output']>;
-};
-
 export type LinkCartPaymentCollection = {
   __typename?: 'LinkCartPaymentCollection';
   cart_id: Scalars['String']['output'];
@@ -2353,8 +2326,6 @@ declare module '@medusajs/framework/types' {
     digital_products: DigitalProduct
     digital_product_download: DigitalProductDownload
     digital_product_downloads: DigitalProductDownload
-    printful_product: PrintfulProduct
-    printful_products: PrintfulProduct
     cart_payment_collection: LinkCartPaymentCollection
     cart_payment_collections: LinkCartPaymentCollection
     cart_promotion: LinkCartPromotion

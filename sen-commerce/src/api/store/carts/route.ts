@@ -1,36 +1,36 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { createCartWorkflow } from "@medusajs/medusa/core-flows"
 
-// POST /store/carts - Create new cart using workflow (Medusa v2 standard)
+// POST /api/store/carts - Create new cart (Medusa v2 standard)
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
-    const { region_id, currency_code = "USD", customer_id, email, sales_channel_id, items = [], ...rest } = req.body as any
+    const { region_id, currency_code = "eur", ...rest } = req.body as any
     
-    // Use createCartWorkflow instead of direct service calls
-    const { result: cart } = await createCartWorkflow(req.scope).run({
+    console.log("Creating cart with:", { region_id, currency_code, ...rest })
+    
+    // Use Medusa's standard create cart workflow
+    const { result } = await createCartWorkflow(req.scope).run({
       input: {
-        region_id,
+        region_id: region_id || "reg_01JXAMMJEW67HVN6167BJ7513K", // Default to Europe region
         currency_code,
-        customer_id,
-        email,
-        sales_channel_id,
-        items,
         ...rest
       }
     })
     
-    // Set cart ID in session for compatibility
+    console.log("Cart created:", result)
+    
+    // Set cart ID in session
     if (req.session) {
-      req.session.cart_id = cart.id
+      req.session.cart_id = result.id
     }
     
     res.json({ 
-      cart,
+      cart: result,
       message: "Cart created successfully" 
     })
     
   } catch (error) {
-    console.error("[Store Carts Create] Error creating cart:", error)
+    console.error("[Store Carts] Error creating cart:", error)
     res.status(500).json({ 
       error: "Failed to create cart",
       message: error.message 

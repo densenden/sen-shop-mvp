@@ -17,20 +17,33 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     
     try {
       // Try to get artwork details and its linked products
-      const artworkModuleService = req.scope.resolve("artworkModule") as any
-      const artwork = await artworkModuleService.retrieveArtworks(artworkId)
+      const artworkModuleService = req.scope.resolve("artworkModuleService") as any
+      const artwork = await artworkModuleService.retrieve(artworkId, {
+        relations: ["products"],
+      })
       
-      if (artwork && artwork.product_ids && Object.keys(artwork.product_ids).length > 0) {
-        const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
+      if (artwork && artwork.products && artwork.products.length > 0) {
+        // Products are already populated from the relation
+        products = artwork.products
+      } else if (artwork && artwork.product_ids && Object.keys(artwork.product_ids).length > 0) {
+        const productService: IProductModuleService = req.scope.resolve(
+          Modules.PRODUCT
+        )
         const productIds = Object.keys(artwork.product_ids)
-        
+
         const result = await productService.listProducts(
           { id: productIds },
           {
-            relations: ["variants", "images", "tags", "categories", "variants.prices"],
+            relations: [
+              "variants",
+              "images",
+              "tags",
+              "categories",
+              "variants.prices",
+            ],
           }
         )
-        
+
         products = result || []
       } else {
         // If no products linked to artwork, return existing products as customizable versions

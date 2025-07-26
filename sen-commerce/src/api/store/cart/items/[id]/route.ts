@@ -34,9 +34,10 @@ export const PUT = async (req: MedusaRequest, res: MedusaResponse) => {
     }
     
     // Update item quantity
-    await cartService.updateLineItem(cartId, itemId, {
-      quantity
-    })
+    await cartService.updateLineItems([{
+      selector: { id: itemId, cart_id: cartId },
+      data: { quantity }
+    }])
     
     // Retrieve updated cart with relations
     const cart = await cartService.retrieveCart(cartId, {
@@ -80,7 +81,7 @@ export const DELETE = async (req: MedusaRequest, res: MedusaResponse) => {
     }
     
     // Remove item from cart
-    await cartService.removeFromCart(cartId, itemId)
+    await cartService.deleteLineItems([itemId])
     
     // Retrieve updated cart with relations
     const cart = await cartService.retrieveCart(cartId, {
