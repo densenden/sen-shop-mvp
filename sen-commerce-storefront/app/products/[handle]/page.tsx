@@ -6,6 +6,7 @@ import { ArrowLeft, Heart, ShoppingBag, Download, Truck, Star, Share2 } from 'lu
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
+import { cartService } from '../../../lib/cart'
 
 interface Product {
   id: string
@@ -36,7 +37,7 @@ interface ProductVariant {
 export default function ProductPage() {
   const params = useParams()
   const router = useRouter()
-  const handle = params.handle as string
+  const handle = params?.handle as string
   
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
@@ -79,7 +80,7 @@ export default function ProductPage() {
           const productWithImages = {
             ...productData,
             thumbnail: productData.thumbnail,
-            images: productData.images?.map(img => typeof img === 'string' ? img : img.url) || [productData.thumbnail],
+            images: productData.images?.map((img: any) => typeof img === 'string' ? img : img.url) || [productData.thumbnail],
             variants: productData.variants?.length > 0 ? productData.variants : [{
               id: `${productData.id}-default`,
               title: 'Default',
@@ -113,38 +114,20 @@ export default function ProductPage() {
 
     setAddingToCart(true)
     try {
-      // Get existing cart
-      const existingCart = JSON.parse(localStorage.getItem('cart') || '[]')
+      console.log('Product page: Adding to cart via cartService:', {
+        productId: product.id,
+        variantId: selectedVariant.id,
+        quantity
+      })
       
-      // Check if item already exists in cart
-      const existingItemIndex = existingCart.findIndex(
-        (item: any) => item.product_id === product.id && item.variant_id === selectedVariant.id
-      )
-
-      if (existingItemIndex >= 0) {
-        // Update quantity
-        existingCart[existingItemIndex].quantity += quantity
-      } else {
-        // Add new item
-        const cartItem = {
-          id: `${product.id}-${selectedVariant.id}`,
-          product_id: product.id,
-          variant_id: selectedVariant.id,
-          title: product.title,
-          price: selectedVariant.price,
-          quantity: quantity,
-          thumbnail: product.thumbnail,
-          metadata: product.metadata
-        }
-        existingCart.push(cartItem)
-      }
-
-      localStorage.setItem('cart', JSON.stringify(existingCart))
+      // Use the same cart service as the artwork pages
+      await cartService.addItem(product.id, selectedVariant.id, quantity)
       
       // Show success message or redirect to cart
       router.push('/cart')
     } catch (error) {
       console.error('Error adding to cart:', error)
+      alert('Failed to add item to cart. Please try again.')
     } finally {
       setAddingToCart(false)
     }

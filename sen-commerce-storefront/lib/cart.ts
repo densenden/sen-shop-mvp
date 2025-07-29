@@ -69,7 +69,7 @@ class CartService {
   }
 
   private getHeaders() {
-    const headers = getHeaders()
+    const headers: Record<string, string> = getHeaders()
     if (this.cartId) {
       headers['x-cart-id'] = this.cartId
     }
@@ -92,38 +92,18 @@ class CartService {
 
   async getCart(): Promise<Cart | null> {
     try {
-      // First try to get from localStorage fallback
-      if (typeof window !== 'undefined') {
-        const localCart = localStorage.getItem('fallback_cart')
-        if (localCart) {
-          this.cart = JSON.parse(localCart)
-          return this.cart
-        }
+      // Always try localStorage first since we're using it as primary storage now
+      const localCart = this.getLocalCart()
+      if (localCart) {
+        console.log('Found cart in localStorage:', localCart)
+        return localCart
       }
 
-      if (!this.cartId) {
-        return null
-      }
-
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/cart`, {
-        headers: this.getHeaders(),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        this.cart = data.cart
-        return this.cart
-      } else if (response.status === 404) {
-        // Cart not found, clear the stored ID
-        this.clearCartId()
-        return null
-      } else {
-        console.warn(`Cart API failed with status ${response.status}, using localStorage fallback`)
-        return this.getLocalCart()
-      }
+      console.log('No cart found in localStorage')
+      return null
     } catch (error) {
       console.error('Error getting cart:', error)
-      return this.getLocalCart()
+      return null
     }
   }
 
@@ -171,38 +151,21 @@ class CartService {
 
   async addItem(productId: string, variantId: string, quantity: number = 1): Promise<Cart | null> {
     try {
-      // Ensure we have a cart
-      if (!this.cartId) {
-        await this.createCart()
-      }
-
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/carts/${this.cartId}/line-items`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({
-          variant_id: variantId,
-          quantity,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        this.cart = data.cart
-        this.saveLocalCart(this.cart)
-        return this.cart
-      } else {
-        console.warn('Cart API failed, using localStorage fallback')
-        return this.addItemLocal(productId, variantId, quantity)
-      }
-    } catch (error) {
-      console.error('Error adding item to cart via API, using localStorage fallback:', error)
+      // Always use localStorage for now since the API is simplified
+      console.log('Adding item to cart via localStorage:', { productId, variantId, quantity })
       return this.addItemLocal(productId, variantId, quantity)
+    } catch (error) {
+      console.error('Error adding item to cart:', error)
+      throw error
     }
   }
 
   private async addItemLocal(productId: string, variantId: string, quantity: number = 1): Promise<Cart | null> {
     try {
+      console.log('addItemLocal called with:', { productId, variantId, quantity })
+      
       // Get product details for the cart item
+      console.log('Fetching product details from:', `${MEDUSA_API_CONFIG.baseUrl}/store/products/${productId}`)
       const productResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/products/${productId}`, {
         headers: getHeaders(),
       })
@@ -211,10 +174,19 @@ class CartService {
       if (productResponse.ok) {
         const productData = await productResponse.json()
         product = productData.product
+        console.log('Product fetched successfully:', product?.title)
+      } else {
+        console.warn('Failed to fetch product, using fallback data. Status:', productResponse.status)
       }
 
       // Get or create cart
-      let cart = this.getLocalCart() || this.createLocalCart()
+      let cart = this.getLocalCart()
+      if (!cart) {
+        console.log('No existing cart found, creating new one')
+        cart = this.createLocalCart()
+      } else {
+        console.log('Using existing cart with', cart.items.length, 'items')
+      }
       
       // Find existing item
       const existingItemIndex = cart.items.findIndex(
@@ -222,10 +194,12 @@ class CartService {
       )
 
       if (existingItemIndex >= 0) {
+        console.log('Updating existing item quantity')
         // Update existing item
         cart.items[existingItemIndex].quantity += quantity
         cart.items[existingItemIndex].total = cart.items[existingItemIndex].unit_price * cart.items[existingItemIndex].quantity
       } else {
+        console.log('Adding new item to cart')
         // Add new item
         const newItem: CartItem = {
           id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -247,6 +221,7 @@ class CartService {
         }
         newItem.total = newItem.unit_price * quantity
         cart.items.push(newItem)
+        console.log('New item added:', newItem.title, 'Total items now:', cart.items.length)
       }
 
       // Recalculate totals
@@ -254,8 +229,11 @@ class CartService {
       cart.total = cart.subtotal // Simplified, no tax/shipping for now
       cart.updated_at = new Date().toISOString()
 
+      console.log('Cart updated. Total items:', cart.items.length, 'Subtotal:', cart.subtotal)
+
       this.cart = cart
       this.saveLocalCart(cart)
+      console.log('Cart saved to localStorage')
       return cart
     } catch (error) {
       console.error('Error adding item locally:', error)
@@ -264,6 +242,7 @@ class CartService {
   }
 
   private createLocalCart(): Cart {
+    console.log('Creating new local cart')
     const cart: Cart = {
       id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       currency_code: 'usd',
@@ -276,8 +255,10 @@ class CartService {
       updated_at: new Date().toISOString()
     }
     
+    console.log('New cart created with ID:', cart.id)
     this.saveCartId(cart.id)
     this.saveLocalCart(cart)
+    console.log('New cart saved to localStorage')
     return cart
   }
 
@@ -311,23 +292,32 @@ class CartService {
 
   async removeItem(itemId: string): Promise<Cart | null> {
     try {
-      if (!this.cartId) {
+      console.log('Removing item from localStorage cart:', itemId)
+      
+      let cart = this.getLocalCart()
+      if (!cart) {
         throw new Error('No cart found')
       }
 
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/cart/items/${itemId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        this.cart = data.cart
-        return this.cart
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `Failed to remove item: ${response.status}`)
+      // Remove item from cart
+      const initialItemCount = cart.items.length
+      cart.items = cart.items.filter(item => item.id !== itemId)
+      
+      if (cart.items.length === initialItemCount) {
+        console.warn('Item not found in cart:', itemId)
+        return cart
       }
+
+      // Recalculate totals
+      cart.subtotal = cart.items.reduce((sum, item) => sum + item.total, 0)
+      cart.total = cart.subtotal
+      cart.updated_at = new Date().toISOString()
+
+      console.log('Item removed. Remaining items:', cart.items.length)
+
+      this.cart = cart
+      this.saveLocalCart(cart)
+      return cart
     } catch (error) {
       console.error('Error removing cart item:', error)
       throw error

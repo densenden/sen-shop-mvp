@@ -14,6 +14,7 @@ interface Product {
   id: string
   title: string
   description?: string
+  variants?: any[]
 }
 
 const ProductEditPage = () => {
@@ -154,6 +155,83 @@ const ProductEditPage = () => {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </div>
+      
+      {/* Product Variants and Pricing */}
+      <div className="flex flex-col gap-y-4 p-4 border border-gray-200 rounded-lg">
+        <h3 className="text-lg font-medium">Product Variants & Pricing</h3>
+        <p className="text-sm text-gray-600">
+          Product variants allow you to offer different options (sizes, colors, etc.) with different prices.
+        </p>
+        
+        {product?.variants && product.variants.length > 0 ? (
+          <div className="space-y-4">
+            {product.variants.map((variant: any, index: number) => (
+              <div key={variant.id} className="p-3 bg-gray-50 rounded border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium">{variant.title || `Variant ${index + 1}`}</h4>
+                  <span className="text-sm text-gray-500">ID: {variant.id}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (in cents)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g., 2000 for $20.00"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      defaultValue={variant.prices?.[0]?.amount || ''}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter price in cents (2000 = $20.00)
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Currency
+                    </label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                      <option value="usd">USD</option>
+                      <option value="eur">EUR</option>
+                      <option value="gbp">GBP</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SKU (Stock Keeping Unit)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., POSTER-001"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    defaultValue={variant.sku || ''}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded border-2 border-dashed border-gray-300">
+            <p className="text-gray-500 mb-4">No variants found for this product</p>
+            <p className="text-sm text-gray-400">
+              Variants are automatically created when products are synced from external sources like Printful.
+            </p>
+          </div>
+        )}
+        
+        <div className="bg-blue-50 border border-blue-200 rounded p-4">
+          <h4 className="font-medium text-blue-900 mb-2">💡 How to Set Product Prices:</h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• <strong>Manual Products:</strong> Edit the price fields above and click Save</li>
+            <li>• <strong>Printful Products:</strong> Prices are set in your Printful dashboard and synced automatically</li>
+            <li>• <strong>Digital Products:</strong> Set prices when creating the digital product</li>
+          </ul>
+        </div>
       </div>
       <div className="flex flex-col gap-y-2">
         <label htmlFor="artwork">Linked Artwork</label>
