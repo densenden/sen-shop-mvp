@@ -1,6 +1,7 @@
 'use client'
 
 import Layout from '../components/Layout'
+import { Flower } from 'lucide-react'
 
 export default function AboutPage() {
   return (
@@ -52,9 +53,7 @@ export default function AboutPage() {
             
             <div className="text-center">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
+                <Flower className="w-6 h-6 text-gray-600" />
               </div>
               <h3 className="text-sm font-medium mb-2">Sustainable</h3>
               <p className="text-sm text-gray-600">Our print-on-demand model reduces waste while our digital offerings provide instant, eco-friendly access to art.</p>
