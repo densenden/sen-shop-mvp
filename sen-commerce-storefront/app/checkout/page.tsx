@@ -164,7 +164,7 @@ export default function CheckoutPage() {
       // Simulate successful payment and create order
       console.log('Payment session created:', paymentSession)
       
-      // Create order in backend
+      // Create order in backend with cart details
       const orderResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/orders`, {
         method: 'POST',
         headers: {
@@ -175,7 +175,9 @@ export default function CheckoutPage() {
           cart_id: cart.id,
           customer_info: customerInfo,
           shipping_address: shippingAddress,
-          payment_session_id: paymentSession.id,
+          payment_session_id: paymentSession.id || 'mock_payment_session',
+          cart_items: cart.items,
+          cart_total: cart.total,
         }),
       })
 
