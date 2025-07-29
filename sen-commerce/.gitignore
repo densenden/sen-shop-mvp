@@ -28,3 +28,4 @@ build
 dist/
 build/
 *.log
+sen-commerce-storefront/.next/

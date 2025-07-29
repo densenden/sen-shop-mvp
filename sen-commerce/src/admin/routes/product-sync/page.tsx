@@ -1,6 +1,7 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { RefreshCw, CheckCircle, AlertCircle, Clock, Play, Pause, Database, ArrowRight, Download, Package, Plus } from "lucide-react"
 import { useState, useEffect } from "react"
+import { sdk } from "../../lib/sdk"
 
 interface SyncLog {
   id: string
@@ -64,8 +65,8 @@ const ProductSyncPage = () => {
   const fetchSyncLogs = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/admin/product-sync")
-      const data = await response.json()
+      const response = await sdk.admin.custom.get("/product-sync")
+      const data = response
       
       setSyncLogs(data.logs || [])
       setStats(data.stats || { total: 0, pending: 0, success: 0, failed: 0, in_progress: 0 })
@@ -80,20 +81,11 @@ const ProductSyncPage = () => {
   const startAction = async (action: string) => {
     setSyncing(true)
     try {
-      const response = await fetch("/admin/product-sync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          action,
-          provider: "printful"
-        })
+      const response = await sdk.admin.custom.post("/product-sync", {
+        action,
+        provider: "printful"
       })
       
-      if (!response.ok) {
-        throw new Error("Failed to start sync")
-      }
       
       // Refresh logs after starting sync
       await fetchSyncLogs()
@@ -130,23 +122,11 @@ const ProductSyncPage = () => {
 
     setImporting(true)
     try {
-      const response = await fetch("/admin/product-sync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          action: "import_products",
-          provider,
-          product_ids: productIds
-        })
+      const result = await sdk.admin.custom.post("/product-sync", {
+        action: "import_products",
+        provider,
+        product_ids: productIds
       })
-      
-      if (!response.ok) {
-        throw new Error("Failed to import products")
-      }
-      
-      const result = await response.json()
       if (result.failed > 0) {
         const errorDetails = result.errors.map((e: { productId: string; error: string }) => `Product ID: ${e.productId}, Error: ${e.error}`).join("\n")
         alert(`Successfully imported ${result.imported} products. ${result.failed} failed.\n\nErrors:\n${errorDetails}`)
