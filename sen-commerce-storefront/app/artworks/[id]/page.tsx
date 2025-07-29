@@ -168,13 +168,16 @@ export default function ArtworkDetailPage() {
   }
 
   const formatPrice = (amount: number, currencyCode: string = 'USD') => {
+    const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0
+    const safeCurrency = (currencyCode || 'USD').toUpperCase()
+    
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: currencyCode.toUpperCase(),
-      }).format(amount / 100)
+        currency: safeCurrency,
+      }).format(safeAmount / 100)
     } catch (error) {
-      return `$${(amount / 100).toFixed(2)}`
+      return `$${(safeAmount / 100).toFixed(2)}`
     }
   }
 

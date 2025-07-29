@@ -79,10 +79,13 @@ export default function ArtworksPage() {
   const topics = Array.from(new Set(collections.map(c => c.topic).filter(Boolean)))
 
   const formatPrice = (price: number, currency: string = 'usd') => {
+    const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
+    const safeCurrency = (currency || 'usd').toUpperCase()
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency.toUpperCase()
-    }).format(price / 100)
+      currency: safeCurrency
+    }).format(safePrice / 100)
   }
 
   return (

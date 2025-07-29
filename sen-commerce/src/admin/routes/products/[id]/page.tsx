@@ -170,7 +170,16 @@ const ProductEditPage = () => {
               <div key={variant.id} className="p-3 bg-gray-50 rounded border">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium">{variant.title || `Variant ${index + 1}`}</h4>
-                  <span className="text-sm text-gray-500">ID: {variant.id}</span>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => window.location.href = `/app/products/${id}/variants/${variant.id}/prices`}
+                    >
+                      Edit Prices
+                    </Button>
+                    <span className="text-sm text-gray-500">ID: {variant.id}</span>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

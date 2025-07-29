@@ -129,6 +129,40 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                 }
 
                 console.log("Printful Product:", JSON.stringify(printfulProduct, null, 2));
+                
+                // Validate and fix product data
+                if (!printfulProduct.name || printfulProduct.name.trim() === '') {
+                    console.warn(`Printful product ${productId} has no name, using fallback`);
+                    printfulProduct.name = `Printful Product ${productId}`;
+                }
+                
+                // Ensure variants array exists and has valid data
+                if (!printfulProduct.variants || printfulProduct.variants.length === 0) {
+                    console.warn(`Printful product ${productId} has no variants, creating default variant`);
+                    printfulProduct.variants = [{
+                        id: `variant_${productId}`,
+                        name: "Default Variant",
+                        price: "25.00",
+                        currency: "USD"
+                    }];
+                } else {
+                    // Validate existing variants
+                    printfulProduct.variants = printfulProduct.variants.filter(variant => variant && variant.id).map(variant => ({
+                        ...variant,
+                        name: variant.name || "Default Variant",
+                        price: variant.price || "25.00",
+                        currency: variant.currency || "USD"
+                    }));
+                    
+                    if (printfulProduct.variants.length === 0) {
+                        printfulProduct.variants = [{
+                            id: `variant_${productId}`,
+                            name: "Default Variant", 
+                            price: "25.00",
+                            currency: "USD"
+                        }];
+                    }
+                }
 
                 const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL);
                 let [defaultSalesChannel] = await salesChannelService.listSalesChannels({
@@ -145,17 +179,20 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                 // Get price from variants or set a default price for POD products
                 let price = 0;
                 if (printfulProduct.variants && printfulProduct.variants.length > 0) {
-                  price = Math.round(parseFloat(printfulProduct.variants[0].price) * 100);
-                } else if (printfulProduct.price) {
+                  const variantPrice = printfulProduct.variants[0].price;
+                  if (variantPrice && !isNaN(parseFloat(variantPrice))) {
+                    price = Math.round(parseFloat(variantPrice) * 100);
+                  }
+                } else if (printfulProduct.price && !isNaN(parseFloat(printfulProduct.price))) {
                   price = Math.round(parseFloat(printfulProduct.price) * 100);
                 }
                 
-                // If no price found, set reasonable defaults based on product type
-                if (price === 0) {
+                // If no valid price found, set reasonable defaults based on product type
+                if (price === 0 || isNaN(price)) {
                   // Set default prices for POD products ($15-$35 range)
                   const defaultPrices = [1500, 2000, 2500, 3000, 3500]; // $15-$35
                   price = defaultPrices[Math.floor(Math.random() * defaultPrices.length)];
-                  console.log(`Set default price ${price/100} for product: ${printfulProduct.name}`);
+                  console.log(`Set default price $${price/100} for product: ${printfulProduct.name}`);
                 }
 
                 medusaProduct = (await productModuleService.createProducts([

@@ -146,10 +146,13 @@ export default function ProductPage() {
   }
 
   const formatPrice = (price: number, currency: string = 'usd') => {
+    const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
+    const safeCurrency = (currency || 'usd').toUpperCase()
+    
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency.toUpperCase()
-    }).format(price / 100)
+      currency: safeCurrency
+    }).format(safePrice / 100)
   }
 
   if (loading) {
