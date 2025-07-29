@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react'
 import Layout from '../components/Layout'
+import { getHeaders } from '../../lib/config'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -61,9 +62,7 @@ export default function LoginPage() {
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getHeaders(),
         body: JSON.stringify(body),
       })
 

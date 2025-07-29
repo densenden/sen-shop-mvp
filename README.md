@@ -285,12 +285,18 @@ VITE_SUPABASE_ANON_KEY=[anon-key]
 - ✅ Secure download system with tokens
 - ✅ Digital product listing page
 
+### Recent Fixes (January 2025)
+- ✅ **Product Import Fixed** - Resolved "cannot read property price" error in product sync
+- ✅ **Product List Display** - Fixed admin UI to show real products from database
+- ✅ **Artwork Integration** - Added artwork selector to product creation/editing
+- ✅ **Checkout Flow Fixed** - Added publishable API key to login/registration requests
+- ✅ **Git Optimization** - Updated .gitignore to prevent large file tracking
+
 ### Known Issues
 - ❌ Digital product detail/edit page missing
 - ❌ No upload progress indicator
-- ❌ No link between products and digital products UI
 - ❌ Download workflow not integrated with orders
-- Browser console shows "playback state" errors (from dev tools, not app code)
+- ❌ Some TypeScript compilation errors in Printful module
 
 ## Digital Products Implementation
 
@@ -350,5 +356,3 @@ MedusaService creates methods following this pattern:
 
 Last Updated: January 2025
 Built with Medusa.js v2.8.4
-
-

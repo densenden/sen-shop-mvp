@@ -56,7 +56,7 @@ interface ArtworkCollection {
 export default function ArtworkDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const artworkId = params.id as string
+  const artworkId = params?.id as string
   
   const [artwork, setArtwork] = useState<Artwork | null>(null)
   const [collection, setCollection] = useState<ArtworkCollection | null>(null)
@@ -98,17 +98,12 @@ export default function ArtworkDetailPage() {
           }
         }
         
-        // Fetch related products
-        const productsResponse = await fetch(
-          `${MEDUSA_API_CONFIG.baseUrl}/store/artworks/${artworkId}/products`,
-          { headers: getHeaders() }
-        )
-        if (productsResponse.ok) {
-          const productsData = await productsResponse.json()
-          console.log('Artwork products response:', productsData)
-          setRelatedProducts(productsData.products || [])
+        // Use products from artwork response (they're already included)
+        if (artworkData.artwork?.products) {
+          console.log('Using products from artwork response:', artworkData.artwork.products)
+          setRelatedProducts(artworkData.artwork.products)
         } else {
-          console.warn('Failed to fetch artwork products, falling back to empty array')
+          console.log('No products found in artwork response')
           setRelatedProducts([])
         }
       } else {
@@ -185,7 +180,15 @@ export default function ArtworkDetailPage() {
 
   const getLowestPrice = (product: Product) => {
     if (!product.variants || product.variants.length === 0) return null
-    const prices = product.variants.flatMap(v => v.prices)
+    
+    // Filter out variants without prices and flatten the prices array
+    const prices = product.variants
+      .filter(v => v.prices && Array.isArray(v.prices) && v.prices.length > 0)
+      .flatMap(v => v.prices)
+      .filter(p => p && typeof p.amount === 'number')
+    
+    if (prices.length === 0) return null
+    
     const lowestPrice = Math.min(...prices.map(p => p.amount))
     const currency = prices.find(p => p.amount === lowestPrice)?.currency_code || 'USD'
     return { amount: lowestPrice, currency }

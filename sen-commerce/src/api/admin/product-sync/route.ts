@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
-import { IProductModuleService } from "@medusajs/types"
+import { IProductModuleService, ISalesChannelModuleService, IPricingModuleService } from "@medusajs/types"
 import { authenticate } from "@medusajs/medusa";
 
 interface SyncLog {
@@ -25,29 +25,15 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const printfulService = req.scope.resolve("printfulModule") as any
     const digitalProductService = req.scope.resolve("digitalProductModuleService") as any
     
-    const [printfulStoreProducts, printfulCatalogProducts, existingPrintfulProducts, digitalProducts] = await Promise.all([
+    const [printfulStoreProducts, existingPrintfulProducts, digitalProducts] = await Promise.all([
       printfulService.fetchProducts().catch(() => []),
-      printfulService.fetchCatalogProducts().catch(() => []),
       printfulService.listPrintfulProducts().catch(() => []),
       digitalProductService.listDigitalProducts({}).catch(() => [])
     ]);
 
-    const catalogFormatted = printfulCatalogProducts.slice(0, 10).map((product: any) => ({
-      id: `catalog-${product.id}`,
-      name: product.name,
-      description: product.description,
-      thumbnail_url: product.image,
-      status: 'available',
-      provider: 'printful',
-      already_imported: false,
-      product_type: 'catalog'
-    }));
-
-    const allPrintfulProducts = [...printfulStoreProducts, ...catalogFormatted];
-
     const availableProducts = {
-      printful: allPrintfulProducts.map(p => ({
-        id: p.id || p.external_id || `product-${p.name}`,
+      printful: printfulStoreProducts.map(p => ({
+        id: p.id || p.external_id,
         name: p.name,
         description: p.description || `${p.name} - Available for custom printing`,
         thumbnail_url: p.thumbnail_url || p.image,
@@ -120,45 +106,126 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
     const importedProducts: any[] = [];
     const errors: any[] = [];
 
-    let printfulProducts: any[] = [];
-    if (provider === "printful") {
-        const printfulService = req.scope.resolve("printfulModule") as any;
-        printfulProducts = await printfulService.fetchProducts();
-    }
+    const printfulService = req.scope.resolve("printfulModule") as any;
 
     for (const productId of productIds) {
         try {
             let medusaProduct;
             if (provider === "printful") {
-                const printfulProduct = printfulProducts.find(p => p.id.toString() === productId.toString());
+                const printfulProduct = await printfulService.getProduct(productId);
 
                 if (!printfulProduct) {
                     throw new Error("Product not found in Printful");
                 }
 
-                const { createProductsWorkflow } = require("@medusajs/medusa/dist/workflows/product/create-products");
-                const workflow = createProductsWorkflow(req.scope);
-                const { result } = await workflow.run({
-                  input: {
-                    products: [
+                console.log("Printful Product:", JSON.stringify(printfulProduct, null, 2));
+
+                const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL);
+                let [defaultSalesChannel] = await salesChannelService.listSalesChannels({
+                  name: "Default",
+                });
+
+                if (!defaultSalesChannel) {
+                  defaultSalesChannel = await salesChannelService.createSalesChannels({
+                    name: "Default",
+                    description: "Default sales channel for all products",
+                  });
+                }
+
+                const price = printfulProduct.price ? Math.round(parseFloat(printfulProduct.price) * 100) : 0
+
+                medusaProduct = (await productModuleService.createProducts([
+                  {
+                    title: printfulProduct.name || `Product ${printfulProduct.id}`,
+                    status: "published",
+                    variants: [
                       {
-                        title: printfulProduct.name,
-                        status: "draft",
-                        variants: [
-                          {
-                            title: "Default",
-                            prices: [{ currency_code: "usd", amount: 0 }],
-                          },
-                        ],
-                        metadata: {
-                          fulfillment_type: "printful_pod",
-                          printful_product_id: printfulProduct.id,
-                        },
+                        title: printfulProduct.variants?.[0]?.name || "Default",
                       },
                     ],
+                    metadata: {
+                      fulfillment_type: "printful_pod",
+                      printful_product_id: printfulProduct.id,
+                    },
                   },
+                ]))[0];
+
+                if (medusaProduct) {
+                  const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING);
+                  await pricingModuleService.addPrices({
+                    priceSetId: medusaProduct.variants[0].price_set_id,
+                    prices: [{
+                      amount: price,
+                      currency_code: "usd",
+                    }],
+                  });
+
+                  const remoteLink = req.scope.resolve("remoteLink");
+                  await remoteLink.create([
+                    {
+                      [Modules.PRODUCT]: { product_id: medusaProduct.id },
+                      [Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                    },
+                  ]);
+                }
+            } else if (provider === "digital") {
+                const digitalProductService = req.scope.resolve("digitalProductModuleService") as any;
+                const digitalProduct = await digitalProductService.getDigitalProduct(productId);
+
+                if (!digitalProduct) {
+                    throw new Error("Digital product not found");
+                }
+
+                const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL);
+                let [defaultSalesChannel] = await salesChannelService.listSalesChannels({
+                  name: "Default",
                 });
-                medusaProduct = result[0];
+
+                if (!defaultSalesChannel) {
+                  defaultSalesChannel = await salesChannelService.createSalesChannels({
+                    name: "Default",
+                    description: "Default sales channel for all products",
+                  });
+                }
+
+                const price = Math.round(parseFloat(digitalProduct.price) * 100)
+
+                medusaProduct = (await productModuleService.createProducts([
+                  {
+                    title: digitalProduct.name,
+                    status: "published",
+                    variants: [
+                      {
+                        title: "Digital Version",
+                      },
+                    ],
+                    metadata: {
+                      fulfillment_type: "digital",
+                    },
+                  },
+                ]))[0];
+
+                if (medusaProduct) {
+                  const digitalProductService = req.scope.resolve("digitalProductModuleService") as any;
+                  await digitalProductService.linkProduct(medusaProduct.id, digitalProduct.id);
+
+                  const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING);
+                  await pricingModuleService.addPrices({
+                    priceSetId: medusaProduct.variants[0].price_set_id,
+                    prices: [{
+                      amount: price,
+                      currency_code: "usd",
+                    }],
+                  });
+
+                  const remoteLink = req.scope.resolve("remoteLink");
+                  await remoteLink.create([
+                    {
+                      [Modules.PRODUCT]: { product_id: medusaProduct.id },
+                      [Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                    },
+                  ]);
+                }
             }
             importedProducts.push(medusaProduct);
         } catch (error) {

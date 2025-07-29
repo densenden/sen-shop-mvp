@@ -40,7 +40,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     // Get related products for this artwork
     let relatedProducts: ProductDTO[] = []
     try {
-      console.log(`[Store API] artwork.product_ids:`, artwork.product_ids, 'type:', typeof artwork.product_ids)
+      console.log(`[Store API] Raw artwork.product_ids:`, artwork.product_ids, 'type:', typeof artwork.product_ids)
       
       // Handle different formats of product_ids (same as in list API)
       let productIds: string[] = []
@@ -62,46 +62,53 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       if (productIds.length > 0) {
         console.log(`[Store API] Attempting to fetch products with IDs:`, productIds)
         
-        // Try to fetch each product individually
-        const productPromises = productIds.map(async (productId) => {
-          try {
-            const product = await productService.retrieveProduct(productId, {
-              relations: ["variants", "variants.prices"]
-            })
-            return product
-          } catch (error) {
-            console.log(`[Store API] Could not fetch product ${productId}:`, error.message)
-            return null
-          }
-        })
+        // Try to fetch all products at once first
+        try {
+          const allProducts = await productService.listProducts({
+            id: productIds
+          }, {
+            relations: ["variants"]
+          })
+          relatedProducts = allProducts
+          console.log(`[Store API] Found ${relatedProducts.length} products via listProducts`)
+        } catch (listError) {
+          console.log(`[Store API] listProducts failed, trying individual fetches:`, listError.message)
+          
+          // Fallback: Try to fetch each product individually
+          const productPromises = productIds.map(async (productId) => {
+            try {
+              const product = await productService.retrieveProduct(productId, {
+                relations: ["variants"]
+              })
+              return product
+            } catch (error) {
+              console.log(`[Store API] Could not fetch product ${productId}:`, error.message)
+              return null
+            }
+          })
+          
+          const productResults = await Promise.all(productPromises)
+          relatedProducts = productResults.filter(p => p !== null)
+        }
         
-        const productResults = await Promise.all(productPromises)
-        relatedProducts = productResults.filter(p => p !== null)
-        
-        console.log(`[Store API] Found ${relatedProducts.length} related products`)
+        console.log(`[Store API] Final result: Found ${relatedProducts.length} related products`)
         if (relatedProducts.length > 0) {
           console.log(`[Store API] Product details:`, relatedProducts.map(p => ({ id: p.id, title: p.title })))
         }
       } else {
-        console.log(`[Store API] No product_ids found for artwork ${id}`)
+        console.log(`[Store API] No product_ids found for artwork ${id} - artwork.product_ids is:`, artwork.product_ids)
       }
     } catch (error) {
-      console.warn("Could not fetch related products:", error)
+      console.error("Could not fetch related products:", error)
     }
 
-    // Format response
+    // Format response - only use fields that exist in the artwork model
     const response = {
       id: artwork.id,
       title: artwork.title,
       description: artwork.description,
       image_url: artwork.image_url,
       artwork_collection_id: artwork.artwork_collection_id,
-      artist_name: artwork.artist_name,
-      creation_date: artwork.creation_date,
-      dimensions: artwork.dimensions,
-      style: artwork.style,
-      brand_story: artwork.brand_story,
-      tags: artwork.tags ? (Array.isArray(artwork.tags) ? artwork.tags : [artwork.tags]) : [],
       products: relatedProducts
     }
 

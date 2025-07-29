@@ -147,7 +147,12 @@ const ProductSyncPage = () => {
       }
       
       const result = await response.json()
-      alert(`Successfully imported ${result.imported} products. ${result.failed} failed.`)
+      if (result.failed > 0) {
+        const errorDetails = result.errors.map((e: { productId: string; error: string }) => `Product ID: ${e.productId}, Error: ${e.error}`).join("\n")
+        alert(`Successfully imported ${result.imported} products. ${result.failed} failed.\n\nErrors:\n${errorDetails}`)
+      } else {
+        alert(`Successfully imported ${result.imported} products.`)
+      }
       
       // Clear selection and refresh data
       setSelectedProducts(new Set())

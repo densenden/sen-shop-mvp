@@ -1916,6 +1916,19 @@ export type ArtworkCollection = {
   deleted_at: Maybe<Scalars['DateTime']['output']>;
 };
 
+export type ArtworkProductRelation = {
+  __typename?: 'ArtworkProductRelation';
+  id: Scalars['ID']['output'];
+  artwork_id: Scalars['String']['output'];
+  product_id: Scalars['String']['output'];
+  product_type: Scalars['String']['output'];
+  is_primary: Scalars['Boolean']['output'];
+  position: Scalars['Int']['output'];
+  created_at: Scalars['DateTime']['output'];
+  updated_at: Scalars['DateTime']['output'];
+  deleted_at: Maybe<Scalars['DateTime']['output']>;
+};
+
 export type DigitalProduct = {
   __typename?: 'DigitalProduct';
   id: Scalars['ID']['output'];
@@ -2322,6 +2335,8 @@ declare module '@medusajs/framework/types' {
     artworks: Artwork
     artwork_collection: ArtworkCollection
     artwork_collections: ArtworkCollection
+    artwork_product_relation: ArtworkProductRelation
+    artwork_product_relations: ArtworkProductRelation
     digital_product: DigitalProduct
     digital_products: DigitalProduct
     digital_product_download: DigitalProductDownload

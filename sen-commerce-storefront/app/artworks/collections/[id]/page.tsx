@@ -38,7 +38,7 @@ interface ArtworkCollection {
 
 export default function CollectionDetailPage() {
   const params = useParams()
-  const collectionId = params.id as string
+  const collectionId = params?.id as string
   
   const [collection, setCollection] = useState<ArtworkCollection | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,18 +52,16 @@ export default function CollectionDetailPage() {
   const fetchCollection = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/artwork-collections`, {
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/artwork-collections/${collectionId}`, {
         headers: getHeaders()
       })
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Collections API Response:', data)
-        const collections = data.collections || []
-        const foundCollection = collections.find((c: ArtworkCollection) => c.id === collectionId)
-        setCollection(foundCollection || null)
+        console.log('Collection API Response:', data)
+        setCollection(data.collection || null)
       } else {
-        console.error('Collections API failed with status:', response.status)
+        console.error('Collection API failed with status:', response.status)
         setCollection(null)
       }
     } catch (error) {
