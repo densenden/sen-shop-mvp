@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { cartService } from '../../lib/cart'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -12,6 +13,26 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [cartItemCount, setCartItemCount] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    // Check login status
+    const token = localStorage.getItem('authToken')
+    setIsLoggedIn(!!token)
+
+    // Load cart count
+    const loadCartCount = async () => {
+      const cart = await cartService.getCart()
+      setCartItemCount(cartService.getItemCount())
+    }
+    
+    loadCartCount()
+
+    // Update cart count periodically (in case items are added from other tabs)
+    const interval = setInterval(loadCartCount, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -58,16 +79,21 @@ export default function Layout({ children }: LayoutProps) {
                 <Search className="h-5 w-5" />
               </button>
               <Link
-                href="/login"
+                href={isLoggedIn ? "/account" : "/login"}
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <User className="h-5 w-5" />
               </Link>
               <Link
                 href="/cart"
-                className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ShoppingBag className="h-5 w-5" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
               </Link>
 
               {/* Mobile menu button */}

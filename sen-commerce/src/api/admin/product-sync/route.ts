@@ -112,6 +112,17 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
         try {
             let medusaProduct;
             if (provider === "printful") {
+                // Check if product is already imported
+                const existingProducts = await productModuleService.listProducts({
+                    metadata: {
+                        printful_product_id: productId
+                    }
+                });
+                
+                if (existingProducts.length > 0) {
+                    throw new Error(`Product with Printful ID ${productId} already exists in Medusa`);
+                }
+
                 const printfulProduct = await printfulService.getProduct(productId);
 
                 if (!printfulProduct) {

@@ -209,7 +209,11 @@ class CartService {
           title: product?.title || 'Product',
           thumbnail: product?.thumbnail || undefined,
           quantity: quantity,
-          unit_price: product?.variants?.find((v: any) => v.id === variantId)?.prices?.[0]?.amount || 2000,
+          unit_price: (() => {
+            const variant = product?.variants?.find((v: any) => v.id === variantId)
+            const price = variant?.prices?.[0]?.amount || variant?.calculated_price?.amount
+            return typeof price === 'number' && !isNaN(price) ? price : 2000
+          })(),
           total: 0,
           currency_code: 'usd',
           product: product ? {
