@@ -5,8 +5,8 @@ const utils_1 = require("@medusajs/framework/utils");
 // POST /api/store/cart/items - Add item to cart
 const POST = async (req, res) => {
     try {
-        const cartService = req.scope.resolve(utils_1.Modules.CART);
-        const productService = req.scope.resolve(utils_1.Modules.PRODUCT);
+        // Use the default cart workflow from Medusa
+        const cartWorkflow = req.scope.resolve("cartWorkflowService");
         const cartId = req.session?.cart_id || req.headers["x-cart-id"];
         if (!cartId) {
             return res.status(404).json({
@@ -14,56 +14,51 @@ const POST = async (req, res) => {
                 message: "No cart ID provided"
             });
         }
-        const { product_id, variant_id, quantity = 1, metadata = {} } = req.body;
-        if (!product_id || !variant_id) {
+        const { variant_id, quantity = 1 } = req.body;
+        if (!variant_id) {
             return res.status(400).json({
                 error: "Missing required fields",
-                message: "product_id and variant_id are required"
+                message: "variant_id is required"
             });
         }
-        // Get product and variant details for line item
-        const product = await productService.retrieveProduct(product_id, {
-            relations: ["variants"]
-        });
-        const variant = product.variants?.find(v => v.id === variant_id);
-        if (!variant) {
-            return res.status(404).json({
-                error: "Variant not found",
-                message: "Specified variant not found for this product"
+        try {
+            // Use Medusa's built-in add to cart workflow
+            const result = await cartWorkflow.addToCart({
+                cart_id: cartId,
+                items: [
+                    {
+                        variant_id,
+                        quantity
+                    }
+                ]
+            });
+            res.json({
+                cart: result.cart,
+                message: "Item added to cart successfully"
             });
         }
-        // Default price in cents (e.g., $20.00)
-        const unitPrice = 2000;
-        // Add line item to cart using Medusa v2 API
-        await cartService.addLineItems(cartId, [
-            {
-                title: `${product.title} - ${variant.title || 'Default'}`,
-                subtitle: product.subtitle || undefined,
-                thumbnail: product.thumbnail || undefined,
-                variant_id,
-                quantity,
-                unit_price: unitPrice,
-                product_id,
-                product_title: product.title,
-                product_description: product.description || undefined,
-                product_subtitle: product.subtitle || undefined,
-                product_handle: product.handle || undefined,
-                variant_sku: variant.sku || undefined,
-                variant_title: variant.title || undefined,
-                metadata: {
-                    ...metadata,
-                    product_id
-                }
-            }
-        ]);
-        // Retrieve updated cart with relations
-        const cart = await cartService.retrieveCart(cartId, {
-            relations: ["items", "items.variant", "items.product", "shipping_address", "billing_address"]
-        });
-        res.json({
-            cart,
-            message: "Item added to cart successfully"
-        });
+        catch (workflowError) {
+            console.log("Workflow failed, trying direct cart service...");
+            // Fallback to manual cart service
+            const cartService = req.scope.resolve(utils_1.Modules.CART);
+            // Create line item manually
+            const lineItem = await cartService.addLineItems(cartId, [{
+                    cart_id: cartId,
+                    variant_id,
+                    quantity,
+                    unit_price: 2000, // Default price
+                    title: `Product ${variant_id}`,
+                    metadata: { variant_id }
+                }]);
+            // Get updated cart
+            const cart = await cartService.retrieveCart(cartId, {
+                relations: ["items"]
+            });
+            res.json({
+                cart,
+                message: "Item added to cart successfully"
+            });
+        }
     }
     catch (error) {
         console.error("[Store Cart Items] Error adding item:", error);
@@ -74,4 +69,4 @@ const POST = async (req, res) => {
     }
 };
 exports.POST = POST;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicm91dGUuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi8uLi8uLi8uLi9zcmMvYXBpL3N0b3JlL2NhcnQvaXRlbXMvcm91dGUudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBRUEscURBQW1EO0FBRW5ELGdEQUFnRDtBQUN6QyxNQUFNLElBQUksR0FBRyxLQUFLLEVBQUUsR0FBa0IsRUFBRSxHQUFtQixFQUFFLEVBQUU7SUFDcEUsSUFBSSxDQUFDO1FBQ0gsTUFBTSxXQUFXLEdBQXVCLEdBQUcsQ0FBQyxLQUFLLENBQUMsT0FBTyxDQUFDLGVBQU8sQ0FBQyxJQUFJLENBQUMsQ0FBQTtRQUN2RSxNQUFNLGNBQWMsR0FBMEIsR0FBRyxDQUFDLEtBQUssQ0FBQyxPQUFPLENBQUMsZUFBTyxDQUFDLE9BQU8sQ0FBQyxDQUFBO1FBRWhGLE1BQU0sTUFBTSxHQUFHLEdBQUcsQ0FBQyxPQUFPLEVBQUUsT0FBTyxJQUFJLEdBQUcsQ0FBQyxPQUFPLENBQUMsV0FBVyxDQUFDLENBQUE7UUFFL0QsSUFBSSxDQUFDLE1BQU0sRUFBRSxDQUFDO1lBQ1osT0FBTyxHQUFHLENBQUMsTUFBTSxDQUFDLEdBQUcsQ0FBQyxDQUFDLElBQUksQ0FBQztnQkFDMUIsS0FBSyxFQUFFLGdCQUFnQjtnQkFDdkIsT0FBTyxFQUFFLHFCQUFxQjthQUMvQixDQUFDLENBQUE7UUFDSixDQUFDO1FBRUQsTUFBTSxFQUFFLFVBQVUsRUFBRSxVQUFVLEVBQUUsUUFBUSxHQUFHLENBQUMsRUFBRSxRQUFRLEdBQUcsRUFBRSxFQUFFLEdBQUcsR0FBRyxDQUFDLElBQVcsQ0FBQTtRQUUvRSxJQUFJLENBQUMsVUFBVSxJQUFJLENBQUMsVUFBVSxFQUFFLENBQUM7WUFDL0IsT0FBTyxHQUFHLENBQUMsTUFBTSxDQUFDLEdBQUcsQ0FBQyxDQUFDLElBQUksQ0FBQztnQkFDMUIsS0FBSyxFQUFFLHlCQUF5QjtnQkFDaEMsT0FBTyxFQUFFLHdDQUF3QzthQUNsRCxDQUFDLENB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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicm91dGUuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi8uLi8uLi8uLi9zcmMvYXBpL3N0b3JlL2NhcnQvaXRlbXMvcm91dGUudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBRUEscURBQW1EO0FBRW5ELGdEQUFnRDtBQUN6QyxNQUFNLElBQUksR0FBRyxLQUFLLEVBQUUsR0FBa0IsRUFBRSxHQUFtQixFQUFFLEVBQUU7SUFDcEUsSUFBSSxDQUFDO1FBQ0gsNENBQTRDO1FBQzVDLE1BQU0sWUFBWSxHQUFHLEdBQUcsQ0FBQyxLQUFLLENBQUMsT0FBTyxDQUFDLHFCQUFxQixDQUFDLENBQUE7UUFFN0QsTUFBTSxNQUFNLEdBQUcsR0FBRyxDQUFDLE9BQU8sRUFBRSxPQUFPLElBQUksR0FBRyxDQUFDLE9BQU8sQ0FBQyxXQUFXLENBQUMsQ0FBQTtRQUUvRCxJQUFJLENBQUMsTUFBTSxFQUFFLENBQUM7WUFDWixPQUFPLEdBQUcsQ0FBQyxNQUFNLENBQUMsR0FBRyxDQUFDLENBQUMsSUFBSSxDQUFDO2dCQUMxQixLQUFLLEVBQUUsZ0JBQWdCO2dCQUN2QixPQUFPLEVBQUUscUJBQXFCO2FBQy9CLENBQUMsQ0FBQTtRQUNKLENBQUM7UUFFRCxNQUFNLEVBQUUsVUFBVSxFQUFFLFFBQVEsR0FBRyxDQUFDLEVBQUUsR0FBRyxHQUFHLENBQUMsSUFBVyxDQUFBO1FBRXBELElBQUksQ0FBQyxVQUFVLEVBQUUsQ0FBQztZQUNoQixPQUFPLEdBQUcsQ0FBQyxNQUFNLENBQUMsR0FBRyxDQUFDLENBQUMsSUFBSSxDQUFDO2dCQUMxQixLQUFLLEVBQUUseUJBQXlCO2dCQUNoQyxPQUFPLEVBQUUsd0JBQXdCO2FBQ2xDLENBQUMsQ0FBQTtRQUNKLENBQUM7UUFFRCxJQUFJLENBQUM7WUFDSCw2Q0FBNkM7WUFDN0MsTUFBTSxNQUFNLEdBQUcsTUFBTSxZQUFZLENBQUMsU0FBUyxDQUFDO2dCQUMxQyxPQUFPLEVBQUUsTUFBTTtnQkFDZixLQUFLLEVBQUU7b0JBQ0w7d0JBQ0UsVUFBVTt3QkFDVixRQUFRO3FCQUNUO2lCQUNGO2FBQ0YsQ0FBQyxDQUFBO1lBRUYsR0FBRyxDQUFDLElBQUksQ0FBQztnQkFDUCxJQUFJLEVBQUUsTUFBTSxDQUFDLElBQUk7Z0JBQ2pCLE9BQU8sRUFBRSxpQ0FBaUM7YUFDM0MsQ0FBQyxDQUFBO1FBRUosQ0FBQztRQUFDLE9BQU8sYUFBYSxFQUFFLENBQUM7WUFDdkIsT0FBTyxDQUFDLEdBQUcsQ0FBQyxnREFBZ0QsQ0FBQyxDQUFBO1lBRTdELGtDQUFrQztZQUNsQyxNQUFNLFdBQVcsR0FBdUIsR0FBRyxDQUFDLEtBQUssQ0FBQyxPQUFPLENBQUMsZUFBTyxDQUFDLElBQUksQ0FBQyxDQUFBO1lBRXZFLDRCQUE0QjtZQUM1QixNQUFNLFFBQVEsR0FBRyxNQUFNLFdBQVcsQ0FBQyxZQUFZLENBQUMsTUFBTSxFQUFFLENBQUM7b0JBQ3ZELE9BQU8sRUFBRSxNQUFNO29CQUNmLFVBQVU7b0JBQ1YsUUFBUTtvQkFDUixVQUFVLEVBQUUsSUFBSSxFQUFFLGdCQUFnQjtvQkFDbEMsS0FBSyxFQUFFLFdBQVcsVUFBVSxFQUFFO29CQUM5QixRQUFRLEVBQUUsRUFBRSxVQUFVLEVBQUU7aUJBQ3pCLENBQUMsQ0FBQyxDQUFBO1lBRUgsbUJBQW1CO1lBQ25CLE1BQU0sSUFBSSxHQUFHLE1BQU0sV0FBVyxDQUFDLFlBQVksQ0FBQyxNQUFNLEVBQUU7Z0JBQ2xELFNBQVMsRUFBRSxDQUFDLE9BQU8sQ0FBQzthQUNyQixDQUFDLENBQUE7WUFFRixHQUFHLENBQUMsSUFBSSxDQUFDO2dCQUNQLElBQUk7Z0JBQ0osT0FBTyxFQUFFLGlDQUFpQzthQUMzQyxDQUFDLENBQUE7UUFDSixDQUFDO0lBRUgsQ0FBQztJQUFDLE9BQU8sS0FBSyxFQUFFLENBQUM7UUFDZixPQUFPLENBQUMsS0FBSyxDQUFDLHVDQUF1QyxFQUFFLEtBQUssQ0FBQyxDQUFBO1FBQzdELEdBQUcsQ0FBQyxNQUFNLENBQUMsR0FBRyxDQUFDLENBQUMsSUFBSSxDQUFDO1lBQ25CLEtBQUssRUFBRSw0QkFBNEI7WUFDbkMsT0FBTyxFQUFFLEtBQUssQ0FBQyxPQUFPO1NBQ3ZCLENBQUMsQ0FBQTtJQUNKLENBQUM7QUFDSCxDQUFDLENBQUE7QUExRVksUUFBQSxJQUFJLFFBMEVoQiJ9

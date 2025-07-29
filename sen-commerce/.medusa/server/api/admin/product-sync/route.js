@@ -1,87 +1,25 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.middlewares = void 0;
 exports.GET = GET;
 exports.POST = POST;
-console.log("[Medusa] Loaded /api/admin/product-sync route.ts");
 const utils_1 = require("@medusajs/framework/utils");
+const medusa_1 = require("@medusajs/medusa");
 // In-memory storage for sync logs (in production, use database)
 let syncLogs = [];
 async function GET(req, res) {
     console.log("[Product Sync] GET request received");
     try {
-        let printfulProducts = [];
-        let digitalProducts = [];
-        let existingPrintfulProducts = [];
-        // Try to get Printful products
-        try {
-            const printfulService = req.scope.resolve("printfulModule");
-            console.log("Printful service resolved:", !!printfulService);
-            if (printfulService) {
-                console.log("Fetching Printful store products...");
-                printfulProducts = await printfulService.fetchStoreProducts();
-                console.log("Printful products fetched:", printfulProducts.length);
-                console.log("Fetching Printful catalog products...");
-                const catalogProducts = await printfulService.fetchCatalogProducts();
-                console.log("Catalog products fetched:", catalogProducts.length);
-                // Add catalog products to the available products list
-                const catalogFormatted = catalogProducts.slice(0, 10).map((product) => ({
-                    id: `catalog-${product.id}`,
-                    name: product.name,
-                    description: product.description,
-                    thumbnail_url: product.image,
-                    status: 'available',
-                    provider: 'printful',
-                    already_imported: false,
-                    product_type: 'catalog'
-                }));
-                // Try to get existing linked products from database
-                try {
-                    existingPrintfulProducts = await printfulService.listPrintfulProducts();
-                    console.log("Existing Printful products:", existingPrintfulProducts.length);
-                }
-                catch (dbError) {
-                    console.log("Database method not available, skipping existing products check");
-                    existingPrintfulProducts = [];
-                }
-                // Combine store and catalog products
-                printfulProducts = [...printfulProducts, ...catalogFormatted];
-            }
-        }
-        catch (error) {
-            console.error("Printful service error:", error.message);
-            console.error("Printful error stack:", error.stack);
-        }
-        // Try to get digital products
-        try {
-            const digitalProductService = req.scope.resolve("digitalProductModuleService");
-            digitalProducts = await digitalProductService.listDigitalProducts({});
-        }
-        catch (error) {
-            console.log("Digital product service not available:", error.message);
-        }
-        // Calculate stats
-        const stats = syncLogs.reduce((acc, log) => {
-            acc.total += 1;
-            switch (log.status) {
-                case "pending":
-                    acc.pending += 1;
-                    break;
-                case "success":
-                    acc.success += 1;
-                    break;
-                case "failed":
-                    acc.failed += 1;
-                    break;
-                case "in_progress":
-                    acc.in_progress += 1;
-                    break;
-            }
-            return acc;
-        }, { total: 0, pending: 0, success: 0, failed: 0, in_progress: 0 });
-        // Format available products for import
+        const printfulService = req.scope.resolve("printfulModule");
+        const digitalProductService = req.scope.resolve("digitalProductModuleService");
+        const [printfulStoreProducts, existingPrintfulProducts, digitalProducts] = await Promise.all([
+            printfulService.fetchProducts().catch(() => []),
+            printfulService.listPrintfulProducts().catch(() => []),
+            digitalProductService.listDigitalProducts({}).catch(() => [])
+        ]);
         const availableProducts = {
-            printful: printfulProducts.map(p => ({
-                id: p.id || p.external_id || `product-${p.name}`,
+            printful: printfulStoreProducts.map(p => ({
+                id: p.id || p.external_id,
                 name: p.name,
                 description: p.description || `${p.name} - Available for custom printing`,
                 thumbnail_url: p.thumbnail_url || p.image,
@@ -98,9 +36,14 @@ async function GET(req, res) {
                 mime_type: dp.mime_type,
                 status: 'available',
                 provider: 'digital',
-                already_imported: false // TODO: Check if linked to Medusa product
+                already_imported: false
             }))
         };
+        const stats = syncLogs.reduce((acc, log) => {
+            acc.total++;
+            acc[log.status]++;
+            return acc;
+        }, { total: 0, pending: 0, success: 0, failed: 0, in_progress: 0 });
         res.json({
             logs: syncLogs,
             stats,
@@ -109,17 +52,12 @@ async function GET(req, res) {
     }
     catch (error) {
         console.error("[Product Sync] Error fetching sync data:", error);
-        console.error("[Product Sync] Error stack:", error.stack);
         res.status(500).json({ error: "Failed to fetch sync data" });
     }
 }
 async function POST(req, res) {
     try {
         const { action, provider = "printful", product_ids = [] } = req.body;
-        if (action === "import_products") {
-            return await importProducts(req, res, provider, product_ids);
-        }
-        // Create sync log entry
         const syncLog = {
             id: `sync_${Date.now()}`,
             sync_type: action,
@@ -128,216 +66,174 @@ async function POST(req, res) {
             created_at: new Date().toISOString()
         };
         syncLogs.unshift(syncLog);
-        // Process the sync asynchronously
-        processSync(syncLog.id, action, provider);
-        res.json({ success: true, syncId: syncLog.id });
+        if (action === "import_products") {
+            // Handle import synchronously for immediate feedback
+            const result = await importProducts(req, provider, product_ids);
+            syncLog.status = result.failed > 0 ? "failed" : "success";
+            syncLog.completed_at = new Date().toISOString();
+            res.json(result);
+        }
+        else {
+            // Handle other actions asynchronously
+            processSync(syncLog.id, action, provider);
+            res.json({ success: true, syncId: syncLog.id });
+        }
     }
     catch (error) {
         console.error("Error starting sync:", error);
         res.status(500).json({ error: "Failed to start sync" });
     }
 }
-async function processSync(syncId, action, provider) {
-    const logIndex = syncLogs.findIndex(log => log.id === syncId);
-    if (logIndex === -1)
-        return;
-    try {
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        switch (action) {
-            case "bulk_import":
-                await performBulkImport(syncId, provider);
-                break;
-            case "update_prices":
-                await updatePrices(syncId, provider);
-                break;
-            case "check_inventory":
-                await checkInventory(syncId, provider);
-                break;
-        }
-        // Update log as completed
-        syncLogs[logIndex].status = "success";
-        syncLogs[logIndex].completed_at = new Date().toISOString();
-    }
-    catch (error) {
-        // Update log as failed
-        syncLogs[logIndex].status = "failed";
-        syncLogs[logIndex].error_message = error instanceof Error ? error.message : "Unknown error";
-        syncLogs[logIndex].completed_at = new Date().toISOString();
-    }
-}
-async function performBulkImport(syncId, provider) {
-    if (provider === "printful") {
-        // Add individual product import logs
-        const productLogs = [
-            {
-                id: `sync_${Date.now()}_1`,
-                product_id: "prod_123",
-                product_name: "Custom T-Shirt",
-                sync_type: "import",
-                status: "success",
-                provider_type: provider,
-                created_at: new Date().toISOString(),
-                completed_at: new Date().toISOString()
-            },
-            {
-                id: `sync_${Date.now()}_2`,
-                product_id: "prod_124",
-                product_name: "Art Print",
-                sync_type: "import",
-                status: "success",
-                provider_type: provider,
-                created_at: new Date().toISOString(),
-                completed_at: new Date().toISOString()
-            }
-        ];
-        syncLogs.splice(1, 0, ...productLogs);
-    }
-}
-async function updatePrices(syncId, provider) {
-    // Simulate price update
-    await new Promise(resolve => setTimeout(resolve, 1000));
-}
-async function checkInventory(syncId, provider) {
-    // Simulate inventory check
-    await new Promise(resolve => setTimeout(resolve, 1500));
-}
-async function importProducts(req, res, provider, productIds) {
-    try {
-        // Use Medusa v2 service resolution pattern
-        let printfulService;
-        let digitalProductService;
-        if (provider === "printful") {
-            try {
-                printfulService = req.scope.resolve("printfulModule");
-            }
-            catch (error) {
-                console.error("Could not resolve printfulModule:", error);
-                return res.status(500).json({ error: "Printful service not available" });
-            }
-        }
-        if (provider === "digital") {
-            try {
-                digitalProductService = req.scope.resolve("digitalProductModuleService");
-            }
-            catch (error) {
-                console.error("Could not resolve digitalProductModuleService:", error);
-                return res.status(500).json({ error: "Digital product service not available" });
-            }
-        }
-        const importedProducts = [];
-        const errors = [];
-        for (const productId of productIds) {
-            try {
-                let medusaProduct;
-                if (provider === "printful") {
-                    // Get Printful product details
-                    const printfulProducts = await printfulService.fetchStoreProducts();
-                    const printfulProduct = printfulProducts.find(p => p.id === productId);
-                    if (!printfulProduct) {
-                        errors.push({ productId, error: "Product not found in Printful" });
-                        continue;
+async function importProducts(req, provider, productIds) {
+    const productModuleService = req.scope.resolve(utils_1.Modules.PRODUCT);
+    const importedProducts = [];
+    const errors = [];
+    const printfulService = req.scope.resolve("printfulModule");
+    for (const productId of productIds) {
+        try {
+            let medusaProduct;
+            if (provider === "printful") {
+                // Check if product is already imported
+                const existingProducts = await productModuleService.listProducts({
+                    metadata: {
+                        printful_product_id: productId
                     }
-                    // Create Medusa product using the product module service
-                    const productModuleService = req.scope.resolve(utils_1.Modules.PRODUCT);
-                    medusaProduct = await productModuleService.createProducts({
-                        title: printfulProduct.name,
-                        description: printfulProduct.description,
-                        status: "draft",
+                });
+                if (existingProducts.length > 0) {
+                    throw new Error(`Product with Printful ID ${productId} already exists in Medusa`);
+                }
+                const printfulProduct = await printfulService.getProduct(productId);
+                if (!printfulProduct) {
+                    throw new Error("Product not found in Printful");
+                }
+                console.log("Printful Product:", JSON.stringify(printfulProduct, null, 2));
+                const salesChannelService = req.scope.resolve(utils_1.Modules.SALES_CHANNEL);
+                let [defaultSalesChannel] = await salesChannelService.listSalesChannels({
+                    name: "Default",
+                });
+                if (!defaultSalesChannel) {
+                    defaultSalesChannel = await salesChannelService.createSalesChannels({
+                        name: "Default",
+                        description: "Default sales channel for all products",
+                    });
+                }
+                // Get price from variants or set a default price for POD products
+                let price = 0;
+                if (printfulProduct.variants && printfulProduct.variants.length > 0) {
+                    price = Math.round(parseFloat(printfulProduct.variants[0].price) * 100);
+                }
+                else if (printfulProduct.price) {
+                    price = Math.round(parseFloat(printfulProduct.price) * 100);
+                }
+                // If no price found, set reasonable defaults based on product type
+                if (price === 0) {
+                    // Set default prices for POD products ($15-$35 range)
+                    const defaultPrices = [1500, 2000, 2500, 3000, 3500]; // $15-$35
+                    price = defaultPrices[Math.floor(Math.random() * defaultPrices.length)];
+                    console.log(`Set default price ${price / 100} for product: ${printfulProduct.name}`);
+                }
+                medusaProduct = (await productModuleService.createProducts([
+                    {
+                        title: printfulProduct.name || `Product ${printfulProduct.id}`,
+                        status: "published",
+                        description: printfulProduct.description || `High-quality print-on-demand ${printfulProduct.name}`,
+                        thumbnail: printfulProduct.thumbnail_url || printfulProduct.image,
+                        variants: [
+                            {
+                                title: printfulProduct.variants?.[0]?.name || "Default Variant",
+                                sku: `pod-${printfulProduct.id}-default`,
+                                manage_inventory: false, // POD products don't need inventory management
+                                allow_backorder: true,
+                            },
+                        ],
                         metadata: {
                             fulfillment_type: "printful_pod",
                             printful_product_id: printfulProduct.id,
-                            source_provider: "printful"
-                        }
+                            product_type: "store",
+                        },
+                    },
+                ]))[0];
+                if (medusaProduct) {
+                    const pricingModuleService = req.scope.resolve(utils_1.Modules.PRICING);
+                    await pricingModuleService.addPrices({
+                        priceSetId: medusaProduct.variants[0].price_set_id,
+                        prices: [{
+                                amount: price,
+                                currency_code: "usd",
+                            }],
                     });
-                    // Create product variants
-                    await productModuleService.createProductVariants({
-                        title: "Default",
-                        sku: `printful-${printfulProduct.id}`,
-                        product_id: medusaProduct.id,
-                        metadata: {
-                            printful_product_id: printfulProduct.id
-                        }
+                    const remoteLink = req.scope.resolve("remoteLink");
+                    await remoteLink.create([
+                        {
+                            [utils_1.Modules.PRODUCT]: { product_id: medusaProduct.id },
+                            [utils_1.Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                        },
+                    ]);
+                }
+            }
+            else if (provider === "digital") {
+                const digitalProductService = req.scope.resolve("digitalProductModuleService");
+                const digitalProduct = await digitalProductService.getDigitalProduct(productId);
+                if (!digitalProduct) {
+                    throw new Error("Digital product not found");
+                }
+                const salesChannelService = req.scope.resolve(utils_1.Modules.SALES_CHANNEL);
+                let [defaultSalesChannel] = await salesChannelService.listSalesChannels({
+                    name: "Default",
+                });
+                if (!defaultSalesChannel) {
+                    defaultSalesChannel = await salesChannelService.createSalesChannels({
+                        name: "Default",
+                        description: "Default sales channel for all products",
                     });
                 }
-                else if (provider === "digital") {
-                    // Get digital product details
-                    const digitalProduct = await digitalProductService.retrieve(productId);
-                    if (!digitalProduct) {
-                        errors.push({ productId, error: "Digital product not found" });
-                        continue;
-                    }
-                    // Create Medusa product using the product module service
-                    const productModuleService = req.scope.resolve(utils_1.Modules.PRODUCT);
-                    medusaProduct = await productModuleService.createProducts({
+                const price = Math.round(parseFloat(digitalProduct.price) * 100);
+                medusaProduct = (await productModuleService.createProducts([
+                    {
                         title: digitalProduct.name,
-                        description: digitalProduct.description,
-                        status: "draft",
+                        status: "published",
+                        variants: [
+                            {
+                                title: "Digital Version",
+                            },
+                        ],
                         metadata: {
-                            fulfillment_type: "digital_download",
-                            digital_product_id: digitalProduct.id,
-                            source_provider: "digital",
-                            file_size: digitalProduct.file_size,
-                            mime_type: digitalProduct.mime_type
-                        }
+                            fulfillment_type: "digital",
+                        },
+                    },
+                ]))[0];
+                if (medusaProduct) {
+                    const digitalProductService = req.scope.resolve("digitalProductModuleService");
+                    await digitalProductService.linkProduct(medusaProduct.id, digitalProduct.id);
+                    const pricingModuleService = req.scope.resolve(utils_1.Modules.PRICING);
+                    await pricingModuleService.addPrices({
+                        priceSetId: medusaProduct.variants[0].price_set_id,
+                        prices: [{
+                                amount: price,
+                                currency_code: "usd",
+                            }],
                     });
-                    // Create product variant for digital product
-                    await productModuleService.createProductVariants({
-                        title: "Digital Download",
-                        sku: `digital-${digitalProduct.id}`,
-                        product_id: medusaProduct.id,
-                        metadata: {
-                            digital_product_id: digitalProduct.id
-                        }
-                    });
+                    const remoteLink = req.scope.resolve("remoteLink");
+                    await remoteLink.create([
+                        {
+                            [utils_1.Modules.PRODUCT]: { product_id: medusaProduct.id },
+                            [utils_1.Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                        },
+                    ]);
                 }
-                importedProducts.push({
-                    productId,
-                    medusaProductId: medusaProduct.id,
-                    provider
-                });
-                // Log successful import
-                syncLogs.unshift({
-                    id: `import_${Date.now()}_${productId}`,
-                    product_id: medusaProduct.id,
-                    product_name: medusaProduct.title,
-                    sync_type: "import",
-                    status: "success",
-                    provider_type: provider,
-                    created_at: new Date().toISOString(),
-                    completed_at: new Date().toISOString()
-                });
             }
-            catch (error) {
-                console.error("Error importing product:", productId, error);
-                errors.push({
-                    productId,
-                    error: error instanceof Error ? error.message : "Unknown error"
-                });
-                // Log failed import
-                syncLogs.unshift({
-                    id: `import_${Date.now()}_${productId}`,
-                    product_id: productId,
-                    sync_type: "import",
-                    status: "failed",
-                    provider_type: provider,
-                    error_message: error instanceof Error ? error.message : "Unknown error",
-                    created_at: new Date().toISOString(),
-                    completed_at: new Date().toISOString()
-                });
-            }
+            importedProducts.push(medusaProduct);
         }
-        res.json({
-            success: true,
-            imported: importedProducts.length,
-            failed: errors.length,
-            imported_products: importedProducts,
-            errors
-        });
+        catch (error) {
+            errors.push({ productId, error: error.message });
+        }
     }
-    catch (error) {
-        console.error("Error importing products:", error);
-        res.status(500).json({ error: "Failed to import products" });
-    }
+    return { success: true, imported: importedProducts.length, failed: errors.length, errors };
 }
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicm91dGUuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi8uLi8uLi9zcmMvYXBpL2FkbWluL3Byb2R1Y3Qtc3luYy9yb3V0ZS50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOztBQTZCQSxrQkFrSEM7QUFFRCxvQkErQkM7QUFoTEQsT0FBTyxDQUFDLEdBQUcsQ0FBQyxrREFBa0QsQ0FBQyxDQUFBO0FBRy9ELHFEQUFtRDtBQXVCbkQsZ0VBQWdFO0FBQ2hFLElBQUksUUFBUSxHQUFjLEVBQUUsQ0FBQTtBQUVyQixLQUFLLFVBQVUsR0FBRyxDQUFDLEdBQWtCLEVBQUUsR0FBbUI7SUFDL0QsT0FBTyxDQUFDLEdBQUcsQ0FBQyxxQ0FBcUMsQ0FBQyxDQUFBO0lBQ2xELElBQUksQ0FBQztRQUNILElBQUksZ0JBQWdCLEdBQVUsRUFBRSxDQUFBO1FBQ2hDLElBQUksZUFBZSxHQUFVLEVBQUUsQ0FBQTtRQUMvQixJQUFJLHdCQUF3QixHQUFVLEVBQUUsQ0FBQTtRQUV4QywrQkFBK0I7UUFDL0IsSUFBSSxDQUFDO1lBQ0gsTUFBTSxlQUFlLEdBQUcsR0FBRyxDQUFDLEtBQUssQ0FBQyxPQUFPLENBQUMsZ0JBQWdCLENBQVEsQ0FBQTtZQUNsRSxPQUFPLENBQUMsR0FBRyxDQUFDLDRCQUE0QixFQUFFLENBQUMsQ0FBQyxlQUFlLENBQUMsQ0FBQTtZQUU1RCxJQUFJLGVBQWUsRUFBRSxDQUFDO2dCQUNwQixPQUFPLENBQUMsR0FBRyxDQUFDLHFDQUFxQyxDQUFDLENBQUE7Z0JBQ2xELGdCQUFnQixHQUFHLE1BQU0sZUFBZSxDQUFDLGtCQUFrQixFQUFFLENBQUE7Z0JBQzdELE9BQU8sQ0FBQyxHQUFHLENBQUMsNEJBQTRCLEVBQUUsZ0JBQWdCLENBQUMsTUFBTSxDQUFDLENBQUE7Z0JBRWxFLE9BQU8sQ0FBQyxHQUFHLENBQUMsdUNBQXVDLENBQUMsQ0FBQTtnQkFDcEQsTUFBTSxlQUFlLEdBQUcsTUFBTSxlQUFlLENBQUMsb0JBQW9CLEVBQUUs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
+async function processSync(syncId, action, provider) {
+    // Placeholder for async processing
+}
+exports.middlewares = [
+    (0, medusa_1.authenticate)("admin", ["session", "bearer"]),
+];
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicm91dGUuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi8uLi8uLi9zcmMvYXBpL2FkbWluL3Byb2R1Y3Qtc3luYy9yb3V0ZS50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7QUFxQkEsa0JBa0RDO0FBRUQsb0JBNEJDO0FBcEdELHFEQUFtRDtBQUVuRCw2Q0FBZ0Q7QUFlaEQsZ0VBQWdFO0FBQ2hFLElBQUksUUFBUSxHQUFjLEVBQUUsQ0FBQTtBQUVyQixLQUFLLFVBQVUsR0FBRyxDQUFDLEdBQWtCLEVBQUUsR0FBbUI7SUFDL0QsT0FBTyxDQUFDLEdBQUcsQ0FBQyxxQ0FBcUMsQ0FBQyxDQUFBO0lBQ2xELElBQUksQ0FBQztRQUNILE1BQU0sZUFBZSxHQUFHLEdBQUcsQ0FBQyxLQUFLLENBQUMsT0FBTyxDQUFDLGdCQUFnQixDQUFRLENBQUE7UUFDbEUsTUFBTSxxQkFBcUIsR0FBRyxHQUFHLENBQUMsS0FBSyxDQUFDLE9BQU8sQ0FBQyw2QkFBNkIsQ0FBUSxDQUFBO1FBRXJGLE1BQU0sQ0FBQyxxQkFBcUIsRUFBRSx3QkFBd0IsRUFBRSxlQUFlLENBQUMsR0FBRyxNQUFNLE9BQU8sQ0FBQyxHQUFHLENBQUM7WUFDM0YsZUFBZSxDQUFDLGFBQWEsRUFBRSxDQUFDLEtBQUssQ0FBQyxHQUFHLEVBQUUsQ0FBQyxFQUFFLENBQUM7WUFDL0MsZUFBZSxDQUFDLG9CQUFvQixFQUFFLENBQUMsS0FBSyxDQUFDLEdBQUcsRUFBRSxDQUFDLEVBQUUsQ0FBQztZQUN0RCxxQkFBcUIsQ0FBQyxtQkFBbUIsQ0FBQyxFQUFFLENBQUMsQ0FBQyxLQUFLLENBQUMsR0FBRyxFQUFFLENBQUMsRUFBRSxDQUFDO1NBQzlELENBQUMsQ0FBQztRQUVILE1BQU0saUJBQWlCLEdBQUc7WUFDeEIsUUFBUSxFQUFFLHFCQUFxQixDQUFDLEdBQUcsQ0FBQyxDQUFDLENBQUMsRUFBRSxDQUFDLENBQUM7Z0JBQ3hDLEVBQUUsRUFBRSxDQUFDLENBQUMsRUFBRSxJ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

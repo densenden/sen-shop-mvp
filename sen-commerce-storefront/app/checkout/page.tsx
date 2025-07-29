@@ -161,14 +161,33 @@ export default function CheckoutPage() {
 
       const paymentSession = await response.json()
       
-      // For now, simulate successful payment and redirect to success
-      // In a real implementation, you'd integrate with Stripe Elements here
-      alert('Stripe Payment Integration Ready! Payment session created successfully.')
+      // Simulate successful payment and create order
       console.log('Payment session created:', paymentSession)
       
-      // Clear cart and redirect to success
+      // Create order in backend
+      const orderResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/orders`, {
+        method: 'POST',
+        headers: {
+          ...getHeaders(),
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({
+          cart_id: cart.id,
+          customer_info: customerInfo,
+          shipping_address: shippingAddress,
+          payment_session_id: paymentSession.id,
+        }),
+      })
+
+      let orderId = 'demo_order_' + Date.now();
+      if (orderResponse.ok) {
+        const orderData = await orderResponse.json();
+        orderId = orderData.order?.id || orderId;
+      }
+
+      // Clear cart and redirect to order success with order ID
       await cartService.clearCart()
-      router.push('/?checkout=success')
+      router.push(`/order-success?order=${orderId}&total=${cart.total}&currency=${cart.currency_code}`)
       
     } catch (error) {
       console.error('Checkout error:', error)

@@ -8,27 +8,30 @@ import { CheckCircle, Download, Package, Mail, Home } from 'lucide-react'
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('order')
+  const total = searchParams.get('total')
+  const currency = searchParams.get('currency')
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (orderId) {
-      // In a real app, fetch order details from API
+      // Get basic order info from URL parameters
       setOrderDetails({
         id: orderId,
-        total: 2500, // $25.00
-        currency_code: 'usd',
+        total: total ? parseInt(total) : 2500,
+        currency_code: currency || 'usd',
         items: [
           {
-            title: 'Digital Art Download',
-            type: 'digital',
-            download_url: '#'
+            title: 'Order Items',
+            type: 'mixed',
+            description: 'Your purchased items are being processed'
           }
-        ]
+        ],
+        created_at: new Date().toISOString()
       })
     }
     setLoading(false)
-  }, [orderId])
+  }, [orderId, total, currency])
 
   if (loading) {
     return (

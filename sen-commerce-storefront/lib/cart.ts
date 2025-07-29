@@ -268,26 +268,33 @@ class CartService {
 
   async updateItem(itemId: string, quantity: number): Promise<Cart | null> {
     try {
-      if (!this.cartId) {
+      console.log('Updating item in localStorage cart:', itemId, 'to quantity:', quantity)
+      
+      let cart = this.getLocalCart()
+      if (!cart) {
         throw new Error('No cart found')
       }
 
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/cart/items/${itemId}`, {
-        method: 'PUT',
-        headers: this.getHeaders(),
-        body: JSON.stringify({
-          quantity,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        this.cart = data.cart
-        return this.cart
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `Failed to update item: ${response.status}`)
+      // Find the item to update
+      const itemIndex = cart.items.findIndex(item => item.id === itemId)
+      if (itemIndex === -1) {
+        throw new Error('Item not found in cart')
       }
+
+      // Update the quantity and total
+      cart.items[itemIndex].quantity = quantity
+      cart.items[itemIndex].total = cart.items[itemIndex].unit_price * quantity
+
+      // Recalculate cart totals
+      cart.subtotal = cart.items.reduce((sum, item) => sum + item.total, 0)
+      cart.total = cart.subtotal
+      cart.updated_at = new Date().toISOString()
+
+      console.log('Item updated. New quantity:', quantity, 'New total:', cart.items[itemIndex].total)
+
+      this.cart = cart
+      this.saveLocalCart(cart)
+      return cart
     } catch (error) {
       console.error('Error updating cart item:', error)
       throw error
