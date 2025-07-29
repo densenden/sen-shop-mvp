@@ -29,8 +29,10 @@
     "@medusajs/framework": "2.8.4",
     "@medusajs/medusa": "2.8.4",
     "@supabase/supabase-js": "^2.48.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/stripe": "^8.0.417",
     "awilix": "^8.0.1",
+    "bcrypt": "^6.0.0",
     "lucide-react": "^0.525.0",
     "pg": "^8.16.3",
     "stripe": "^18.3.0"

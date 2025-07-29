@@ -1,8 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { authenticate } from "@medusajs/medusa"
-
-// In-memory storage for orders (in production, use database)
-const ordersStore: Map<string, any[]> = new Map()
+import { Modules } from "@medusajs/framework/utils"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
