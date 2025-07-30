@@ -54,8 +54,8 @@ const ProductListWidget = () => {
   )
 }
 
-export default ProductListWidget
-
 export const config = {
   zone: "product.list.before"
 }
+
+export default ProductListWidget

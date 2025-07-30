@@ -1,27 +1,56 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { authenticate } from "@medusajs/medusa"
+import { Modules } from "@medusajs/framework/utils"
+import jwt from "jsonwebtoken"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
-    // For now, return a mock customer since authentication is complex
-    // In a real implementation, you'd get this from the session or JWT token
-    const customer = {
-      id: "cust_01234567890",
-      email: "user@example.com",
-      first_name: "John",
-      last_name: "Doe",
-      phone: "+1234567890",
-      created_at: new Date().toISOString(),
-      metadata: {}
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: "Unauthorized - No token provided"
+      })
     }
 
-    res.json({ customer })
+    const token = authHeader.split(' ')[1]
+    
+    // Verify token
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || "supersecret")
+    } catch (error) {
+      return res.status(401).json({
+        error: "Unauthorized - Invalid token"
+      })
+    }
+
+    const customerService = req.scope.resolve(Modules.CUSTOMER)
+    
+    // Fetch customer by ID
+    const customer = await customerService.retrieveCustomer(decoded.customer_id)
+    
+    if (!customer) {
+      return res.status(404).json({
+        error: "Customer not found"
+      })
+    }
+
+    res.json({
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        first_name: customer.first_name,
+        last_name: customer.last_name,
+        phone: customer.phone,
+        created_at: customer.created_at,
+        metadata: customer.metadata
+      }
+    })
   } catch (error) {
-    console.error("Error fetching user profile:", error)
-    res.status(500).json({ error: "Failed to fetch user profile" })
+    console.error("Auth me error:", error)
+    res.status(500).json({
+      error: "Failed to fetch user profile",
+      details: error.message
+    })
   }
 }
-
-export const middlewares = [
-  authenticate("customer", ["session", "bearer"]),
-]

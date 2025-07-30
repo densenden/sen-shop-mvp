@@ -72,9 +72,13 @@ export default function CheckoutPage() {
     phone: ''
   })
   const [paymentMethod, setPaymentMethod] = useState('stripe')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [showLoginForm, setShowLoginForm] = useState(false)
+  const [loginError, setLoginError] = useState('')
 
   useEffect(() => {
     loadCart()
+    loadUserData()
   }, [])
 
   const loadCart = async () => {
@@ -85,6 +89,35 @@ export default function CheckoutPage() {
       console.error('Error loading cart:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadUserData = () => {
+    // Load user data from localStorage
+    const storedUser = localStorage.getItem('user')
+    const authToken = localStorage.getItem('authToken')
+    
+    if (storedUser && authToken) {
+      try {
+        const user = JSON.parse(storedUser)
+        setIsLoggedIn(true)
+        // Pre-fill customer info
+        setCustomerInfo({
+          email: user.email || '',
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          phone: user.phone || ''
+        })
+        // Pre-fill shipping address with user data
+        setShippingAddress(prev => ({
+          ...prev,
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          phone: user.phone || ''
+        }))
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+      }
     }
   }
 
@@ -100,6 +133,37 @@ export default function CheckoutPage() {
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleLogin = async (email: string, password: string) => {
+    setLoginError('')
+    try {
+      const response = await fetch('/api/store/auth/login', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Store user data
+        localStorage.setItem('user', JSON.stringify(data.customer || data.user))
+        localStorage.setItem('authToken', data.token || data.access_token)
+        
+        // Update state
+        setIsLoggedIn(true)
+        setShowLoginForm(false)
+        
+        // Load user data into form
+        loadUserData()
+      } else {
+        setLoginError(data.message || 'Login failed')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      setLoginError('Network error. Please try again.')
+    }
   }
 
   const formatPrice = (amount: number, currencyCode: string = 'USD') => {
@@ -253,6 +317,79 @@ export default function CheckoutPage() {
             {/* Checkout Form */}
             <div className="lg:col-span-2">
               <div className="space-y-8">
+                {/* Login Option for Guest Users */}
+                {!isLoggedIn && (
+                  <div className="bg-blue-50 border border-blue-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">Have an account?</h3>
+                        <p className="text-sm text-gray-600 mt-1">Sign in to use your saved information</p>
+                      </div>
+                      {!showLoginForm && (
+                        <button
+                          onClick={() => setShowLoginForm(true)}
+                          className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        >
+                          Sign In
+                        </button>
+                      )}
+                    </div>
+                    
+                    {showLoginForm && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          const formData = new FormData(e.currentTarget)
+                          handleLogin(
+                            formData.get('email') as string,
+                            formData.get('password') as string
+                          )
+                        }}
+                        className="space-y-4 mt-4 pt-4 border-t border-blue-200"
+                      >
+                        {loginError && (
+                          <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 text-sm">
+                            {loginError}
+                          </div>
+                        )}
+                        <div>
+                          <input
+                            name="email"
+                            type="email"
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Email address"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            name="password"
+                            type="password"
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Password"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="submit"
+                            className="bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700"
+                          >
+                            Sign In
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowLoginForm(false)}
+                            className="text-gray-600 hover:text-gray-700 text-sm"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+
                 {/* Customer Information */}
                 <div className="bg-white border border-gray-100 p-6">
                   <h2 className="text-lg font-medium text-gray-900 mb-6">Customer Information</h2>
