@@ -1,0 +1,13 @@
+{
+  "name": "sen-commerce-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd sen-commerce && npm ci --production=false && npm run build",
+    "start": "cd sen-commerce && npm start",
+    "install": "cd sen-commerce && npm ci --production=false"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
