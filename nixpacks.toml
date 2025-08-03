@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs-20_x", "postgresql"]
+
+[phases.install]
+cmds = ["cd sen-commerce && npm ci --production=false"]
+
+[phases.build]
+cmds = ["cd sen-commerce && npm run build"]
+
+[start]
+cmd = "cd sen-commerce && npm start"
