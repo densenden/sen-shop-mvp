@@ -68,6 +68,10 @@ export class PrintfulOrderService extends MedusaService({}) {
     super(container, options)
     this.apiToken = process.env.PRINTFUL_API_TOKEN || ""
     this.apiBaseUrl = "https://api.printful.com"
+    
+    if (!this.apiToken) {
+      console.warn("PRINTFUL_API_TOKEN not configured - Printful order functionality will not work")
+    }
   }
 
   // Create order in Printful

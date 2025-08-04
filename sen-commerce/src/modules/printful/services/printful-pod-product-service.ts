@@ -1,5 +1,6 @@
 import { MedusaService } from "@medusajs/framework/utils"
 import { PrintfulProduct } from "../models/printful-product"
+import { PrintfulOrderService } from "./printful-order-service"
 
 interface PrintfulV2CatalogProduct {
   id: string
@@ -81,11 +82,13 @@ export class PrintfulPodProductService extends MedusaService({
   private apiBaseUrlV1: string
   private apiBaseUrlV2: string
   private container: any
+  private orderService: PrintfulOrderService
 
   constructor(container: any, options?: any) {
     super(container, options)
     this.container = container
     this.apiToken = process.env.PRINTFUL_API_TOKEN || ""
+    this.orderService = new PrintfulOrderService(container, options)
     this.apiBaseUrlV1 = "https://api.printful.com"
     this.apiBaseUrlV2 = "https://api.printful.com/v2"
   }
@@ -280,5 +283,26 @@ export class PrintfulPodProductService extends MedusaService({
   async findPrintfulProductByPrintfulId(printfulId: string) {
     const results = await this.listPrintfulProducts({ filters: { printful_product_id: printfulId } })
     return results[0] || null
+  }
+
+  // Order methods - delegate to PrintfulOrderService
+  async createOrder(orderData: any) {
+    return this.orderService.createOrder(orderData)
+  }
+
+  async getOrder(orderId: string) {
+    return this.orderService.getOrder(orderId)
+  }
+
+  async updateOrder(orderId: string, orderData: any) {
+    return this.orderService.updateOrder(orderId, orderData)
+  }
+
+  async cancelOrder(orderId: string) {
+    return this.orderService.cancelOrder(orderId)
+  }
+
+  async getOrders(params?: any) {
+    return this.orderService.getOrders(params)
   }
 } 

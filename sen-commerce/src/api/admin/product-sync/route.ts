@@ -203,12 +203,21 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                   status: "published",
                   description: printfulProduct.description || `High-quality print-on-demand ${printfulProduct.name}`,
                   thumbnail: printfulProduct.thumbnail_url || printfulProduct.image,
+                  options: [
+                    {
+                      title: "Default",
+                      values: ["Default"]
+                    }
+                  ],
                   variants: [
                     {
                       title: printfulProduct.variants?.[0]?.name || "Default Variant",
                       sku: `pod-${printfulProduct.id}-default`,
                       manage_inventory: false,
                       allow_backorder: true,
+                      options: {
+                        "Default": "Default"
+                      },
                       prices: [
                         {
                           amount: price,
@@ -262,12 +271,21 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                   title: digitalProduct.name,
                   status: "published",
                   description: digitalProduct.description || `Digital download: ${digitalProduct.name}`,
+                  options: [
+                    {
+                      title: "Format",
+                      values: ["Digital"]
+                    }
+                  ],
                   variants: [
                     {
                       title: "Digital Version",
                       sku: `digital-${productId}`,
                       manage_inventory: false,
                       allow_backorder: true,
+                      options: {
+                        "Format": "Digital"
+                      },
                       prices: [
                         {
                           amount: price,
