@@ -15,23 +15,51 @@ export default function OrderSuccessPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (orderId) {
-      // Get basic order info from URL parameters
-      setOrderDetails({
-        id: orderId,
-        total: total ? parseInt(total) : 2500,
-        currency_code: currency || 'usd',
-        items: [
-          {
-            title: 'Order Items',
-            type: 'mixed',
-            description: 'Your purchased items are being processed'
+    const fetchOrderDetails = async () => {
+      if (orderId) {
+        try {
+          const response = await fetch(`http://localhost:9000/store/orders/${orderId}/details`)
+          if (response.ok) {
+            const data = await response.json()
+            setOrderDetails(data.order)
+          } else {
+            // Fallback to URL parameters if API fails
+            setOrderDetails({
+              id: orderId,
+              total: total ? parseInt(total) : 2500,
+              currency_code: currency || 'usd',
+              items: [
+                {
+                  title: 'Order Items',
+                  fulfillment_type: 'mixed',
+                  description: 'Your purchased items are being processed'
+                }
+              ],
+              created_at: new Date().toISOString()
+            })
           }
-        ],
-        created_at: new Date().toISOString()
-      })
+        } catch (error) {
+          console.error('Error fetching order details:', error)
+          // Fallback to URL parameters
+          setOrderDetails({
+            id: orderId,
+            total: total ? parseInt(total) : 2500,
+            currency_code: currency || 'usd',
+            items: [
+              {
+                title: 'Order Items',
+                fulfillment_type: 'mixed',
+                description: 'Your purchased items are being processed'
+              }
+            ],
+            created_at: new Date().toISOString()
+          })
+        }
+      }
+      setLoading(false)
     }
-    setLoading(false)
+
+    fetchOrderDetails()
   }, [orderId, total, currency])
 
   if (loading) {
@@ -80,7 +108,7 @@ export default function OrderSuccessPage() {
                 {orderDetails.items.map((item: any, index: number) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      {item.type === 'digital' ? (
+                      {item.fulfillment_type === 'digital' ? (
                         <div className="p-2 bg-blue-100 rounded-lg">
                           <Download className="h-6 w-6 text-blue-600" />
                         </div>
@@ -92,21 +120,56 @@ export default function OrderSuccessPage() {
                       <div>
                         <h3 className="font-medium text-gray-900">{item.title}</h3>
                         <p className="text-sm text-gray-600">
-                          {item.type === 'digital' ? 'Digital Download' : 'Physical Product'}
+                          {item.fulfillment_type === 'digital' ? 'Digital Download' : 
+                           item.fulfillment_type === 'printful_pod' ? 'Print on Demand' : 'Physical Product'}
                         </p>
+                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                       </div>
                     </div>
-                    {item.type === 'digital' && (
-                      <button
-                        onClick={() => window.open(item.download_url, '_blank')}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
-                      >
-                        Download
-                      </button>
-                    )}
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {formatPrice(item.total || item.unit_price, orderDetails.currency_code)}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {/* Download Links Section */}
+              {orderDetails.download_links && orderDetails.download_links.length > 0 && (
+                <div className="bg-blue-50 rounded-lg p-6 mb-6">
+                  <div className="flex items-center mb-4">
+                    <Download className="h-6 w-6 text-blue-600 mr-2" />
+                    <h3 className="text-lg font-semibold text-gray-900">Digital Downloads</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {orderDetails.download_links.map((link: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between bg-white rounded-lg p-4">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{link.product_name}</h4>
+                          <p className="text-sm text-gray-600">
+                            Downloads: {link.download_count}{link.max_downloads > 0 ? `/${link.max_downloads}` : ' (unlimited)'}
+                          </p>
+                          {link.expires_at && (
+                            <p className="text-xs text-gray-500">
+                              Expires: {new Date(link.expires_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => window.open(link.download_url, '_blank')}
+                          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-4">
+                    Download links are valid for 7 days. Save your files to a secure location.
+                  </p>
+                </div>
+              )}
 
               <div className="border-t border-gray-200 pt-4">
                 <div className="flex justify-between">

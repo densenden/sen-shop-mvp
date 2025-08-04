@@ -36,56 +36,58 @@ export default async function handleDigitalProducts({
     }
     
     // Check each line item for digital products
-    const digitalProductIds: string[] = []
+    const digitalProductItems: Array<{digitalProductId: string, product: any, quantity: number}> = []
     
-    // For now, we'll check if products have digital products by querying separately
     for (const item of order.items) {
-      if (item?.product?.id) {
-        // Query for linked digital products
-        // Since we removed the link, we'll need another way to associate them
-        // For now, let's check if product metadata or title indicates it's digital
-        
-        // This is a placeholder - you'll need to implement your own logic
-        // For example, you could:
-        // 1. Store digital product IDs in product metadata
-        // 2. Use a naming convention
-        // 3. Create a custom field on products
-        
-        logger.info(`Checking product ${item.product.id} for digital products`)
+      if (item?.product?.id && item?.product?.metadata) {
+        // Check if product has digital fulfillment
+        if (item.product.metadata.fulfillment_type === 'digital') {
+          // Look for linked digital product ID in metadata
+          const digitalProductId = item.product.metadata.digital_product_id
+          if (digitalProductId) {
+            digitalProductItems.push({
+              digitalProductId,
+              product: item.product,
+              quantity: item.quantity || 1
+            })
+            logger.info(`Found digital product ${digitalProductId} for order item ${item.id}`)
+          }
+        }
       }
     }
     
     // If we found digital products, create download access
-    if (digitalProductIds.length > 0) {
+    if (digitalProductItems.length > 0) {
       const downloadLinks: any[] = []
       
-      for (const digitalProductId of digitalProductIds) {
+      for (const item of digitalProductItems) {
         const digitalProducts = await digitalProductService.listDigitalProducts({
-          filters: { id: digitalProductId }
+          filters: { id: item.digitalProductId }
         })
         const digitalProduct = digitalProducts[0]
         
         if (digitalProduct) {
-          // Generate secure token
-          const token = crypto.randomBytes(32).toString('hex')
-          
-          // Create download access
-          await digitalProductService.createDigitalProductDownloads([
-            {
+          // Generate secure token for each quantity (some digital products might need separate tokens)
+          for (let i = 0; i < item.quantity; i++) {
+            const token = crypto.randomBytes(32).toString('hex')
+            
+            // Create download access
+            await digitalProductService.createDigitalProductDownloads({
               digital_product_id: digitalProduct.id,
               order_id: order.id,
-              customer_id: order.customer_id ?? order.email ?? undefined,
+              customer_id: order.customer_id || order.email || 'guest',
               token,
               expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-              is_active: true
-            }
-          ])
-          
-          downloadLinks.push({
-            product_name: digitalProduct.name,
-            download_url: `${process.env.STORE_URL || 'http://localhost:8000'}/download/${token}`,
-            expires_in_days: 7
-          })
+              is_active: true,
+              download_count: 0
+            })
+            
+            downloadLinks.push({
+              product_name: digitalProduct.name,
+              download_url: `${process.env.STORE_URL || 'http://localhost:3000'}/api/store/download/${token}`,
+              expires_in_days: 7
+            })
+          }
         }
       }
       

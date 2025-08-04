@@ -195,49 +195,47 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                   console.log(`Set default price $${price/100} for product: ${printfulProduct.name}`);
                 }
 
-                medusaProduct = (await productModuleService.createProducts([
-                  {
-                    title: printfulProduct.name || `Product ${printfulProduct.id}`,
-                    status: "published",
-                    description: printfulProduct.description || `High-quality print-on-demand ${printfulProduct.name}`,
-                    thumbnail: printfulProduct.thumbnail_url || printfulProduct.image,
-                    variants: [
-                      {
-                        title: printfulProduct.variants?.[0]?.name || "Default Variant",
-                        sku: `pod-${printfulProduct.id}-default`,
-                        manage_inventory: false, // POD products don't need inventory management
-                        allow_backorder: true,
-                      },
-                    ],
-                    metadata: {
-                      fulfillment_type: "printful_pod",
-                      printful_product_id: printfulProduct.id,
-                      product_type: "store",
-                    },
-                  },
-                ]))[0];
-
-                if (medusaProduct) {
-                  const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING);
-                  await pricingModuleService.addPrices({
-                    priceSetId: medusaProduct.variants[0].price_set_id,
-                    prices: [{
-                      amount: price,
-                      currency_code: "usd",
-                    }],
-                  });
-
-                  const remoteLink = req.scope.resolve("remoteLink");
-                  await remoteLink.create([
+                // Use the proper workflow to create products with prices
+                const { createProductsWorkflow } = await import("@medusajs/core-flows")
+                
+                const productInput = {
+                  title: printfulProduct.name || `Product ${printfulProduct.id}`,
+                  status: "published",
+                  description: printfulProduct.description || `High-quality print-on-demand ${printfulProduct.name}`,
+                  thumbnail: printfulProduct.thumbnail_url || printfulProduct.image,
+                  variants: [
                     {
-                      [Modules.PRODUCT]: { product_id: medusaProduct.id },
-                      [Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                      title: printfulProduct.variants?.[0]?.name || "Default Variant",
+                      sku: `pod-${printfulProduct.id}-default`,
+                      manage_inventory: false,
+                      allow_backorder: true,
+                      prices: [
+                        {
+                          amount: price,
+                          currency_code: "usd",
+                        }
+                      ]
                     },
-                  ]);
+                  ],
+                  sales_channels: [{ id: defaultSalesChannel.id }],
+                  metadata: {
+                    fulfillment_type: "printful_pod",
+                    printful_product_id: printfulProduct.id,
+                    product_type: "store",
+                  },
                 }
+
+                const { result } = await createProductsWorkflow(req.scope).run({
+                  input: { products: [productInput] }
+                })
+                
+                medusaProduct = result.products[0]
             } else if (provider === "digital") {
                 const digitalProductService = req.scope.resolve("digitalProductModuleService") as any;
-                const digitalProduct = await digitalProductService.getDigitalProduct(productId);
+                const digitalProducts = await digitalProductService.listDigitalProducts({
+                    filters: { id: productId }
+                });
+                const digitalProduct = digitalProducts[0];
 
                 if (!digitalProduct) {
                     throw new Error("Digital product not found");
@@ -255,44 +253,41 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                   });
                 }
 
-                const price = Math.round(parseFloat(digitalProduct.price) * 100)
+                const price = Math.round(parseFloat(digitalProduct.price || "5.00") * 100)
 
-                medusaProduct = (await productModuleService.createProducts([
-                  {
-                    title: digitalProduct.name,
-                    status: "published",
-                    variants: [
-                      {
-                        title: "Digital Version",
-                      },
-                    ],
-                    metadata: {
-                      fulfillment_type: "digital",
-                    },
-                  },
-                ]))[0];
-
-                if (medusaProduct) {
-                  const digitalProductService = req.scope.resolve("digitalProductModuleService") as any;
-                  await digitalProductService.linkProduct(medusaProduct.id, digitalProduct.id);
-
-                  const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING);
-                  await pricingModuleService.addPrices({
-                    priceSetId: medusaProduct.variants[0].price_set_id,
-                    prices: [{
-                      amount: price,
-                      currency_code: "usd",
-                    }],
-                  });
-
-                  const remoteLink = req.scope.resolve("remoteLink");
-                  await remoteLink.create([
+                // Import the workflow for digital products too
+                const { createProductsWorkflow: createDigitalWorkflow } = await import("@medusajs/core-flows")
+                
+                const digitalProductInput = {
+                  title: digitalProduct.name,
+                  status: "published",
+                  description: digitalProduct.description || `Digital download: ${digitalProduct.name}`,
+                  variants: [
                     {
-                      [Modules.PRODUCT]: { product_id: medusaProduct.id },
-                      [Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                      title: "Digital Version",
+                      sku: `digital-${productId}`,
+                      manage_inventory: false,
+                      allow_backorder: true,
+                      prices: [
+                        {
+                          amount: price,
+                          currency_code: "usd",
+                        }
+                      ]
                     },
-                  ]);
+                  ],
+                  sales_channels: [{ id: defaultSalesChannel.id }],
+                  metadata: {
+                    fulfillment_type: "digital",
+                    digital_product_id: digitalProduct.id,
+                  },
                 }
+
+                const { result: digitalResult } = await createDigitalWorkflow(req.scope).run({
+                  input: { products: [digitalProductInput] }
+                })
+                
+                medusaProduct = digitalResult.products[0]
             }
             importedProducts.push(medusaProduct);
         } catch (error) {

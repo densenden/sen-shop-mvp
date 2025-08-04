@@ -1,5 +1,14 @@
 # Sen-Commerce Backend
 
+[![Production](https://img.shields.io/badge/Production-Live-green)](https://shop.sen.studio)
+[![Backend](https://img.shields.io/badge/Backend-Medusa.js%20v2-blue)](https://medusajs.com)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL-blue)](https://postgresql.org)
+[![Storage](https://img.shields.io/badge/Storage-Supabase-green)](https://supabase.com)
+[![POD](https://img.shields.io/badge/POD-Printful%20API-orange)](https://printful.com)
+[![Deployment](https://img.shields.io/badge/Deploy-Railway-blueviolet)](https://railway.app)
+
+**🚀 Live Production Site:** [shop.sen.studio](https://shop.sen.studio)
+
 ## Overview
 
 Modern e-commerce backend built on Medusa.js v2 with comprehensive digital and print-on-demand product management, artwork systems, and fulfillment automation.
@@ -196,13 +205,38 @@ npm run dev
 - Order management
 - Responsive design ready for styling
 
+## 🚀 Production Deployment
+
+### Live Environment
+- **Production URL:** [shop.sen.studio](https://shop.sen.studio)
+- **Admin Panel:** [shop.sen.studio/app](https://shop.sen.studio/app)
+- **Backend:** Railway.app deployment
+- **Frontend:** Vercel deployment
+- **Database:** Supabase PostgreSQL
+- **Storage:** Supabase S3-compatible storage
+
+### Deployment Architecture
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │   Database      │
+│   (Vercel)      │◄──►│   (Railway)     │◄──►│  (Supabase)     │
+│ shop.sen.studio │    │ API & Admin     │    │  PostgreSQL     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                               │
+                       ┌───────▼────────┐
+                       │   File Storage │
+                       │   (Supabase)   │
+                       │   S3-Compatible│
+                       └────────────────┘
+```
+
 ## Project Status
 
-### 🎯 **Current State: Production Ready**
+### 🎯 **Current State: Production Live & Deployed**
 
 ### ✅ **Completed Systems**
 
-**Backend (100% Complete):**
+**Backend (100% Complete & Deployed):**
 - ✅ Digital product management with secure delivery
 - ✅ Comprehensive artwork system with collections
 - ✅ Full Printful POD integration with webhooks
@@ -211,19 +245,22 @@ npm run dev
 - ✅ API endpoints for all systems
 - ✅ Database schemas and migrations
 - ✅ File upload and storage system
+- ✅ Production deployment on Railway
 
-**Frontend (80% Complete):**
-- ✅ Basic storefront with product browsing
+**Frontend (85% Complete & Deployed):**
+- ✅ Functional storefront with product browsing
 - ✅ Artwork gallery
-- ✅ Shopping cart interface
+- ✅ Shopping cart and checkout
+- ✅ Order management system
 - ✅ Responsive layout foundation
-- 🎨 Styling and UX improvements needed
+- ✅ Production deployment on Vercel
+- 🎨 Advanced styling and UX enhancements in progress
 
-### 🎨 **Next Phase: Styling & UX**
-- Professional storefront design
-- Enhanced user experience
-- Mobile optimization
-- Performance improvements
+### 🎨 **Current Phase: UI/UX Enhancement**
+- Professional storefront design implementation
+- Enhanced user experience flows
+- Mobile optimization improvements
+- Performance and SEO optimization
 
 ## Documentation
 
@@ -233,6 +270,18 @@ npm run dev
 
 ---
 
-**Tech Stack:** Medusa.js v2, PostgreSQL, Next.js, TypeScript, Supabase, Printful API  
+## 🛠️ Tech Stack
+
+| Component | Technology | Status |
+|-----------|------------|---------|
+| **Backend Framework** | Medusa.js v2 | ✅ Production |
+| **Database** | PostgreSQL (Supabase) | ✅ Production |
+| **Frontend** | Next.js 14 + TypeScript | ✅ Production |
+| **File Storage** | Supabase S3-Compatible | ✅ Production |
+| **POD Integration** | Printful API v1/v2 | ✅ Production |
+| **Deployment** | Railway + Vercel | ✅ Production |
+| **Authentication** | Medusa Auth | ✅ Production |
+| **Payment Processing** | Stripe Integration | ✅ Production |
+
 **Last Updated:** January 2025  
-**Status:** Production Ready - Ready for Styling Phase
+**Status:** 🚀 Live in Production - [shop.sen.studio](https://shop.sen.studio)

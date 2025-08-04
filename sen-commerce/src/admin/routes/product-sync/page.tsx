@@ -65,8 +65,18 @@ const ProductSyncPage = () => {
   const fetchSyncLogs = async () => {
     try {
       setLoading(true)
-      const response = await sdk.admin.custom.get("/product-sync")
-      const data = response
+      const response = await fetch("http://localhost:9000/admin/product-sync", {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
       
       setSyncLogs(data.logs || [])
       setStats(data.stats || { total: 0, pending: 0, success: 0, failed: 0, in_progress: 0 })
@@ -81,11 +91,21 @@ const ProductSyncPage = () => {
   const startAction = async (action: string) => {
     setSyncing(true)
     try {
-      const response = await sdk.admin.custom.post("/product-sync", {
-        action,
-        provider: "printful"
+      const response = await fetch("http://localhost:9000/admin/product-sync", {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          provider: "printful"
+        })
       })
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       
       // Refresh logs after starting sync
       await fetchSyncLogs()
@@ -122,11 +142,25 @@ const ProductSyncPage = () => {
 
     setImporting(true)
     try {
-      const result = await sdk.admin.custom.post("/product-sync", {
-        action: "import_products",
-        provider,
-        product_ids: productIds
+      const response = await fetch("http://localhost:9000/admin/product-sync", {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: "import_products",
+          provider,
+          product_ids: productIds
+        })
       })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      
       if (result.failed > 0) {
         const errorDetails = result.errors.map((e: { productId: string; error: string }) => `Product ID: ${e.productId}, Error: ${e.error}`).join("\n")
         alert(`Successfully imported ${result.imported} products. ${result.failed} failed.\n\nErrors:\n${errorDetails}`)

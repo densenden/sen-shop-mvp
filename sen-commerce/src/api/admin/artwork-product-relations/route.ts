@@ -1,4 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { authenticate } from "@medusajs/medusa"
 
 interface ArtworkProductRelation {
   id: string
@@ -11,26 +12,22 @@ interface ArtworkProductRelation {
   updated_at: string
 }
 
-// In-memory storage for relations (in production, use database)
-let artworkProductRelations: ArtworkProductRelation[] = []
-
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { artwork_id, product_id, product_type } = req.query
+    const artworkModuleService = req.scope.resolve("artworkModuleService")
 
-    let filteredRelations = artworkProductRelations
+    // Build filters
+    const filters: any = {}
+    if (artwork_id) filters.artwork_id = artwork_id
+    if (product_id) filters.product_id = product_id  
+    if (product_type) filters.product_type = product_type
 
-    if (artwork_id) {
-      filteredRelations = filteredRelations.filter(r => r.artwork_id === artwork_id)
-    }
-    if (product_id) {
-      filteredRelations = filteredRelations.filter(r => r.product_id === product_id)
-    }
-    if (product_type) {
-      filteredRelations = filteredRelations.filter(r => r.product_type === product_type)
-    }
+    const relations = await artworkModuleService.listArtworkProductRelations({
+      filters
+    })
 
-    res.json({ relations: filteredRelations })
+    res.json({ relations })
   } catch (error) {
     console.error("Error fetching artwork-product relations:", error)
     res.status(500).json({ error: "Failed to fetch relations" })
@@ -40,41 +37,44 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { artwork_id, product_id, product_type, is_primary = false, position = 0 } = req.body as any
+    const artworkModuleService = req.scope.resolve("artworkModuleService")
 
     if (!artwork_id || !product_id || !product_type) {
       return res.status(400).json({ error: "artwork_id, product_id, and product_type are required" })
     }
 
     // Check if relation already exists
-    const existingRelation = artworkProductRelations.find(
-      r => r.artwork_id === artwork_id && r.product_id === product_id
-    )
+    const existingRelations = await artworkModuleService.listArtworkProductRelations({
+      filters: { artwork_id, product_id }
+    })
 
-    if (existingRelation) {
+    if (existingRelations.length > 0) {
       return res.status(400).json({ error: "Relation already exists" })
     }
 
     // If this is primary, unset other primary relations for the same product
     if (is_primary) {
-      artworkProductRelations.forEach(r => {
-        if (r.product_id === product_id) {
-          r.is_primary = false
-        }
+      const productRelations = await artworkModuleService.listArtworkProductRelations({
+        filters: { product_id }
       })
+      
+      for (const relation of productRelations) {
+        if (relation.is_primary) {
+          await artworkModuleService.updateArtworkProductRelations({
+            id: relation.id,
+            is_primary: false
+          })
+        }
+      }
     }
 
-    const newRelation: ArtworkProductRelation = {
-      id: `rel_${Date.now()}`,
+    const newRelation = await artworkModuleService.createArtworkProductRelations({
       artwork_id,
       product_id,
       product_type,
       is_primary,
-      position,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-
-    artworkProductRelations.push(newRelation)
+      position
+    })
 
     res.json({ relation: newRelation })
   } catch (error) {
@@ -86,19 +86,23 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 export async function DELETE(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { artwork_id, product_id } = req.query
+    const artworkModuleService = req.scope.resolve("artworkModuleService")
 
     if (!artwork_id || !product_id) {
       return res.status(400).json({ error: "artwork_id and product_id are required" })
     }
 
-    const initialLength = artworkProductRelations.length
-    artworkProductRelations = artworkProductRelations.filter(
-      r => !(r.artwork_id === artwork_id && r.product_id === product_id)
-    )
+    // Find the relation to delete
+    const relations = await artworkModuleService.listArtworkProductRelations({
+      filters: { artwork_id, product_id }
+    })
 
-    if (artworkProductRelations.length === initialLength) {
+    if (relations.length === 0) {
       return res.status(404).json({ error: "Relation not found" })
     }
+
+    // Delete the relation
+    await artworkModuleService.deleteArtworkProductRelations(relations[0].id)
 
     res.json({ deleted: true })
   } catch (error) {
@@ -106,3 +110,7 @@ export async function DELETE(req: MedusaRequest, res: MedusaResponse) {
     res.status(500).json({ error: "Failed to delete relation" })
   }
 }
+
+export const middlewares = [
+  authenticate("admin", ["session", "bearer"]),
+]

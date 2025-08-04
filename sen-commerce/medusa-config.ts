@@ -65,7 +65,7 @@ export default defineConfig({
     // }
     {
       resolve: "./src/modules/printful",
-      alias: "podProviderManager",
+      alias: "printfulModule",
       definition: {
         isQueryable: true
       }

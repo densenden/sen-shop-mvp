@@ -22,7 +22,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     for (const product of products) {
       if (product.variants && product.variants.length > 0) {
         for (const variant of product.variants) {
-          if (variant.price_set_id) {
+          if ((variant as any).price_set_id) {
             try {
               // Generate random price between $5-$100 based on product type
               let priceRange = [500, 10000]; // $5-$100 default
@@ -40,7 +40,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
               
               // Try to add price - if it already exists, this will fail silently
               await pricingModuleService.addPrices({
-                priceSetId: variant.price_set_id,
+                priceSetId: (variant as any).price_set_id,
                 prices: [{
                   amount: randomPrice,
                   currency_code: 'usd',

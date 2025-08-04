@@ -21,10 +21,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
     
     // Get current prices for the variant
-    let prices = []
-    if (variant.price_set_id) {
+    let prices: any[] = []
+    if ((variant as any).price_set_id) {
       try {
-        const priceSet = await pricingModuleService.retrievePriceSet(variant.price_set_id, {
+        const priceSet = await pricingModuleService.retrievePriceSet((variant as any).price_set_id, {
           relations: ['prices']
         })
         prices = priceSet.prices || []
@@ -42,7 +42,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         id: variant.id,
         title: variant.title,
         sku: variant.sku,
-        price_set_id: variant.price_set_id
+        price_set_id: (variant as any).price_set_id
       },
       prices
     })
@@ -70,13 +70,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.status(404).json({ error: "Variant not found" })
     }
     
-    if (!variant.price_set_id) {
+    if (!(variant as any).price_set_id) {
       return res.status(400).json({ error: "Variant has no price set" })
     }
     
     // Remove existing prices first
     try {
-      const existingPriceSet = await pricingModuleService.retrievePriceSet(variant.price_set_id, {
+      const existingPriceSet = await pricingModuleService.retrievePriceSet((variant as any).price_set_id, {
         relations: ['prices']
       })
       
@@ -90,7 +90,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // Add new prices
     if (prices && prices.length > 0) {
       await pricingModuleService.addPrices({
-        priceSetId: variant.price_set_id,
+        priceSetId: (variant as any).price_set_id,
         prices: prices.map(price => ({
           amount: Number(price.amount),
           currency_code: price.currency_code.toLowerCase()
