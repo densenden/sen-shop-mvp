@@ -54,15 +54,6 @@ export default defineConfig({
         ]
       }
     },
-    // SendGrid notification provider (commented out due to version conflicts)
-    // {
-    //   resolve: "@medusajs/notification-sendgrid",
-    //   options: {
-    //     channels: ["email"],
-    //     api_key: process.env.SENDGRID_API_KEY,
-    //     from: process.env.SENDGRID_FROM,
-    //   }
-    // },
     {
       resolve: "./src/modules/printful",
       alias: "printfulModule",

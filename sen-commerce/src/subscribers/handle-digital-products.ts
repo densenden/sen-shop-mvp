@@ -100,14 +100,13 @@ export default async function handleDigitalProducts({
         
         // Get customer name or use email
         const customerName = order.email?.split('@')[0] || 'Customer'
+        const orderNumber = order.id.slice(-8).toUpperCase()
         
         const emailData = {
           customerEmail: order.email,
           customerName,
           orderId: order.id,
-          totalAmount: 0, // Not needed for download email
-          currencyCode: 'usd',
-          items: [],
+          orderNumber,
           downloadLinks: downloadLinks.map(link => ({
             productTitle: link.product_name,
             downloadUrl: link.download_url,
@@ -116,7 +115,7 @@ export default async function handleDigitalProducts({
         }
         
         try {
-          await emailService.sendDigitalProductDownloadLinks(emailData)
+          await emailService.sendDigitalDownloadLinks(emailData)
           logger.info(`Download links email sent successfully to ${order.email}`)
         } catch (error) {
           logger.error(`Failed to send download links email:`, error)

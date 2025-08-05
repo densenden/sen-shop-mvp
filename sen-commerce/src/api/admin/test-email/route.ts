@@ -6,7 +6,7 @@ export const POST = async (
   res: MedusaResponse
 ): Promise<void> => {
   try {
-    const { type = 'order-confirmation', email = 'shop@sen.studio' } = req.body
+    const { type = 'connection-test', email = 'shop@sen.studio' } = req.body
 
     const emailService = new EmailService()
 
@@ -14,41 +14,7 @@ export const POST = async (
       const result = await emailService.testConnection()
       res.json({
         success: result,
-        message: result ? 'SendGrid connection successful' : 'SendGrid connection failed',
-        timestamp: new Date().toISOString()
-      })
-      return
-    }
-
-    if (type === 'order-confirmation') {
-      const testOrderData = {
-        customerEmail: email,
-        customerName: 'Test Customer',
-        orderId: `test_order_${Date.now()}`,
-        totalAmount: 2999, // $29.99
-        currencyCode: 'usd',
-        items: [
-          {
-            title: 'Digital Art - Mountain Landscape',
-            quantity: 1,
-            unitPrice: 1999,
-            fulfillmentType: 'digital'
-          },
-          {
-            title: 'T-Shirt Print - Abstract Design',
-            quantity: 1,
-            unitPrice: 1000,
-            fulfillmentType: 'printful_pod'
-          }
-        ]
-      }
-
-      const result = await emailService.sendOrderConfirmation(testOrderData)
-      res.json({
-        success: result,
-        message: result ? 'Order confirmation email sent' : 'Failed to send order confirmation',
-        email,
-        orderId: testOrderData.orderId,
+        message: result ? 'Resend connection successful' : 'Resend connection failed',
         timestamp: new Date().toISOString()
       })
       return
@@ -65,14 +31,47 @@ export const POST = async (
       return
     }
 
+    if (type === 'order-confirmation') {
+      const testOrderData = {
+        customerEmail: email,
+        customerName: 'Test Customer',
+        orderId: `order_test_${Date.now()}`,
+        orderNumber: `TC${Date.now().toString().slice(-6)}`,
+        items: [
+          {
+            title: 'Digital Art - Mountain Landscape',
+            quantity: 1,
+            unitPrice: 1999,
+            fulfillmentType: 'digital'
+          },
+          {
+            title: 'T-Shirt Print - Abstract Design',
+            quantity: 1,
+            unitPrice: 1000,
+            fulfillmentType: 'printful_pod'
+          }
+        ],
+        totalAmount: 2999,
+        currencyCode: 'usd'
+      }
+
+      const result = await emailService.sendOrderConfirmation(testOrderData)
+      res.json({
+        success: result,
+        message: result ? 'Order confirmation email sent' : 'Failed to send order confirmation',
+        email,
+        orderNumber: testOrderData.orderNumber,
+        timestamp: new Date().toISOString()
+      })
+      return
+    }
+
     if (type === 'download-links') {
       const testDownloadData = {
         customerEmail: email,
         customerName: 'Test Customer',
-        orderId: `test_order_${Date.now()}`,
-        totalAmount: 0,
-        currencyCode: 'usd',
-        items: [],
+        orderId: `order_test_${Date.now()}`,
+        orderNumber: `TC${Date.now().toString().slice(-6)}`,
         downloadLinks: [
           {
             productTitle: 'Digital Art - Mountain Landscape',
@@ -87,13 +86,36 @@ export const POST = async (
         ]
       }
 
-      const result = await emailService.sendDigitalProductDownloadLinks(testDownloadData)
+      const result = await emailService.sendDigitalDownloadLinks(testDownloadData)
       res.json({
         success: result,
         message: result ? 'Download links email sent' : 'Failed to send download links',
         email,
-        orderId: testDownloadData.orderId,
+        orderNumber: testDownloadData.orderNumber,
         downloadCount: testDownloadData.downloadLinks?.length || 0,
+        timestamp: new Date().toISOString()
+      })
+      return
+    }
+
+    if (type === 'payment-confirmation') {
+      const testPaymentData = {
+        customerEmail: email,
+        customerName: 'Test Customer',
+        orderId: `order_test_${Date.now()}`,
+        orderNumber: `TC${Date.now().toString().slice(-6)}`,
+        paymentAmount: 2999,
+        currencyCode: 'usd',
+        paymentMethod: 'Credit Card (**** 4242)',
+        transactionId: `txn_test_${Date.now()}`
+      }
+
+      const result = await emailService.sendPaymentConfirmation(testPaymentData)
+      res.json({
+        success: result,
+        message: result ? 'Payment confirmation email sent' : 'Failed to send payment confirmation',
+        email,
+        orderNumber: testPaymentData.orderNumber,
         timestamp: new Date().toISOString()
       })
       return
@@ -101,8 +123,8 @@ export const POST = async (
 
     res.status(400).json({
       success: false,
-      message: 'Invalid email type. Use: connection-test, welcome, order-confirmation, or download-links',
-      validTypes: ['connection-test', 'welcome', 'order-confirmation', 'download-links']
+      message: 'Invalid email type. Use: connection-test, welcome, order-confirmation, download-links, or payment-confirmation',
+      validTypes: ['connection-test', 'welcome', 'order-confirmation', 'download-links', 'payment-confirmation']
     })
 
   } catch (error) {

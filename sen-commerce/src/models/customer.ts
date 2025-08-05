@@ -8,6 +8,9 @@ export const Customer = model.define("customer", {
   last_name: model.text().nullable(),
   phone: model.text().nullable(),
   has_account: model.boolean().default(false),
+  // Email preferences
+  email_notifications: model.boolean().default(true), // Order confirmations, download links, etc.
+  marketing_emails: model.boolean().default(true), // Promotional emails, newsletters
   metadata: model.json().nullable(),
 })
 

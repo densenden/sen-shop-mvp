@@ -27,18 +27,22 @@ const sendOrderConfirmationEmailStep = createStep(
     
     const emailService = new EmailService()
     
+    // Generate order number from order ID
+    const orderNumber = data.order_id.slice(-8).toUpperCase()
+    
     const emailData = {
       customerEmail: data.customer_email,
       customerName: data.customer_name,
       orderId: data.order_id,
-      totalAmount: data.total_amount,
-      currencyCode: data.currency_code,
+      orderNumber,
       items: data.items.map(item => ({
         title: item.title,
         quantity: item.quantity,
         unitPrice: item.unit_price,
         fulfillmentType: item.fulfillment_type
-      }))
+      })),
+      totalAmount: data.total_amount,
+      currencyCode: data.currency_code
     }
     
     const emailSent = await emailService.sendOrderConfirmation(emailData)
