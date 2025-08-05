@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import jwt from "jsonwebtoken"
+import EmailService from "../../../services/email-service"
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
@@ -32,6 +33,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       process.env.JWT_SECRET || "supersecret",
       { expiresIn: "7d" }
     )
+
+    // Send welcome email (don't wait for it to complete)
+    const emailService = new EmailService()
+    const customerName = first_name || email.split('@')[0] || 'New Customer'
+    
+    emailService.sendWelcomeEmail(email, customerName).catch(error => {
+      console.error('[Registration] Failed to send welcome email:', error)
+      // Don't fail registration if email fails
+    })
 
     res.json({
       customer: {

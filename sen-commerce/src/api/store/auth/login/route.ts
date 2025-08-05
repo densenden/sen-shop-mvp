@@ -1,5 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
+import jwt from "jsonwebtoken"
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
@@ -30,8 +31,16 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       const customer = customers[0]
 
       // TODO: Implement proper password verification
-      // For now, we'll create a simple session token
-      const token = `customer_${customer.id}_${Date.now()}`
+      // Create a JWT token
+      const token = jwt.sign(
+        { 
+          customer_id: customer.id,
+          email: customer.email,
+          type: 'customer'
+        },
+        process.env.JWT_SECRET || "supersecret",
+        { expiresIn: '7d' }
+      )
 
       res.json({
         customer: {

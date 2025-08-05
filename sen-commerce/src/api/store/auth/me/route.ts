@@ -13,12 +13,14 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
 
     const token = authHeader.split(' ')[1]
-    
+    console.log("Auth me token:", token)
+
     // Verify token
     let decoded: any
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET || "supersecret")
     } catch (error) {
+      console.error("Auth me error:", error)
       return res.status(401).json({
         error: "Unauthorized - Invalid token"
       })

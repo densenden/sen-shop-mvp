@@ -24,7 +24,7 @@
       "delay": 2,
       "content": {
         "title": "Modern Tech Stack",
-        "subtitle": "Medusa.js v2 + Next.js 14",
+        "subtitle": "Medusa.js v2 + Vite + Next.js",
         "highlight": "TypeScript"
       }
     },
@@ -97,7 +97,7 @@
       "subtitle": "Digital Art & Print-on-Demand E-commerce Platform",
       "content": {
         "project": "SenCommerce MVP",
-        "built_with": "Medusa.js v2 + Next.js 14 + TypeScript",
+        "built_with": "Medusa.js v2 + Vite + Next.js 14 + TypeScript",
         "timeline": "3 months development (May-Aug 2025)",
         "status": "Production-ready backend, functional storefront",
         "presenter": "Denis Kreuzer",
@@ -115,16 +115,16 @@
         "description": "Comprehensive e-commerce platform with separate frontend and backend, integrated with multiple external services",
         "components": [
           {
-            "layer": "Frontend",
-            "items": ["Next.js 14 Storefront", "Cart & Checkout", "User Authentication", "Product Browsing"]
+            "layer": "Frontend Applications",
+            "items": ["Next.js 14 Storefront (Customer-facing)", "Vite Admin Dashboard (Content management)"]
           },
           {
-            "layer": "Backend", 
-            "items": ["Medusa.js v2 Core", "Custom Modules", "Admin Dashboard", "REST API"]
+            "layer": "Backend Core", 
+            "items": ["Medusa.js v2 Framework", "Custom Modules (Artwork, Digital Products, Printful)", "REST API (25+ endpoints)", "Built with Vite"]
           },
           {
             "layer": "External Services",
-            "items": ["Printful API (POD)", "Stripe (Payments)", "Supabase (Storage)", "SendGrid (Email)", "PostgreSQL", "Redis"]
+            "items": ["Printful API (POD)", "Stripe (Payments)", "Supabase (Storage & DB)", "Railway/Vercel (Hosting)"]
           }
         ]
       }
@@ -138,6 +138,31 @@
         "image_placeholder": "architecture-diagram",
         "description": "Full system architecture showing frontend, backend, and external services integration",
         "note": "Comprehensive architecture diagram screenshot"
+      }
+    },
+    {
+      "id": "why-background",
+      "type": "problem",
+      "title": "Why This Project?",
+      "subtitle": "The motivation and background",
+      "content": {
+        "personal_motivation": "As an artist and developer, I needed a platform that could handle both digital art sales and print-on-demand without the limitations of existing solutions",
+        "market_problems": [
+          {
+            "platform": "Etsy",
+            "issues": ["Limited customization", "High transaction fees", "No brand control", "Marketplace dependency"]
+          },
+          {
+            "platform": "Shopify",
+            "issues": ["Monthly subscription costs", "App dependency", "Limited backend control", "Vendor lock-in"]
+          },
+          {
+            "platform": "Custom Solutions",
+            "issues": ["High development cost", "Long time to market", "Maintenance overhead", "Security concerns"]
+          }
+        ],
+        "opportunity": "Build a flexible, cost-effective e-commerce platform with full control over features and branding",
+        "learning_goals": "Master modern full-stack development while solving a real business problem"
       }
     },
     {
@@ -164,32 +189,6 @@
       }
     },
     {
-      "id": "database-migration",
-      "type": "migration-story",
-      "title": "Database Migration Challenge",
-      "subtitle": "Railway to Supabase with SQL dump",
-      "content": {
-        "challenge": "Mid-project migration from Railway PostgreSQL to Supabase",
-        "approach": "Complete SQL dump and restore process",
-        "steps": [
-          "Generated full SQL dump from Railway PostgreSQL database",
-          "Preserved all table structures, relationships, and data",
-          "Configured Supabase PostgreSQL connection",
-          "Restored complete database schema and data",
-          "Updated environment variables and connection strings",
-          "Verified data integrity and application functionality"
-        ],
-        "outcome": "Seamless migration with zero data loss",
-        "learning": "Gained experience with database migrations and cloud provider transitions",
-        "tech_details": [
-          "PostgreSQL pg_dump utility",
-          "Schema and data preservation", 
-          "Connection string updates",
-          "Environment configuration"
-        ]
-      }
-    },
-    {
       "id": "solution",
       "type": "solution",
       "title": "The Solution",
@@ -213,25 +212,80 @@
       }
     },
     {
+      "id": "what-is-medusa",
+      "type": "tech-overview",
+      "title": "What is Medusa.js?",
+      "subtitle": "Modern headless e-commerce framework",
+      "content": {
+        "medusa_logo": "medusa-logo-placeholder",
+        "description": "Medusa.js is an open-source, headless e-commerce framework built for developers who want complete control over their commerce stack",
+        "key_features": [
+          "Headless architecture - API-first approach",
+          "Modular design - extensible with custom modules",
+          "Built-in admin dashboard for content management",
+          "Multiple sales channels and regions support",
+          "Integrated payment and fulfillment providers",
+          "TypeScript-first with excellent developer experience"
+        ],
+        "why_chosen": [
+          "No vendor lock-in - open source and self-hosted",
+          "Highly customizable - build exactly what you need",
+          "Modern tech stack - TypeScript, Node.js, PostgreSQL",
+          "Active community and comprehensive documentation",
+          "Production-ready with enterprise features"
+        ]
+      }
+    },
+    {
       "id": "tech-stack",
       "type": "tech",
       "title": "Technology Stack",
       "subtitle": "Modern, scalable, production-ready",
       "content": {
-        "core_technologies": [
+        "backend_technologies": [
           {"name": "Medusa.js v2.8.4", "role": "Backend Framework", "reason": "Modular e-commerce engine"},
-          {"name": "Next.js 14", "role": "Frontend Framework", "reason": "Server-side rendering & TypeScript"},
+          {"name": "Vite", "role": "Build Tool", "reason": "Fast development and production builds"},
           {"name": "PostgreSQL", "role": "Database", "reason": "Reliable relational database"},
           {"name": "Medusa Framework ORM", "role": "Database ORM", "reason": "Built-in type-safe ORM with Medusa framework"},
-          {"name": "Tailwind CSS", "role": "Styling", "reason": "Utility-first responsive design"}
+          {"name": "TypeScript", "role": "Language", "reason": "Type safety and better developer experience"}
+        ],
+        "frontend_technologies": [
+          {"name": "Next.js 14", "role": "Storefront Framework", "reason": "Server-side rendering for customer-facing site"},
+          {"name": "Vite Admin", "role": "Admin Dashboard", "reason": "Fast admin interface with Medusa"},
+          {"name": "Tailwind CSS", "role": "Styling", "reason": "Utility-first responsive design"},
+          {"name": "React", "role": "UI Library", "reason": "Component-based user interfaces"}
         ],
         "infrastructure": [
-          {"name": "Supabase", "role": "File Storage", "reason": "S3-compatible with CDN"},
+          {"name": "Supabase", "role": "File Storage & Database", "reason": "S3-compatible storage with PostgreSQL"},
           {"name": "Stripe", "role": "Payments", "reason": "Secure payment processing"},
-          {"name": "SendGrid", "role": "Email", "reason": "Transactional email delivery"},
           {"name": "Printful V2", "role": "Print-on-Demand", "reason": "Automated product fulfillment"},
-          {"name": "Redis", "role": "Caching", "reason": "Session & API response caching"}
+          {"name": "Railway/Vercel", "role": "Deployment", "reason": "Cloud hosting and CI/CD"}
         ]
+      }
+    },
+    {
+      "id": "what-are-modules",
+      "type": "concept-explanation",
+      "title": "What are Modules?",
+      "subtitle": "Understanding Medusa's modular architecture",
+      "content": {
+        "module_concept": "Modules in Medusa are self-contained packages that encapsulate specific business logic, database entities, and APIs",
+        "core_benefits": [
+          "Separation of concerns - each module handles one business domain",
+          "Reusability - modules can be shared across projects",
+          "Maintainability - easier to update and debug isolated functionality",
+          "Scalability - add or remove features without affecting core system"
+        ],
+        "why_custom_modules": {
+          "problem": "Standard e-commerce modules don't handle specialized use cases like digital art management and print-on-demand workflows",
+          "solution": "Build custom modules for unique business requirements",
+          "examples": [
+            "Artwork Module - manages digital art collections and metadata",
+            "Digital Product Module - handles secure file downloads with tokens",
+            "Printful Module - automates print-on-demand order processing"
+          ]
+        },
+        "architecture_advantage": "Modular design allows mixing core Medusa functionality with custom business logic seamlessly"
       }
     },
     {
@@ -316,7 +370,6 @@
       "title": "Database Schema",
       "subtitle": "Entity Relationship Diagram",
       "content": {
-        "image_placeholder": "database-erd",
         "description": "Complete database schema showing all 15+ tables and their relationships",
         "note": "Screenshot of actual database ERD diagram"
       }
@@ -351,10 +404,22 @@
         },
         "security_features": [
           "CORS configuration for frontend domains",
-          "File type and size validation",
-          "Rate limiting on sensitive endpoints",
-          "SQL injection protection via ORM"
+          "File type and size validation (50MB limit)",
+          "Token-based secure downloads with expiry",
+          "JWT authentication for customer sessions",
+          "Session-based admin authentication",
+          "SQL injection protection via Medusa ORM"
         ]
+      }
+    },
+    {
+      "id": "screenshot-showcase",
+      "type": "fullscreen-image",
+      "title": "Platform Screenshots",
+      "subtitle": "Live system demonstration",
+      "content": {
+        "description": "Screenshots showing the actual working system - storefront, admin dashboard, and key features",
+        "note": "Live platform screenshots demonstrating real functionality"
       }
     },
     {
@@ -512,6 +577,32 @@
             "challenge": "Real-time order tracking",
             "solution": "Webhook integration with comprehensive status synchronization"
           }
+        ]
+      }
+    },
+    {
+      "id": "database-migration",
+      "type": "migration-story",
+      "title": "Database Migration Challenge",
+      "subtitle": "Railway to Supabase with SQL dump",
+      "content": {
+        "challenge": "Mid-project migration from Railway PostgreSQL to Supabase",
+        "approach": "Complete SQL dump and restore process",
+        "steps": [
+          "Generated full SQL dump from Railway PostgreSQL database",
+          "Preserved all table structures, relationships, and data",
+          "Configured Supabase PostgreSQL connection",
+          "Restored complete database schema and data",
+          "Updated environment variables and connection strings",
+          "Verified data integrity and application functionality"
+        ],
+        "outcome": "Seamless migration with zero data loss",
+        "learning": "Gained experience with database migrations and cloud provider transitions",
+        "tech_details": [
+          "PostgreSQL pg_dump utility",
+          "Schema and data preservation", 
+          "Connection string updates",
+          "Environment configuration"
         ]
       }
     },

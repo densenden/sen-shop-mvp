@@ -88,8 +88,9 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [addresses, setAddresses] = useState<Address[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
+  const [downloads, setDownloads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'addresses' | 'favorites' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'downloads' | 'addresses' | 'favorites' | 'settings'>('overview')
   const [editingProfile, setEditingProfile] = useState(false)
   const [updatingProfile, setUpdatingProfile] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -118,6 +119,7 @@ export default function AccountPage() {
       await fetchUserProfile(token)
       await fetchOrders(token)
       await fetchAddresses(token)
+      await fetchDownloads(token)
       
       // Load favorites from localStorage
       const savedFavorites = localStorage.getItem('favorites')
@@ -192,6 +194,24 @@ export default function AccountPage() {
       }
     } catch (error) {
       console.error('Error fetching addresses:', error)
+    }
+  }
+
+  const fetchDownloads = async (token: string) => {
+    try {
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/downloads`, {
+        headers: {
+          ...getHeaders(),
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setDownloads(data.downloads || [])
+      }
+    } catch (error) {
+      console.error('Error fetching downloads:', error)
     }
   }
 
@@ -372,6 +392,18 @@ export default function AccountPage() {
                 >
                   <Package className="h-4 w-4" />
                   <span>Orders ({orders.length})</span>
+                </button>
+                
+                <button
+                  onClick={() => setActiveTab('downloads')}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 text-sm transition-colors ${
+                    activeTab === 'downloads' 
+                      ? 'bg-gray-900 text-white' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Downloads ({downloads.length})</span>
                 </button>
                 
                 <button
@@ -692,6 +724,104 @@ export default function AccountPage() {
                               </div>
                             </div>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'downloads' && (
+              <div className="bg-white border border-gray-100">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h3 className="text-lg font-medium text-gray-900">Digital Downloads</h3>
+                </div>
+                <div className="p-6">
+                  {downloads.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Download className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No digital downloads yet</h3>
+                      <p className="text-gray-600 mb-6">Purchase digital artworks to see your download links here.</p>
+                      <Link
+                        href="/artworks"
+                        className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800"
+                      >
+                        Browse Digital Artworks
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {downloads.map((download, index) => (
+                        <div key={index} className="border border-gray-100 p-6 hover:border-gray-200 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <h4 className="font-medium text-gray-900">{download.product_name}</h4>
+                                {download.is_expired ? (
+                                  <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
+                                    Expired
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
+                                    Active
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {download.product_description && (
+                                <p className="text-sm text-gray-600 mb-3">{download.product_description}</p>
+                              )}
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                                <div>
+                                  <span className="font-medium">Order:</span>
+                                  <div>#{download.order_display_id}</div>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Purchased:</span>
+                                  <div>{formatDate(download.order_date)}</div>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Downloads:</span>
+                                  <div>
+                                    {download.download_count} / {download.max_downloads === -1 ? '∞' : download.max_downloads}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Expires:</span>
+                                  <div>
+                                    {download.expires_at ? formatDate(download.expires_at) : 'Never'}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {download.file_size && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                  File size: {(download.file_size / (1024 * 1024)).toFixed(1)} MB
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="ml-6">
+                              {download.is_expired ? (
+                                <div className="text-center">
+                                  <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
+                                  <p className="text-xs text-red-600">Link expired</p>
+                                </div>
+                              ) : (
+                                <a
+                                  href={download.download_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex flex-col items-center space-y-2 bg-gray-900 text-white px-4 py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+                                >
+                                  <Download className="h-5 w-5" />
+                                  <span>Download</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>

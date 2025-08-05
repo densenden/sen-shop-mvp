@@ -1,5 +1,6 @@
 import { createWorkflow, WorkflowResponse } from "@medusajs/workflows-sdk"
 import { createStep } from "@medusajs/workflows-sdk"
+import EmailService from "../services/email-service"
 
 // Types for the workflow
 interface OrderConfirmationData {
@@ -24,38 +25,28 @@ const sendOrderConfirmationEmailStep = createStep(
     console.log(`[Order Confirmation] Order ID: ${data.order_id}`)
     console.log(`[Order Confirmation] Total: ${data.total_amount/100} ${data.currency_code.toUpperCase()}`)
     
-    // For now, just log the confirmation email
-    // In production, integrate with SendGrid or another email service
-    const emailContent = `
-Dear ${data.customer_name},
-
-Thank you for your order! Your order #${data.order_id.slice(-8)} has been confirmed.
-
-Order Details:
-${data.items.map(item => 
-  `- ${item.title} x${item.quantity} - $${(item.unit_price * item.quantity / 100).toFixed(2)}`
-).join('\n')}
-
-Total: $${(data.total_amount / 100).toFixed(2)} ${data.currency_code.toUpperCase()}
-
-${data.items.some(item => item.fulfillment_type === 'digital') ? 
-  'Your digital products will be available for download in your account shortly.' : ''}
-
-${data.items.some(item => item.fulfillment_type === 'printful_pod') ? 
-  'Your print-on-demand items will be processed and shipped within 2-3 business days.' : ''}
-
-You can track your order at: http://localhost:3000/account
-
-Best regards,
-The SenCommerce Team
-    `;
+    const emailService = new EmailService()
     
-    console.log(`[Order Confirmation] Email content prepared:`, emailContent);
+    const emailData = {
+      customerEmail: data.customer_email,
+      customerName: data.customer_name,
+      orderId: data.order_id,
+      totalAmount: data.total_amount,
+      currencyCode: data.currency_code,
+      items: data.items.map(item => ({
+        title: item.title,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        fulfillmentType: item.fulfillment_type
+      }))
+    }
+    
+    const emailSent = await emailService.sendOrderConfirmation(emailData)
     
     // Return success
     return {
       success: true,
-      email_sent: true,
+      email_sent: emailSent,
       recipient: data.customer_email,
       order_id: data.order_id
     }

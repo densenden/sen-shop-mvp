@@ -2,6 +2,7 @@ import { type SubscriberConfig, type SubscriberArgs } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { DIGITAL_PRODUCT_MODULE } from "../modules/digital-product"
 import type { DigitalProductModuleService } from "../modules/digital-product/services/digital-product-module-service"
+import EmailService from "../services/email-service"
 import crypto from "crypto"
 
 export default async function handleDigitalProducts({ 
@@ -41,7 +42,7 @@ export default async function handleDigitalProducts({
     for (const item of order.items) {
       if (item?.product?.id && item?.product?.metadata) {
         // Check if product has digital fulfillment
-        if (item.product.metadata.fulfillment_type === 'digital') {
+        if (item.product.metadata.fulfillment_type === 'digital_download') {
           // Look for linked digital product ID in metadata
           const digitalProductId = item.product.metadata.digital_product_id
           if (digitalProductId) {
@@ -95,9 +96,31 @@ export default async function handleDigitalProducts({
       if (downloadLinks.length > 0) {
         logger.info(`Sending ${downloadLinks.length} download links to ${order.email}`)
         
-        // TODO: Send email using notification service
-        // For now, just log the links
-        logger.info(`Download links: ${JSON.stringify(downloadLinks)}`)
+        const emailService = new EmailService()
+        
+        // Get customer name or use email
+        const customerName = order.email?.split('@')[0] || 'Customer'
+        
+        const emailData = {
+          customerEmail: order.email,
+          customerName,
+          orderId: order.id,
+          totalAmount: 0, // Not needed for download email
+          currencyCode: 'usd',
+          items: [],
+          downloadLinks: downloadLinks.map(link => ({
+            productTitle: link.product_name,
+            downloadUrl: link.download_url,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+          }))
+        }
+        
+        try {
+          await emailService.sendDigitalProductDownloadLinks(emailData)
+          logger.info(`Download links email sent successfully to ${order.email}`)
+        } catch (error) {
+          logger.error(`Failed to send download links email:`, error)
+        }
       }
     }
     
