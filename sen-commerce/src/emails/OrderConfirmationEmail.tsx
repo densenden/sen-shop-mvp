@@ -1,6 +1,17 @@
-import { Section, Text, Row, Column, Hr, Heading, Link, Img } from '@react-email/components'
-import { EmailLayout } from './components/Layout'
-import { Button } from './components/Button'
+import {
+  Button,
+  Section,
+  Text,
+  Heading,
+  Link,
+  Row,
+  Column,
+  Hr,
+  Img
+} from '@react-email/components'
+import BaseEmailLayout from './components/BaseLayout'
+import SenCommerceSignature from './components/SenCommerceSignature'
+import { emailStyles } from './components/EmailStyles'
 
 interface OrderItem {
   title: string
@@ -20,134 +31,142 @@ interface OrderConfirmationEmailProps {
 }
 
 export const OrderConfirmationEmail = ({
-  customerName,
-  orderId,
-  orderNumber,
-  items,
-  totalAmount,
-  currencyCode,
+  customerName = 'John Doe',
+  orderId = 'order_123',
+  orderNumber = '#SC-2024-001',
+  items = [
+    { title: 'Premium Product', quantity: 1, unitPrice: 2999, fulfillmentType: 'digital' }
+  ],
+  totalAmount = 2999,
+  currencyCode = 'USD',
   storeUrl = 'https://shop.sen.studio'
 }: OrderConfirmationEmailProps) => {
+  
   const formatPrice = (price: number) => `$${(price / 100).toFixed(2)}`
-  const hasDigitalProducts = items.some(item => item.fulfillmentType === 'digital')
+  const hasDigitalProducts = items.some(item => item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download')
   const hasPrintProducts = items.some(item => item.fulfillmentType === 'printful_pod')
 
   return (
-    <EmailLayout preview={`Order confirmation #${orderNumber}`}>
-      <Section className="px-8 py-6">
-        {/* Success Header */}
-        <Section className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 text-center mb-8 border border-green-200">
-          <Text className="text-4xl m-0 mb-2">✅</Text>
-          <Heading className="text-2xl font-semibold text-green-700 m-0 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Order Confirmed!</Heading>
-          <Heading as="h2" className="text-lg font-medium text-green-600 m-0" style={{ fontFamily: 'Inter, sans-serif' }}>Thank you, {customerName}</Heading>
-        </Section>
-        
-        <Text className="text-base text-gray-700 leading-relaxed m-0 mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-          Your order has been confirmed and is being processed. Here are your order details:
+    <BaseEmailLayout
+      previewText={`Order confirmation ${orderNumber} - SenCommerce`}
+      title="Order Confirmed"
+      logoUrl="https://shop.sen.studio/logo.svg"
+      logoAlt="SenCommerce"
+    >
+      {/* Greeting */}
+      <Section className={emailStyles.layout.section}>
+        <Text className={`${emailStyles.typography.sizes.base} text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
+          Hi {customerName},
         </Text>
         
+        <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.md}`}>
+          Thank you for your order! We're excited to get your products to you. Your order has been confirmed and is being processed.
+        </Text>
+
         {/* Order Details Card */}
-        <Section className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
-          {/* Order Header */}
-          <Section className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <Row>
-              <Column>
-                <Heading as="h2" className="text-lg font-semibold text-gray-900 m-0" style={{ fontFamily: 'Inter, sans-serif' }}>Order #{orderNumber}</Heading>
-              </Column>
-              <Column className="text-right">
-                <Text className="text-sm text-gray-500 m-0" style={{ fontFamily: 'Inter, sans-serif' }}>{new Date().toLocaleDateString()}</Text>
-              </Column>
-            </Row>
-          </Section>
+        <Section className={`${emailStyles.components.card.primary} ${emailStyles.layout.sectionSmall}`}>
+          <Heading className={`${emailStyles.typography.sizes.lg} ${emailStyles.typography.weights.medium} text-${emailStyles.colors.text.primary} ${emailStyles.layout.spacing.sm}`}>
+            Order Details
+          </Heading>
           
-          {/* Order Items */}
-          <Section className="px-6 py-4">
-            {items.map((item, index) => (
-              <div key={index}>
-                <Row className="py-4">
-                  <Column className="w-16 pr-4">
-                    <Img
-                      src={item.fulfillmentType === 'digital' 
-                        ? 'https://dltvkqzxlwxbtgiofkds.supabase.co/storage/v1/object/public/artwork-images/digital-art-thumb.jpg'
-                        : 'https://dltvkqzxlwxbtgiofkds.supabase.co/storage/v1/object/public/artwork-images/print-product-thumb.jpg'
-                      }
-                      alt={item.title}
-                      width="56"
-                      height="56"
-                      className="rounded-lg border border-gray-200 shadow-sm"
-                    />
-                  </Column>
-                  <Column className="flex-1 pr-4">
-                    <Text className="text-base font-semibold text-gray-900 m-0 mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>{item.title}</Text>
-                    <Row>
-                      <Column>
-                        <Text className="text-sm text-gray-600 m-0" style={{ fontFamily: 'Inter, sans-serif' }}>
-                          {item.fulfillmentType === 'digital' && '📱 Digital Download'}
-                          {item.fulfillmentType === 'printful_pod' && '🖨️ Print-on-Demand'}
-                          {!item.fulfillmentType && '📦 Product'}
-                        </Text>
-                      </Column>
-                      <Column className="text-right">
-                        <Text className="text-sm text-gray-500 m-0" style={{ fontFamily: 'Inter, sans-serif' }}>Qty: {item.quantity}</Text>
-                      </Column>
-                    </Row>
-                  </Column>
-                  <Column className="text-right w-20">
-                    <Text className="text-base font-bold text-gray-900 m-0" style={{ fontFamily: 'Inter, sans-serif' }}>{formatPrice(item.unitPrice * item.quantity)}</Text>
-                  </Column>
-                </Row>
-                {index < items.length - 1 && <Hr className="border-gray-100 my-0" />}
-              </div>
-            ))}
-          </Section>
+          <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.xs}`}>
+            <strong>Order Number:</strong> {orderNumber}
+          </Text>
           
-          {/* Order Total */}
-          <Section className="bg-gray-900 px-6 py-4">
-            <Row>
-              <Column>
-                <Text className="text-lg font-semibold text-white m-0" style={{ fontFamily: 'Inter, sans-serif' }}>Total</Text>
-              </Column>
-              <Column className="text-right">
-                <Text className="text-xl font-bold text-white m-0" style={{ fontFamily: 'Inter, sans-serif' }}>{formatPrice(totalAmount)} {currencyCode.toUpperCase()}</Text>
-              </Column>
-            </Row>
-          </Section>
+          <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.xs}`}>
+            <strong>Order Date:</strong> {new Date().toLocaleDateString()}
+          </Text>
+          
+          <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
+            <strong>Total:</strong> {formatPrice(totalAmount)} {currencyCode.toUpperCase()}
+          </Text>
         </Section>
-        
+
+        {/* Items Ordered */}
+        <Section className={`${emailStyles.components.card.neutral} ${emailStyles.layout.sectionSmall}`}>
+          <Heading className={`${emailStyles.typography.sizes.lg} ${emailStyles.typography.weights.medium} text-${emailStyles.colors.text.primary} ${emailStyles.layout.spacing.sm}`}>
+            Items Ordered
+          </Heading>
+          
+          {items.map((item, index) => (
+            <div key={index}>
+              <Row className="py-2">
+                <Column className="w-16 pr-4">
+                  <Img
+                    src={item.fulfillmentType === 'digital' 
+                      ? 'https://dltvkqzxlwxbtgiofkds.supabase.co/storage/v1/object/public/artwork-images/digital-art-thumb.jpg'
+                      : 'https://dltvkqzxlwxbtgiofkds.supabase.co/storage/v1/object/public/artwork-images/print-product-thumb.jpg'
+                    }
+                    alt={item.title}
+                    width="48"
+                    height="48"
+                    className="rounded-lg border border-gray-200"
+                  />
+                </Column>
+                <Column className="flex-1">
+                  <Text className={`text-${emailStyles.colors.text.secondary} font-medium mb-1`}>
+                    {item.quantity}x {item.title}
+                  </Text>
+                  <Text className={`text-${emailStyles.colors.text.light} text-sm`}>
+                    {item.fulfillmentType === 'digital' && '📱 Digital Download'}
+                    {item.fulfillmentType === 'printful_pod' && '🖨️ Print-on-Demand'}
+                    {!item.fulfillmentType && '📦 Product'}
+                  </Text>
+                </Column>
+                <Column className="text-right">
+                  <Text className={`text-${emailStyles.colors.text.secondary} font-medium`}>
+                    {formatPrice(item.unitPrice * item.quantity)}
+                  </Text>
+                </Column>
+              </Row>
+              {index < items.length - 1 && <Hr className="border-gray-200 my-2" />}
+            </div>
+          ))}
+        </Section>
+
+        {/* Digital Products Notice */}
         {hasDigitalProducts && (
-          <Section className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
-            <Text className="text-base font-semibold text-blue-800 m-0 mb-2">📱 Digital Products</Text>
-            <Text className="text-sm text-blue-700 m-0">
+          <Section className={`${emailStyles.components.card.secondary} ${emailStyles.layout.sectionSmall}`}>
+            <Text className={`text-${emailStyles.colors.secondary} font-semibold mb-2`}>📱 Digital Products</Text>
+            <Text className={`text-${emailStyles.colors.text.secondary} text-sm`}>
               Your digital products will be available for download shortly. You'll receive a separate email with secure download links.
             </Text>
           </Section>
         )}
-        
+
+        {/* Print Products Notice */}
         {hasPrintProducts && (
-          <Section className="bg-green-50 border border-green-200 rounded-lg p-4 my-4">
-            <Text className="text-base font-semibold text-green-800 m-0 mb-2">🖨️ Print-on-Demand Items</Text>
-            <Text className="text-sm text-green-700 m-0">
+          <Section className={`bg-green-50 p-4 rounded-lg ${emailStyles.layout.sectionSmall}`}>
+            <Text className="text-green-800 font-semibold mb-2">🖨️ Print-on-Demand Items</Text>
+            <Text className="text-green-700 text-sm">
               Your print-on-demand items will be processed and shipped within 2-3 business days. You'll receive tracking information once shipped.
             </Text>
           </Section>
         )}
-        
-        <Section className="text-center mb-8">
-          <Button href={`${storeUrl}/account/orders/${orderId}`}>
-            Track Your Order
-          </Button>
-        </Section>
-        
-        <Text className="text-base text-gray-700 leading-6 m-0 mb-4">
-          Questions about your order? Contact us at <Link href="mailto:shop@sen.studio" className="text-gray-900 underline">shop@sen.studio</Link> or visit our support center.
+
+        <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
+          You'll receive a shipping confirmation email with tracking information once your order ships.
         </Text>
-        
-        <Text className="text-base text-gray-700 text-center m-0 mt-8">
-          Thank you for choosing SenCommerce!<br/>
-          <strong>The SenCommerce Team</strong>
+
+        <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.md}`}>
+          Need help? Visit our <Link href="https://shop.sen.studio/support" className={emailStyles.components.link.underlined}>support center</Link> or reply to this email.
         </Text>
       </Section>
-    </EmailLayout>
+
+      {/* Action Button */}
+      <Section className={`text-center ${emailStyles.layout.section}`}>
+        <Button
+          href={`${storeUrl}/orders/${orderNumber}`}
+          className={emailStyles.components.button.primary}
+        >
+          Track Your Order
+        </Button>
+      </Section>
+
+      {/* Signature */}
+      <SenCommerceSignature />
+    </BaseEmailLayout>
   )
 }
 
+export default OrderConfirmationEmail

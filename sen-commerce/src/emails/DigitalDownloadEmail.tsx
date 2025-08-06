@@ -1,6 +1,16 @@
-import { Section, Text, Row, Column, Hr, Heading, Link } from '@react-email/components'
-import { EmailLayout } from './components/Layout'
-import { Button } from './components/Button'
+import {
+  Button,
+  Section,
+  Text,
+  Heading,
+  Link,
+  Row,
+  Column,
+  Hr
+} from '@react-email/components'
+import BaseEmailLayout from './components/BaseLayout'
+import SenCommerceSignature from './components/SenCommerceSignature'
+import { emailStyles } from './components/EmailStyles'
 
 interface DownloadLink {
   productTitle: string
@@ -10,6 +20,7 @@ interface DownloadLink {
 
 interface DigitalDownloadEmailProps {
   customerName: string
+  customerEmail: string
   orderId: string
   orderNumber: string
   downloadLinks: DownloadLink[]
@@ -17,178 +28,113 @@ interface DigitalDownloadEmailProps {
 }
 
 export const DigitalDownloadEmail = ({
-  customerName,
-  orderId,
-  orderNumber,
-  downloadLinks,
+  customerName = 'John Doe',
+  customerEmail = 'customer@example.com',
+  orderId = 'order_123',
+  orderNumber = '#SC-2024-001',
+  downloadLinks = [
+    { 
+      productTitle: 'Digital Artwork - Abstract Design', 
+      downloadUrl: 'https://example.com/download/token123',
+      expiresAt: '2024-01-22'
+    }
+  ],
   storeUrl = 'https://shop.sen.studio'
-}: DigitalDownloadEmailProps) => (
-  <EmailLayout preview={`Your digital downloads are ready - Order #${orderNumber}`}>
-    <Section style={content}>
-      <Heading style={greeting}>Your Downloads Are Ready! 🎨</Heading>
-      
-      <Text style={paragraph}>
-        Hi {customerName}, your digital products from order #{orderNumber} are now available for download.
-      </Text>
-      
-      <Section style={downloadsSection}>
-        <Heading as="h2" style={sectionTitle}>Digital Downloads</Heading>
+}: DigitalDownloadEmailProps) => {
+
+  return (
+    <BaseEmailLayout
+      previewText={`Your digital downloads are ready - Order ${orderNumber}`}
+      title="Digital Downloads Ready"
+      logoUrl="https://shop.sen.studio/logo.svg"
+      logoAlt="SenCommerce"
+    >
+      {/* Greeting */}
+      <Section className={emailStyles.layout.section}>
+        <Text className={`${emailStyles.typography.sizes.base} text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
+          Hi {customerName},
+        </Text>
         
-        {downloadLinks.map((link, index) => (
-          <div key={index}>
-            <Section style={downloadItem}>
-              <Row>
-                <Column style={productColumn}>
-                  <Text style={productTitle}>{link.productTitle}</Text>
-                  <Text style={expiryText}>Expires: {link.expiresAt}</Text>
-                </Column>
-                <Column style={downloadColumn}>
-                  <Button href={link.downloadUrl}>
+        <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.md}`}>
+          Great news! Your digital products from order <strong>{orderNumber}</strong> are now ready for download.
+        </Text>
+
+        {/* Download Notice */}
+        <Section className={`${emailStyles.components.card.primary} ${emailStyles.layout.sectionSmall}`}>
+          <Heading className={`${emailStyles.typography.sizes.lg} ${emailStyles.typography.weights.medium} text-${emailStyles.colors.text.primary} ${emailStyles.layout.spacing.sm}`}>
+            📱 Digital Downloads Ready
+          </Heading>
+          
+          <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
+            Click the download links below to access your digital products. These links are secure and will expire in 7 days.
+          </Text>
+        </Section>
+
+        {/* Download Links */}
+        <Section className={`${emailStyles.components.card.neutral} ${emailStyles.layout.sectionSmall}`}>
+          <Heading className={`${emailStyles.typography.sizes.lg} ${emailStyles.typography.weights.medium} text-${emailStyles.colors.text.primary} ${emailStyles.layout.spacing.sm}`}>
+            Your Downloads
+          </Heading>
+          
+          {downloadLinks.map((link, index) => (
+            <div key={index}>
+              <Row className="py-3">
+                <Column className="flex-1">
+                  <Text className={`text-${emailStyles.colors.text.secondary} font-medium mb-1`}>
+                    {link.productTitle}
+                  </Text>
+                  <Text className={`text-${emailStyles.colors.text.light} text-sm mb-3`}>
+                    Expires: {link.expiresAt}
+                  </Text>
+                  <Button
+                    href={link.downloadUrl}
+                    className={emailStyles.components.button.primary}
+                  >
                     Download Now
                   </Button>
                 </Column>
               </Row>
-            </Section>
-            {index < downloadLinks.length - 1 && <Hr style={itemDivider} />}
-          </div>
-        ))}
+              {index < downloadLinks.length - 1 && <Hr className="border-gray-200 my-3" />}
+            </div>
+          ))}
+        </Section>
+
+        {/* Important Information */}
+        <Section className={`bg-yellow-50 p-4 rounded-lg border border-yellow-200 ${emailStyles.layout.sectionSmall}`}>
+          <Heading className="text-yellow-800 font-semibold text-base mb-2">⚠️ Important Information</Heading>
+          <Text className="text-yellow-700 text-sm mb-2">
+            • Download links expire in 7 days for security
+          </Text>
+          <Text className="text-yellow-700 text-sm mb-2">
+            • Please download your files immediately and save them locally
+          </Text>
+          <Text className="text-yellow-700 text-sm">
+            • Contact us if you need help accessing your downloads
+          </Text>
+        </Section>
+
+        <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.md}`}>
+          Having trouble with your downloads? Contact our support team at <Link href="mailto:shop@sen.studio" className={emailStyles.components.link.underlined}>shop@sen.studio</Link> and we'll be happy to help.
+        </Text>
       </Section>
-      
-      <Section style={warningSection}>
-        <Text style={warningTitle}>⚠️ Important Information</Text>
-        <ul style={warningList}>
-          <li style={warningItem}>Download links expire after 7 days or 3 downloads, whichever comes first</li>
-          <li style={warningItem}>Please save your files immediately after downloading</li>
-          <li style={warningItem}>Files are high-resolution and suitable for both digital and print use</li>
-          <li style={warningItem}>For commercial use, please review our licensing terms</li>
-        </ul>
-      </Section>
-      
-      <Section style={ctaSection}>
-        <Button href={`${storeUrl}/account/downloads`} variant="secondary">
-          View All Downloads
+
+      {/* Support Section */}
+      <Section className={`text-center ${emailStyles.layout.section}`}>
+        <Text className={`text-${emailStyles.colors.text.muted} text-sm ${emailStyles.layout.spacing.sm}`}>
+          Need assistance? We're here to help!
+        </Text>
+        <Button
+          href="https://shop.sen.studio/support"
+          className={emailStyles.components.button.secondary}
+        >
+          Contact Support
         </Button>
       </Section>
-      
-      <Text style={paragraph}>
-        Having trouble downloading? Contact our support team at <Link href="mailto:shop@sen.studio" style={emailLink}>shop@sen.studio</Link> and we'll help you right away.
-      </Text>
-      
-      <Text style={signature}>
-        Enjoy your digital artwork!<br/>
-        <strong>The SenCommerce Team</strong>
-      </Text>
-    </Section>
-  </EmailLayout>
-)
 
-// Styles
-const content = {
-  padding: '0 20px',
+      {/* Signature */}
+      <SenCommerceSignature />
+    </BaseEmailLayout>
+  )
 }
 
-const greeting = {
-  fontSize: '24px',
-  fontWeight: '600',
-  color: '#059669',
-  margin: '0 0 24px 0',
-  textAlign: 'center' as const,
-}
-
-const paragraph = {
-  fontSize: '16px',
-  lineHeight: '24px',
-  color: '#374151',
-  margin: '0 0 16px 0',
-}
-
-const downloadsSection = {
-  backgroundColor: '#f0f9ff',
-  border: '1px solid #0ea5e9',
-  borderRadius: '8px',
-  padding: '24px',
-  margin: '24px 0',
-}
-
-const sectionTitle = {
-  fontSize: '20px',
-  fontWeight: '600',
-  color: '#0c4a6e',
-  margin: '0 0 20px 0',
-  textAlign: 'center' as const,
-}
-
-const downloadItem = {
-  padding: '16px 0',
-}
-
-const productColumn = {
-  width: '70%',
-}
-
-const downloadColumn = {
-  width: '30%',
-  textAlign: 'right' as const,
-}
-
-const productTitle = {
-  fontSize: '16px',
-  fontWeight: '500',
-  color: '#1e293b',
-  margin: '0 0 4px 0',
-}
-
-const expiryText = {
-  fontSize: '14px',
-  color: '#64748b',
-  margin: '0',
-}
-
-const itemDivider = {
-  borderColor: '#bae6fd',
-  margin: '8px 0',
-}
-
-const warningSection = {
-  backgroundColor: '#fef3c7',
-  border: '1px solid #f59e0b',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '24px 0',
-}
-
-const warningTitle = {
-  fontSize: '16px',
-  fontWeight: '600',
-  color: '#92400e',
-  margin: '0 0 12px 0',
-}
-
-const warningList = {
-  color: '#92400e',
-  fontSize: '14px',
-  margin: '0',
-  paddingLeft: '20px',
-}
-
-const warningItem = {
-  margin: '4px 0',
-  lineHeight: '20px',
-}
-
-const ctaSection = {
-  textAlign: 'center' as const,
-  margin: '32px 0',
-}
-
-const signature = {
-  fontSize: '16px',
-  color: '#374151',
-  margin: '32px 0 0 0',
-  textAlign: 'center' as const,
-}
-
-const emailLink = {
-  color: '#2563eb',
-  textDecoration: 'underline',
-}
+export default DigitalDownloadEmail
