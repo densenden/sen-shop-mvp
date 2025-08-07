@@ -1,7 +1,8 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { RefreshCw, CheckCircle, AlertCircle, Clock, Play, Pause, Database, ArrowRight, Download, Package, Plus } from "lucide-react"
-import { useState, useEffect } from "react"
-import { sdk } from "../../lib/sdk"
+import { RefreshCw, CheckCircle, AlertCircle, Clock, Play, Database, Download, Package, Plus, Search, Filter, ChevronUp, ChevronDown, Edit, ExternalLink } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Container, Table, Button, Badge, Heading, Input, Select, Checkbox, IconButton, Text } from "@medusajs/ui"
+import { useNavigate } from "react-router-dom"
 
 interface SyncLog {
   id: string
@@ -34,9 +35,12 @@ interface AvailableProduct {
   status: string
   provider: string
   already_imported: boolean
+  medusa_product_id?: string | null
+  product_type?: string
 }
 
 const ProductSyncPage = () => {
+  const navigate = useNavigate()
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
   const [stats, setStats] = useState<SyncStats>({
     total: 0,
@@ -53,10 +57,14 @@ const ProductSyncPage = () => {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [typeFilter, setTypeFilter] = useState("all")
-  const [providerFilter, setProviderFilter] = useState("all")
-  const [activeTab, setActiveTab] = useState<"logs" | "products">("products")
+  const [activeTab, setActiveTab] = useState<"products" | "logs">("products")
+  
+  // Filter and sort state
+  const [searchTerm, setSearchTerm] = useState("")
+  const [providerFilter, setProviderFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [sortField, setSortField] = useState<string>("name")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   useEffect(() => {
     fetchSyncLogs()
@@ -65,7 +73,7 @@ const ProductSyncPage = () => {
   const fetchSyncLogs = async () => {
     try {
       setLoading(true)
-      const response = await fetch("http://localhost:9000/admin/product-sync", {
+      const response = await fetch("/admin/product-sync", {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -88,18 +96,19 @@ const ProductSyncPage = () => {
     }
   }
 
-  const startAction = async (action: string) => {
-    setSyncing(true)
+  const importSingleProduct = async (provider: string, productId: string) => {
+    setImporting(true)
     try {
-      const response = await fetch("http://localhost:9000/admin/product-sync", {
+      const response = await fetch("/admin/product-sync", {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action,
-          provider: "printful"
+          action: "import_products",
+          provider,
+          product_ids: [productId]
         })
       })
       
@@ -107,27 +116,25 @@ const ProductSyncPage = () => {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
-      // Refresh logs after starting sync
+      const result = await response.json()
+      
+      if (result.failed > 0) {
+        const errorDetails = result.errors.map((e: { productId: string; error: string }) => `Product ID: ${e.productId}, Error: ${e.error}`).join("\n")
+        alert(`Failed to import product.\n\nErrors:\n${errorDetails}`)
+      } else {
+        alert(`Successfully imported product!`)
+      }
+      
+      // Refresh data
       await fetchSyncLogs()
       
-      // Poll for updates
-      const interval = setInterval(async () => {
-        await fetchSyncLogs()
-      }, 2000)
-      
-      // Stop polling after 30 seconds
-      setTimeout(() => {
-        clearInterval(interval)
-      }, 30000)
-      
     } catch (error) {
-      console.error("Error starting sync:", error)
+      console.error("Error importing product:", error)
+      alert("Failed to import product")
     } finally {
-      setSyncing(false)
+      setImporting(false)
     }
   }
-
-  const startBulkSync = () => startAction("bulk_import")
 
   const importSelectedProducts = async (provider: string) => {
     const productIds = Array.from(selectedProducts).filter(id => {
@@ -142,7 +149,7 @@ const ProductSyncPage = () => {
 
     setImporting(true)
     try {
-      const response = await fetch("http://localhost:9000/admin/product-sync", {
+      const response = await fetch("/admin/product-sync", {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -180,145 +187,212 @@ const ProductSyncPage = () => {
     }
   }
 
-  const toggleProductSelection = (productId: string, provider: string) => {
-    const key = `${provider}-${productId}`
-    const newSelection = new Set(selectedProducts)
-    if (newSelection.has(key)) {
-      newSelection.delete(key)
-    } else {
-      newSelection.add(key)
-    }
-    setSelectedProducts(newSelection)
-  }
+  // Combine all products for filtering and sorting
+  const allProducts = useMemo(() => {
+    return [...availableProducts.printful, ...availableProducts.digital].map(product => ({
+      ...product,
+      key: `${product.provider}-${product.id}`
+    }))
+  }, [availableProducts])
 
-  const selectAllProducts = (provider: string) => {
-    const newSelection = new Set(selectedProducts)
-    const products = availableProducts[provider as keyof typeof availableProducts]
-    products.forEach(product => {
-      if (!product.already_imported) {
-        newSelection.add(`${provider}-${product.id}`)
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = [...allProducts]
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Provider filter
+    if (providerFilter !== "all") {
+      filtered = filtered.filter(p => p.provider === providerFilter)
+    }
+
+    // Status filter
+    if (statusFilter === "imported") {
+      filtered = filtered.filter(p => p.already_imported)
+    } else if (statusFilter === "available") {
+      filtered = filtered.filter(p => !p.already_imported)
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aValue: any, bValue: any
+      
+      switch (sortField) {
+        case 'name':
+          aValue = a.name || ''
+          bValue = b.name || ''
+          break
+        case 'provider':
+          aValue = a.provider || ''
+          bValue = b.provider || ''
+          break
+        case 'status':
+          aValue = a.already_imported ? 'imported' : 'available'
+          bValue = b.already_imported ? 'imported' : 'available'
+          break
+        default:
+          aValue = a.name || ''
+          bValue = b.name || ''
+      }
+
+      if (sortDirection === 'asc') {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
       }
     })
+
+    return filtered
+  }, [allProducts, searchTerm, providerFilter, statusFilter, sortField, sortDirection])
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const toggleProductSelection = (productKey: string, product: AvailableProduct) => {
+    if (product.already_imported) return
+    
+    const newSelection = new Set(selectedProducts)
+    if (newSelection.has(productKey)) {
+      newSelection.delete(productKey)
+    } else {
+      newSelection.add(productKey)
+    }
     setSelectedProducts(newSelection)
   }
 
-  const filteredLogs = syncLogs.filter(log => {
-    const matchesStatus = statusFilter === "all" || log.status === statusFilter
-    const matchesType = typeFilter === "all" || log.sync_type === typeFilter
-    const matchesProvider = providerFilter === "all" || log.provider_type === providerFilter
-    return matchesStatus && matchesType && matchesProvider
-  })
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending": return <Clock className="w-4 h-4 text-yellow-500" />
-      case "in_progress": return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
-      case "success": return <CheckCircle className="w-4 h-4 text-green-500" />
-      case "failed": return <AlertCircle className="w-4 h-4 text-red-500" />
-      default: return <Clock className="w-4 h-4 text-gray-500" />
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800"
-      case "in_progress": return "bg-blue-100 text-blue-800"
-      case "success": return "bg-green-100 text-green-800"
-      case "failed": return "bg-red-100 text-red-800"
-      default: return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  }
-
-  const getDuration = (start: string, end?: string) => {
-    const startTime = new Date(start).getTime()
-    const endTime = end ? new Date(end).getTime() : Date.now()
-    const duration = Math.floor((endTime - startTime) / 1000)
+  const handleSelectAll = () => {
+    const availableProductKeys = filteredAndSortedProducts
+      .filter(p => !p.already_imported)
+      .map(p => p.key)
     
-    if (duration < 60) return `${duration}s`
-    if (duration < 3600) return `${Math.floor(duration / 60)}m`
-    return `${Math.floor(duration / 3600)}h`
+    if (selectedProducts.size === availableProductKeys.length) {
+      setSelectedProducts(new Set())
+    } else {
+      setSelectedProducts(new Set(availableProductKeys))
+    }
+  }
+
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
+      case 'printful':
+        return <Package className="w-4 h-4" />
+      case 'digital':
+        return <Download className="w-4 h-4" />
+      default:
+        return <Package className="w-4 h-4" />
+    }
+  }
+
+  const getProviderColor = (provider: string) => {
+    switch (provider) {
+      case 'printful':
+        return 'bg-green-100 text-green-800'
+      case 'digital':
+        return 'bg-blue-100 text-blue-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field) return null
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="w-4 h-4" /> : 
+      <ChevronDown className="w-4 h-4" />
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <Container className="sencommerce-sync">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Product Sync</h1>
-          <p className="text-gray-600 mt-1">
-            Monitor and manage product synchronization with POD providers
-          </p>
+          <Heading level="h1">Product Sync</Heading>
+          <p className="text-ui-fg-subtle">Manage product synchronization with POD providers and digital products</p>
         </div>
-        <div className="flex gap-3">
-          <button
+        <div className="flex gap-2">
+          <Button 
             onClick={fetchSyncLogs}
+            variant="secondary"
             disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
-          </button>
-          <button
-            onClick={startBulkSync}
-            disabled={syncing}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {syncing ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            {syncing ? "Starting..." : "Start Bulk Sync"}
-          </button>
+          </Button>
+          {selectedProducts.size > 0 && (
+            <>
+              <Button 
+                onClick={() => importSelectedProducts("printful")}
+                disabled={importing || Array.from(selectedProducts).filter(id => id.startsWith("printful-")).length === 0}
+                variant="primary"
+                className="flex items-center gap-2"
+              >
+                {importing ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                Import POD ({Array.from(selectedProducts).filter(id => id.startsWith("printful-")).length})
+              </Button>
+              <Button 
+                onClick={() => importSelectedProducts("digital")}
+                disabled={importing || Array.from(selectedProducts).filter(id => id.startsWith("digital-")).length === 0}
+                variant="primary"
+                className="flex items-center gap-2"
+              >
+                {importing ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                Import Digital ({Array.from(selectedProducts).filter(id => id.startsWith("digital-")).length})
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Syncs</p>
-              <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+              <p className="text-sm text-gray-600">Available</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {allProducts.filter(p => !p.already_imported).length}
+              </p>
             </div>
-            <Database className="w-8 h-8 text-gray-400" />
+            <Package className="w-8 h-8 text-gray-400" />
           </div>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-semibold text-yellow-600">{stats.pending}</p>
-            </div>
-            <Clock className="w-8 h-8 text-yellow-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">In Progress</p>
-              <p className="text-2xl font-semibold text-blue-600">{stats.in_progress}</p>
-            </div>
-            <RefreshCw className="w-8 h-8 text-blue-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Success</p>
-              <p className="text-2xl font-semibold text-green-600">{stats.success}</p>
+              <p className="text-sm text-gray-600">Imported</p>
+              <p className="text-2xl font-semibold text-green-600">
+                {allProducts.filter(p => p.already_imported).length}
+              </p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
@@ -327,391 +401,225 @@ const ProductSyncPage = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Failed</p>
-              <p className="text-2xl font-semibold text-red-600">{stats.failed}</p>
+              <p className="text-sm text-gray-600">POD Products</p>
+              <p className="text-2xl font-semibold text-green-600">{availableProducts.printful.length}</p>
             </div>
-            <AlertCircle className="w-8 h-8 text-red-400" />
+            <Package className="w-8 h-8 text-green-400" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Digital Products</p>
+              <p className="text-2xl font-semibold text-blue-600">{availableProducts.digital.length}</p>
+            </div>
+            <Download className="w-8 h-8 text-blue-400" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Selected</p>
+              <p className="text-2xl font-semibold text-blue-600">{selectedProducts.size}</p>
+            </div>
+            <Checkbox className="w-8 h-8 text-blue-400" />
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-1 mb-4">
-        <button
-          onClick={() => setActiveTab("products")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "products"
-              ? "bg-blue-500 text-white"
-              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
-        >
-          Available Products
-        </button>
-        <button
-          onClick={() => setActiveTab("logs")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === "logs"
-              ? "bg-blue-500 text-white"
-              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
-        >
-          Sync Logs
-        </button>
+      {/* Filters and Search */}
+      <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex-1 min-w-[200px]">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+        
+        <Select value={providerFilter} onValueChange={setProviderFilter}>
+          <Select.Trigger className="w-[140px]">
+            <Select.Value />
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="all">All Providers</Select.Item>
+            <Select.Item value="printful">Printful POD</Select.Item>
+            <Select.Item value="digital">Digital</Select.Item>
+          </Select.Content>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select.Trigger className="w-[140px]">
+            <Select.Value />
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="all">All Status</Select.Item>
+            <Select.Item value="available">Available</Select.Item>
+            <Select.Item value="imported">Already Imported</Select.Item>
+          </Select.Content>
+        </Select>
+
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <Text className="text-sm text-gray-600">
+            {filteredAndSortedProducts.length} products
+          </Text>
+        </div>
       </div>
 
-      {/* Products Tab */}
-      {activeTab === "products" && (
-        <div className="space-y-6">
-          {/* Printful Products */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Package className="w-5 h-5 text-green-600" />
-                  <h2 className="text-lg font-semibold">Printful Products</h2>
-                  <span className="text-sm text-gray-500">({availableProducts.printful.length} available)</span>
+      {/* Products Table */}
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <Table className="sencommerce-sync-table">
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell className="w-12">
+                <Checkbox
+                  checked={
+                    selectedProducts.size === filteredAndSortedProducts.filter(p => !p.already_imported).length &&
+                    filteredAndSortedProducts.filter(p => !p.already_imported).length > 0
+                  }
+                  onCheckedChange={handleSelectAll}
+                />
+              </Table.HeaderCell>
+              <Table.HeaderCell 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center gap-1">
+                  Product
+                  <SortIcon field="name" />
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => selectAllProducts("printful")}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={() => importSelectedProducts("printful")}
-                    disabled={importing || Array.from(selectedProducts).filter(id => id.startsWith("printful-")).length === 0}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {importing ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+              </Table.HeaderCell>
+              <Table.HeaderCell 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleSort('provider')}
+              >
+                <div className="flex items-center gap-1">
+                  Provider
+                  <SortIcon field="provider" />
+                </div>
+              </Table.HeaderCell>
+              <Table.HeaderCell 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center gap-1">
+                  Status
+                  <SortIcon field="status" />
+                </div>
+              </Table.HeaderCell>
+              <Table.HeaderCell>Details</Table.HeaderCell>
+              <Table.HeaderCell className="text-right">Actions</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {filteredAndSortedProducts.map((product) => (
+              <Table.Row key={product.key} className={`hover:bg-gray-50 ${product.already_imported ? 'bg-gray-25' : ''}`}>
+                <Table.Cell>
+                  <Checkbox
+                    checked={selectedProducts.has(product.key)}
+                    onCheckedChange={() => toggleProductSelection(product.key, product)}
+                    disabled={product.already_imported}
+                  />
+                </Table.Cell>
+                <Table.Cell>
+                  <div className="flex items-center gap-3">
+                    {product.thumbnail_url ? (
+                      <img 
+                        src={product.thumbnail_url} 
+                        alt={product.name}
+                        className="w-10 h-10 object-cover rounded border border-gray-200"
+                      />
                     ) : (
-                      <Plus className="w-4 h-4" />
+                      <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
+                        {getProviderIcon(product.provider)}
+                      </div>
                     )}
-                    Import Selected
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              {availableProducts.printful.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No Printful products available</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableProducts.printful.map((product) => (
-                    <div key={product.id} className={`border rounded-lg p-4 ${product.already_imported ? 'bg-gray-50 opacity-75' : 'bg-white'}`}>
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.has(`printful-${product.id}`)}
-                          onChange={() => toggleProductSelection(product.id, "printful")}
-                          disabled={product.already_imported}
-                          className="mt-1"
-                        />
-                        {product.thumbnail_url && (
-                          <img
-                            src={product.thumbnail_url}
-                            alt={product.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
-                          {product.already_imported && (
-                            <span className="inline-block mt-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
-                              Already Imported
-                            </span>
-                          )}
-                        </div>
+                    <div>
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-sm text-gray-500 truncate max-w-[200px]">
+                        {product.description}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Digital Products */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Download className="w-5 h-5 text-blue-600" />
-                  <h2 className="text-lg font-semibold">Digital Products</h2>
-                  <span className="text-sm text-gray-500">({availableProducts.digital.length} available)</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => selectAllProducts("digital")}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={() => importSelectedProducts("digital")}
-                    disabled={importing || Array.from(selectedProducts).filter(id => id.startsWith("digital-")).length === 0}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {importing ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
+                  </div>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge size="small" className={`inline-flex items-center gap-1 ${getProviderColor(product.provider)}`}>
+                    {getProviderIcon(product.provider)}
+                    {product.provider.charAt(0).toUpperCase() + product.provider.slice(1)}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  {product.already_imported ? (
+                    <Badge size="small" className="bg-green-100 text-green-800">
+                      Imported
+                    </Badge>
+                  ) : (
+                    <Badge size="small" className="bg-blue-100 text-blue-800">
+                      Available
+                    </Badge>
+                  )}
+                </Table.Cell>
+                <Table.Cell>
+                  <div className="text-sm text-gray-600">
+                    {product.provider === 'digital' && product.file_size && (
+                      <div>Size: {Math.round(product.file_size / 1024 / 1024 * 10) / 10} MB</div>
                     )}
-                    Import Selected
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
-              {availableProducts.digital.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No digital products available</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableProducts.digital.map((product) => (
-                    <div key={product.id} className={`border rounded-lg p-4 ${product.already_imported ? 'bg-gray-50 opacity-75' : 'bg-white'}`}>
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.has(`digital-${product.id}`)}
-                          onChange={() => toggleProductSelection(product.id, "digital")}
-                          disabled={product.already_imported}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
-                          <div className="mt-2 flex gap-2">
-                            {product.file_size && (
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                {Math.round(product.file_size / 1024 / 1024 * 10) / 10} MB
-                              </span>
-                            )}
-                            {product.mime_type && (
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                {product.mime_type}
-                              </span>
-                            )}
-                          </div>
-                          {product.already_imported && (
-                            <span className="inline-block mt-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
-                              Already Imported
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Logs Tab */}
-      {activeTab === "logs" && (
-        <div className="space-y-6">
-          {/* Sync Actions */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button
-            onClick={() => startBulkSync()}
-            disabled={syncing}
-            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-          >
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Database className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="text-left">
-              <div className="font-medium">Import All Products</div>
-              <div className="text-sm text-gray-600">Sync all products from Printful</div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400" />
-          </button>
-
-          <button
-            onClick={() => startAction("update_prices")}
-            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="p-2 bg-green-100 rounded-lg">
-              <RefreshCw className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="text-left">
-              <div className="font-medium">Update Prices</div>
-              <div className="text-sm text-gray-600">Sync latest pricing from providers</div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400" />
-          </button>
-
-          <button
-            onClick={() => startAction("check_inventory")}
-            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="text-left">
-              <div className="font-medium">Check Inventory</div>
-              <div className="text-sm text-gray-600">Verify product availability</div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-gray-400" />
-          </button>
-        </div>
+                    {product.provider === 'digital' && product.mime_type && (
+                      <div>Type: {product.mime_type}</div>
+                    )}
+                    {product.provider === 'printful' && product.product_type && (
+                      <div>Type: {product.product_type}</div>
+                    )}
+                  </div>
+                </Table.Cell>
+                <Table.Cell>
+                  <div className="flex items-center justify-end gap-2">
+                    {product.already_imported && product.medusa_product_id ? (
+                      <IconButton
+                        onClick={() => navigate(`/products/${product.medusa_product_id}/edit`)}
+                        size="small"
+                        variant="transparent"
+                        title="Edit in Medusa"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        onClick={() => importSingleProduct(product.provider, product.id)}
+                        size="small"
+                        variant="transparent"
+                        title="Import this product"
+                        disabled={importing}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </IconButton>
+                    )}
+                  </div>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="success">Success</option>
-          <option value="failed">Failed</option>
-        </select>
-
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Types</option>
-          <option value="import">Import</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
-          <option value="bulk_import">Bulk Import</option>
-        </select>
-
-        <select
-          value={providerFilter}
-          onChange={(e) => setProviderFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Providers</option>
-          <option value="printful">Printful</option>
-          <option value="gooten">Gooten</option>
-        </select>
-
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          {filteredLogs.length} of {syncLogs.length} sync operations
-        </div>
-      </div>
-
-      {/* Sync Logs */}
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Provider
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Duration
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Started
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {log.product_name || "Bulk Operation"}
-                        </div>
-                        {log.product_id && (
-                          <div className="text-sm text-gray-500">{log.product_id}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                        {log.sync_type.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
-                        {getStatusIcon(log.status)}
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900 capitalize">{log.provider_type}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">
-                        {getDuration(log.created_at, log.completed_at)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">
-                        {formatDate(log.created_at)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {log.error_message ? (
-                        <div className="text-red-600" title={log.error_message}>
-                          {log.error_message.length > 50 
-                            ? `${log.error_message.substring(0, 50)}...`
-                            : log.error_message
-                          }
-                        </div>
-                      ) : log.status === "success" ? (
-                        <span className="text-green-600">Completed successfully</span>
-                      ) : log.status === "in_progress" ? (
-                        <span className="text-blue-600">Processing...</span>
-                      ) : (
-                        <span className="text-gray-500">Waiting to start</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredLogs.length === 0 && (
-            <div className="text-center py-12">
-              <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No sync operations found</h3>
-              <p className="text-gray-600">
-                {statusFilter !== "all" || typeFilter !== "all" || providerFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "No sync operations have been performed yet"
-                }
-              </p>
-            </div>
-          )}
+      {filteredAndSortedProducts.length === 0 && (
+        <div className="text-center py-12">
+          <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+          <p className="text-gray-600 mb-4">
+            Try adjusting your search or filters
+          </p>
         </div>
       )}
-        </div>
-      )}
-    </div>
+    </Container>
   )
 }
 

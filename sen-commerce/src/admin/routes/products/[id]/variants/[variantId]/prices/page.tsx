@@ -1,244 +1,343 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Button, Input, Select } from "@medusajs/ui"
-import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { Button, Input, Label, Container, Badge, Text } from "@medusajs/ui"
+import { 
+  ArrowLeft, 
+  Save, 
+  DollarSign,
+  Plus,
+  Trash2
+} from "lucide-react"
 
 interface Price {
-  id: string
+  id?: string
   amount: number
   currency_code: string
 }
 
-interface Variant {
-  id: string
-  title: string
-  sku?: string
-  prices?: Price[]
+interface VariantPricesData {
+  product: {
+    id: string
+    title: string
+  }
+  variant: {
+    id: string
+    title: string
+    sku?: string
+    price_set_id?: string
+  }
+  prices: Price[]
 }
 
-interface Product {
-  id: string
-  title: string
-  variants?: Variant[]
-}
-
-const VariantPriceEditPage = () => {
-  const { id: productId, variantId } = useParams<{ id: string; variantId: string }>()
+const VariantPricesPage = () => {
   const navigate = useNavigate()
-  const [product, setProduct] = useState<Product | null>(null)
-  const [variant, setVariant] = useState<Variant | null>(null)
-  const [prices, setPrices] = useState<Price[]>([])
+  const { id: productId, variantId } = useParams<{ id: string; variantId: string }>()
+  const [data, setData] = useState<VariantPricesData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string>("")
+  const [success, setSuccess] = useState<string>("")
+
+  // Form state
+  const [prices, setPrices] = useState<Price[]>([])
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        
-        // Fetch product data
-        const response = await fetch(`/admin/products/${productId}`)
-        const data = await response.json()
-        
-        setProduct(data.product)
-        
-        // Find the specific variant
-        const foundVariant = data.product?.variants?.find((v: Variant) => v.id === variantId)
-        if (foundVariant) {
-          setVariant(foundVariant)
-          setPrices(foundVariant.prices || [{ id: 'new', amount: 2000, currency_code: 'usd' }])
-        }
-      } catch (error) {
-        console.error("Error fetching product/variant:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (productId && variantId) {
-      fetchData()
-    }
+    fetchData()
   }, [productId, variantId])
 
-  const updatePrice = (index: number, field: keyof Price, value: string | number) => {
-    const updatedPrices = [...prices]
-    updatedPrices[index] = {
-      ...updatedPrices[index],
-      [field]: field === 'amount' ? Number(value) : value
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/admin/products/${productId}/variants/${variantId}/prices`, {
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch variant prices")
+      }
+
+      const result = await response.json()
+      setData(result)
+      
+      // Initialize prices or set default USD price
+      if (result.prices && result.prices.length > 0) {
+        setPrices(result.prices.map(p => ({
+          id: p.id,
+          amount: p.amount / 100, // Convert from cents
+          currency_code: p.currency_code.toUpperCase()
+        })))
+      } else {
+        // Default to USD price
+        setPrices([{ amount: 25.00, currency_code: 'USD' }])
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      setError("Failed to load variant prices. Please try again.")
+    } finally {
+      setLoading(false)
     }
-    setPrices(updatedPrices)
   }
 
-  const addPrice = () => {
-    setPrices([...prices, { id: `new-${Date.now()}`, amount: 2000, currency_code: 'usd' }])
+  const handleAddPrice = () => {
+    setPrices([...prices, { amount: 0, currency_code: 'USD' }])
   }
 
-  const removePrice = (index: number) => {
-    if (prices.length > 1) {
-      setPrices(prices.filter((_, i) => i !== index))
+  const handleRemovePrice = (index: number) => {
+    setPrices(prices.filter((_, i) => i !== index))
+  }
+
+  const handlePriceChange = (index: number, field: keyof Price, value: string | number) => {
+    setPrices(prices.map((price, i) => 
+      i === index ? { ...price, [field]: value } : price
+    ))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSuccess("")
+
+    // Validate prices
+    const validPrices = prices.filter(p => p.amount > 0 && p.currency_code)
+    if (validPrices.length === 0) {
+      setError("Please add at least one valid price")
+      return
     }
-  }
 
-  const handleSave = async () => {
     try {
       setSaving(true)
       
-      // Update variant prices via API
       const response = await fetch(`/admin/products/${productId}/variants/${variantId}/prices`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
-          prices: prices.map(price => ({
-            amount: price.amount,
-            currency_code: price.currency_code
+          prices: validPrices.map(p => ({
+            amount: Math.round(p.amount * 100), // Convert to cents
+            currency_code: p.currency_code.toUpperCase()
           }))
-        }),
+        })
       })
 
-      if (response.ok) {
-        alert("Prices updated successfully!")
-        navigate(`/app/products/${productId}`)
-      } else {
-        throw new Error('Failed to update prices')
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update prices")
       }
+
+      setSuccess(`Updated ${validPrices.length} price(s) successfully!`)
+      // Refresh data
+      await fetchData()
     } catch (error) {
-      console.error("Error saving prices:", error)
-      alert("Failed to save prices. Please try again.")
+      console.error("Error updating prices:", error)
+      setError(error.message || "Failed to update prices")
     } finally {
       setSaving(false)
     }
   }
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase()
-    }).format(amount / 100)
-  }
-
   if (loading) {
-    return <div className="p-6">Loading...</div>
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
-  if (!product || !variant) {
-    return <div className="p-6">Product or variant not found</div>
+  if (!data) {
+    return (
+      <Container className="p-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Variant not found</h2>
+          <p className="text-gray-600 mb-4">The variant you're looking for doesn't exist.</p>
+          <Button onClick={() => navigate(`/products/${productId}`)}>
+            Back to Product
+          </Button>
+        </div>
+      </Container>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-y-6 p-6">
+    <div className="flex flex-col gap-6 p-6 w-full max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Edit Variant Prices</h1>
-          <p className="text-gray-600 mt-1">
-            Product: {product.title} → Variant: {variant.title}
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/products/${productId}`)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Product
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold">Edit Variant Prices</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Text className="text-sm text-gray-600">
+                {data.product.title} → {data.variant.title}
+              </Text>
+              {data.variant.sku && (
+                <Badge variant="outline">SKU: {data.variant.sku}</Badge>
+              )}
+            </div>
+          </div>
         </div>
         <Button
-          variant="secondary"
-          onClick={() => navigate(`/app/products/${productId}`)}
+          onClick={handleSubmit}
+          disabled={saving}
+          className="flex items-center gap-2"
         >
-          Back to Product
+          {saving ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              Save Prices
+            </>
+          )}
         </Button>
       </div>
 
-      {/* Prices */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium">Pricing</h2>
-          <Button variant="secondary" onClick={addPrice}>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+          {success}
+        </div>
+      )}
+
+      {/* Pricing Form */}
+      <Container className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-medium">Variant Pricing</h2>
+            <Text className="text-sm text-gray-600">
+              Set prices for different currencies and markets
+            </Text>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleAddPrice}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
             Add Price
           </Button>
         </div>
 
-        <div className="space-y-4">
-          {prices.map((price, index) => (
-            <div key={index} className="grid grid-cols-12 gap-4 p-4 border border-gray-100 rounded">
-              <div className="col-span-5">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Amount (in cents)
-                </label>
-                <Input
-                  type="number"
-                  value={price.amount}
-                  onChange={(e) => updatePrice(index, 'amount', e.target.value)}
-                  placeholder="2000"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Preview: {formatCurrency(price.amount, price.currency_code)}
-                </p>
-              </div>
-
-              <div className="col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Currency
-                </label>
-                <Select
-                  value={price.currency_code}
-                  onValueChange={(value) => updatePrice(index, 'currency_code', value)}
-                >
-                  <Select.Trigger>
-                    <Select.Value placeholder="Select currency" />
-                  </Select.Trigger>
-                  <Select.Content>
-                    <Select.Item value="usd">USD</Select.Item>
-                    <Select.Item value="eur">EUR</Select.Item>
-                    <Select.Item value="gbp">GBP</Select.Item>
-                    <Select.Item value="cad">CAD</Select.Item>
-                  </Select.Content>
-                </Select>
-              </div>
-
-              <div className="col-span-4 flex items-end">
-                {prices.length > 1 && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => removePrice(index)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Remove
-                  </Button>
-                )}
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {prices.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+              <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <Text className="text-gray-600 mb-4">No prices configured</Text>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddPrice}
+              >
+                Add Your First Price
+              </Button>
             </div>
-          ))}
-        </div>
+          ) : (
+            prices.map((price, index) => (
+              <div key={index} className="flex gap-4 items-end p-4 border border-gray-200 rounded-lg">
+                <div className="flex-1">
+                  <Label htmlFor={`amount-${index}`} className="mb-1">
+                    Amount
+                  </Label>
+                  <Input
+                    id={`amount-${index}`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price.amount}
+                    onChange={(e) => handlePriceChange(index, 'amount', parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div className="w-32">
+                  <Label htmlFor={`currency-${index}`} className="mb-1">
+                    Currency
+                  </Label>
+                  <Input
+                    id={`currency-${index}`}
+                    value={price.currency_code}
+                    onChange={(e) => handlePriceChange(index, 'currency_code', e.target.value.toUpperCase())}
+                    placeholder="USD"
+                    maxLength={3}
+                    required
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => handleRemovePrice(index)}
+                  className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))
+          )}
 
-        {/* Info Box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded p-4">
-          <h4 className="font-medium text-blue-900 mb-2">💡 Pricing Guidelines:</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Enter amounts in cents (e.g., 2000 for $20.00)</li>
-            <li>• You can set different prices for different currencies</li>
-            <li>• Prices are used for checkout and product display</li>
-            <li>• For Printful products, manual price changes may be overridden during sync</li>
-          </ul>
-        </div>
-      </div>
+          {prices.length > 0 && (
+            <div className="flex justify-end gap-3 pt-6 border-t">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => navigate(`/products/${productId}`)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving || prices.filter(p => p.amount > 0).length === 0}
+                className="flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save {prices.filter(p => p.amount > 0).length} Price(s)
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </form>
+      </Container>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <Button
-          variant="secondary"
-          onClick={() => navigate(`/app/products/${productId}`)}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save Prices"}
-        </Button>
-      </div>
+      {/* Tips */}
+      <Container className="p-4 bg-blue-50 border-blue-200">
+        <h3 className="font-medium text-blue-800 mb-2">💡 Pricing Tips</h3>
+        <div className="text-sm text-blue-700 space-y-1">
+          <p>• Use standard currency codes like USD, EUR, GBP</p>
+          <p>• Prices are stored in the smallest currency unit (cents)</p>
+          <p>• You can set different prices for different markets</p>
+          <p>• At least one price is required for the variant to be purchasable</p>
+        </div>
+      </Container>
     </div>
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Edit Variant Prices",
-})
+// Remove route config to prevent sidebar menu errors with parameterized routes
 
-export default VariantPriceEditPage
+export default VariantPricesPage

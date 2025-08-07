@@ -29,7 +29,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 }
 
-// PUT /admin/artworks/:id
+// PUT /admin/artworks/:id - Single Source of Truth approach
 export async function PUT(req: MedusaRequest, res: MedusaResponse) {
   const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
   const { id } = req.params
@@ -47,8 +47,9 @@ export async function PUT(req: MedusaRequest, res: MedusaResponse) {
       product_ids: body.product_ids || []
     }
     
-    console.log("Updating artwork with data:", updateData)
+    console.log(`[Artwork PUT] Updating artwork ${id} with product_ids:`, updateData.product_ids)
     const updated = await artworkModuleService.updateArtworks({ id, ...updateData })
+    
     res.json(updated)
   } catch (error) {
     console.error("Error updating artwork:", error)

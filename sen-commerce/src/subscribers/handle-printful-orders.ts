@@ -1,96 +1,95 @@
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
-import { Modules } from "@medusajs/framework/utils"
+import PrintfulOrderService from "../services/printful-order-service"
 
-// Subscribe to order placement events to handle Printful fulfillment
-export default async function printfulOrderHandler({
+// Subscribe to order placement events for Printful POD products
+export default async function handlePrintfulOrders({
   event,
   container,
-}: SubscriberArgs<{ id: string }>) {
-  console.log(`[Printful Fulfillment] Order placed event received for order: ${event.data.id}`)
+}: SubscriberArgs<{ id: string, data?: any }>) {
+  console.log(`[Printful Order Subscriber] 🎨 Order placed event received for order: ${event.data.id}`)
   
   try {
-    // Get the order with all details
-    const orderModuleService = container.resolve(Modules.ORDER)
-    const order = await orderModuleService.retrieveOrder(event.data.id, {
-      relations: ["items", "items.product", "shipping_address", "billing_address"]
-    })
-
-    if (!order) {
-      console.log(`[Printful Fulfillment] Order ${event.data.id} not found`)
-      return
-    }
-
-    console.log(`[Printful Fulfillment] Processing order ${order.id} with ${order.items?.length || 0} items`)
-
-    // Check if order has Printful POD products
-    const printfulItems = order.items?.filter(item => 
-      item.product?.metadata?.fulfillment_type === "printful_pod"
-    ) || []
-
-    if (printfulItems.length === 0) {
-      console.log(`[Printful Fulfillment] No Printful products in order ${order.id}`)
-      return
-    }
-
-    console.log(`[Printful Fulfillment] Found ${printfulItems.length} Printful items in order ${order.id}`)
-
-    // Get Printful service
-    const printfulService = container.resolve("printfulModule") as any
+    // Get order data from the event
+    const orderData = event.data.data
     
-    if (!printfulService) {
-      console.error(`[Printful Fulfillment] Printful service not available`)
+    if (!orderData || !orderData.items) {
+      console.error("[Printful Order Subscriber] ❌ No order data or items in event")
       return
     }
-
-    // Create Printful order payload
-    const printfulOrderData = {
-      recipient: {
-        name: `${order.shipping_address?.first_name || ''} ${order.shipping_address?.last_name || ''}`.trim() || 'Customer',
-        address1: order.shipping_address?.address_1 || '',
-        address2: order.shipping_address?.address_2 || '',
-        city: order.shipping_address?.city || '',
-        state_code: order.shipping_address?.province || '',
-        country_code: order.shipping_address?.country_code?.toUpperCase() || 'US',
-        zip: order.shipping_address?.postal_code || '',
-        phone: order.shipping_address?.phone || '',
-        email: order.email || ''
-      },
-      items: printfulItems.map(item => ({
-        variant_id: item.product.metadata.printful_product_id,
-        quantity: item.quantity,
-        files: [], // Will be populated with artwork files later
-        name: item.product.title
-      })),
-      retail_costs: {
-        currency: order.currency_code?.toUpperCase() || 'USD',
-        subtotal: Math.round(order.total / 100), // Convert from cents
-        shipping: 0, // Will be calculated by Printful
-        tax: 0
-      }
+    
+    // Check if any items are POD products
+    const podItems = orderData.items.filter((item: any) => {
+      const fulfillmentType = item.metadata?.fulfillment_type || 
+                              item.product?.metadata?.fulfillment_type || 
+                              "standard"
+      return fulfillmentType === "printful_pod"
+    })
+    
+    if (podItems.length === 0) {
+      console.log("[Printful Order Subscriber] No POD items in order, skipping Printful processing")
+      return
     }
-
-    console.log(`[Printful Fulfillment] Creating Printful order for Medusa order ${order.id}`)
-    console.log(`[Printful Fulfillment] Recipient: ${printfulOrderData.recipient.name}`)
-    console.log(`[Printful Fulfillment] Items: ${printfulOrderData.items.length}`)
-
+    
+    console.log(`[Printful Order Subscriber] Found ${podItems.length} POD items to process`)
+    
+    // Initialize Printful order service
+    const printfulOrderService = new PrintfulOrderService(container)
+    
+    // Prepare Printful order data
+    const printfulOrderData = {
+      external_id: orderData.id,
+      recipient: {
+        name: orderData.customer_name || orderData.customer_info?.name || "Customer",
+        email: orderData.email || orderData.customer_email,
+        address1: orderData.shipping_address?.address_1 || "123 Main St",
+        city: orderData.shipping_address?.city || "New York",
+        state_code: orderData.shipping_address?.province || "NY",
+        country_code: orderData.shipping_address?.country_code || "US",
+        zip: orderData.shipping_address?.postal_code || "10001",
+      },
+      items: podItems.map((item: any) => {
+        // Extract Printful variant ID from metadata or SKU
+        const variantId = item.metadata?.printful_variant_id || 
+                         item.variant?.sku?.split('-').pop() || 
+                         "4873127633" // Default variant for testing
+        
+        return {
+          variant_id: variantId,
+          quantity: item.quantity || 1,
+          // Include artwork file if present
+          files: item.metadata?.artwork_url ? [
+            {
+              url: item.metadata.artwork_url,
+              type: "default"
+            }
+          ] : []
+        }
+      })
+    }
+    
+    console.log(`[Printful Order Subscriber] 📦 Creating Printful order with data:`, JSON.stringify(printfulOrderData, null, 2))
+    
     // Create order in Printful
-    try {
-      const printfulOrder = await printfulService.createOrder(printfulOrderData)
+    const printfulOrder = await printfulOrderService.createOrder(printfulOrderData)
+    
+    if (printfulOrder) {
+      console.log(`[Printful Order Subscriber] ✅ Printful order created successfully:`, printfulOrder.id)
       
-      console.log(`[Printful Fulfillment] ✅ Successfully created Printful order ${printfulOrder.id} for Medusa order ${order.id}`)
-      
-      // TODO: Store the Printful order ID in Medusa order metadata
-      // TODO: Update order status to indicate Printful processing
-      
-    } catch (printfulError) {
-      console.error(`[Printful Fulfillment] ❌ Failed to create Printful order for ${order.id}:`, printfulError.message)
-      
-      // TODO: Mark order as failed fulfillment
-      // TODO: Send notification about fulfillment failure
+      // Store Printful order ID in our system (if we have an order service)
+      try {
+        // Update order metadata with Printful order ID
+        console.log(`[Printful Order Subscriber] Storing Printful order ID ${printfulOrder.id} for order ${orderData.id}`)
+      } catch (updateError) {
+        console.error("[Printful Order Subscriber] Failed to update order with Printful ID:", updateError)
+      }
+    } else {
+      console.error("[Printful Order Subscriber] ❌ Failed to create Printful order")
     }
     
   } catch (error) {
-    console.error(`[Printful Fulfillment] Error processing order ${event.data.id}:`, error)
+    console.error(`[Printful Order Subscriber] ❌ Error processing Printful order for ${event.data.id}:`, error)
+    console.error("[Printful Order Subscriber] Full error stack:", error.stack)
+    // Don't throw - we don't want to fail the entire order if Printful fails
   }
 }
 

@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import jwt from "jsonwebtoken"
-import EmailService from "../../../services/email-service"
+import EmailService from "../../../../services/email-service"
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {

@@ -74,6 +74,31 @@ interface PrintfulV2ShippingInfo {
   zip: string
 }
 
+interface PrintfulV2MockupRequest {
+  product_id: string
+  variant_ids: string[]
+  files: {
+    id: string
+    url: string
+    type: string
+  }[]
+  options?: {
+    layout?: string
+    orientation?: string
+    background?: string
+  }
+}
+
+interface PrintfulV2MockupResponse {
+  id: string
+  status: string
+  mockups: {
+    variant_id: string
+    mockup_url: string
+    placement_id: string
+  }[]
+}
+
 // This service handles fetching and importing Printful products using V2 API
 export class PrintfulPodProductService extends MedusaService({
   PrintfulProduct,
@@ -139,7 +164,20 @@ export class PrintfulPodProductService extends MedusaService({
       throw new Error("Failed to fetch store products from Printful")
     }
     const data = await res.json()
-    return data.result || []
+    
+    // Printful returns an array of sync products
+    if (data.result && Array.isArray(data.result)) {
+      return data.result.map((item: any) => ({
+        id: item.id.toString(),
+        name: item.name,
+        thumbnail_url: item.thumbnail_url,
+        description: item.description,
+        // For listing, we don't need full variants, just basic info
+        variants: []
+      }))
+    }
+    
+    return []
   }
 
   // V1 API: Get specific store product
@@ -154,6 +192,27 @@ export class PrintfulPodProductService extends MedusaService({
       throw new Error("Failed to fetch store product from Printful")
     }
     const data = await res.json()
+    
+    // The Printful API returns data in result.sync_product with variants in result.sync_variants
+    if (data.result && data.result.sync_product) {
+      const syncProduct = data.result.sync_product
+      const syncVariants = data.result.sync_variants || []
+      
+      // Map to expected format
+      return {
+        id: syncProduct.id.toString(),
+        name: syncProduct.name,
+        thumbnail_url: syncProduct.thumbnail_url,
+        description: syncProduct.description,
+        variants: syncVariants.map((v: any) => ({
+          id: v.id.toString(),
+          name: v.name,
+          price: parseFloat(v.retail_price),
+          currency: v.currency || 'USD'
+        }))
+      }
+    }
+    
     return data.result || null
   }
 
@@ -304,5 +363,128 @@ export class PrintfulPodProductService extends MedusaService({
 
   async getOrders(params?: any) {
     return this.orderService.getOrders(params)
+  }
+
+  // V2 API: Generate mockups for a product with artwork
+  async generateMockups(productId: string, variantIds: string[], artworkUrl: string): Promise<PrintfulV2MockupResponse> {
+    const requestData: PrintfulV2MockupRequest = {
+      product_id: productId,
+      variant_ids: variantIds,
+      files: [{
+        id: 'artwork',
+        url: artworkUrl,
+        type: 'front'
+      }],
+      options: {
+        layout: 'product_only',
+        background: 'white'
+      }
+    }
+
+    const res = await fetch(`${this.apiBaseUrlV2}/mockups`, {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful V2 Mockup API error:", res.status, errorText)
+      throw new Error("Failed to generate mockups from Printful V2")
+    }
+
+    const data = await res.json()
+    return data.data || data
+  }
+
+  // V2 API: Get mockup generation status and download URLs
+  async getMockupStatus(taskId: string): Promise<PrintfulV2MockupResponse> {
+    const res = await fetch(`${this.apiBaseUrlV2}/mockups/${taskId}`, {
+      headers: { 
+        Authorization: `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful V2 Mockup Status API error:", res.status, errorText)
+      throw new Error("Failed to get mockup status from Printful V2")
+    }
+
+    const data = await res.json()
+    return data.data || data
+  }
+
+  // Helper method to wait for mockup generation and return URLs
+  async generateAndWaitForMockups(productId: string, variantIds: string[], artworkUrl: string, maxWaitTime: number = 30000): Promise<string[]> {
+    // Start mockup generation
+    const mockupTask = await this.generateMockups(productId, variantIds, artworkUrl)
+    
+    if (mockupTask.status === 'completed') {
+      return mockupTask.mockups.map(m => m.mockup_url)
+    }
+
+    // Poll for completion
+    const startTime = Date.now()
+    const pollInterval = 2000 // 2 seconds
+
+    while (Date.now() - startTime < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+      
+      try {
+        const status = await this.getMockupStatus(mockupTask.id)
+        
+        if (status.status === 'completed') {
+          return status.mockups.map(m => m.mockup_url)
+        } else if (status.status === 'failed') {
+          throw new Error('Mockup generation failed')
+        }
+        // Continue polling if status is still 'processing'
+      } catch (error) {
+        console.warn('Error checking mockup status:', error)
+      }
+    }
+
+    throw new Error('Mockup generation timed out')
+  }
+
+  // Enhanced product import with mockups
+  async importProductWithMockups(printfulProduct: PrintfulV2StoreProduct, artworkUrl?: string): Promise<any> {
+    let mockupUrls: string[] = []
+    
+    if (artworkUrl && printfulProduct.variants.length > 0) {
+      try {
+        // Take first few variants to generate mockups
+        const variantIds = printfulProduct.variants.slice(0, 3).map(v => v.id)
+        mockupUrls = await this.generateAndWaitForMockups(printfulProduct.id, variantIds, artworkUrl)
+        console.log(`Generated ${mockupUrls.length} mockups for product ${printfulProduct.id}`)
+      } catch (error) {
+        console.warn(`Failed to generate mockups for product ${printfulProduct.id}:`, error)
+        // Continue with import even if mockups fail
+      }
+    }
+
+    // Create product with mockup images
+    const productImages = [printfulProduct.thumbnail_url, ...mockupUrls].filter(Boolean)
+    
+    const productInput = {
+      title: printfulProduct.name,
+      description: printfulProduct.description || `${printfulProduct.name} - Custom print-on-demand product`,
+      thumbnail: productImages[0],
+      images: productImages.map(url => ({ url })),
+      status: "published",
+      metadata: {
+        printful_product_id: printfulProduct.id,
+        mockup_urls: mockupUrls,
+        artwork_url: artworkUrl,
+        fulfillment_type: "printful_pod"
+      }
+    }
+
+    return productInput
   }
 } 

@@ -77,7 +77,7 @@ class EmailService {
     }
 
     try {
-      const html = render(WelcomeEmail({ 
+      const html = await render(WelcomeEmail({ 
         customerName, 
         storeUrl: this.storeUrl 
       }))
@@ -110,7 +110,7 @@ class EmailService {
     }
 
     try {
-      const html = render(OrderConfirmationEmail({
+      const html = await render(OrderConfirmationEmail({
         ...data,
         storeUrl: this.storeUrl
       }))
@@ -148,7 +148,7 @@ class EmailService {
     }
 
     try {
-      const html = render(DigitalDownloadEmail({
+      const html = await render(DigitalDownloadEmail({
         ...data,
         storeUrl: this.storeUrl
       }))
@@ -181,7 +181,7 @@ class EmailService {
     }
 
     try {
-      const html = render(PaymentConfirmationEmail({
+      const html = await render(PaymentConfirmationEmail({
         ...data,
         storeUrl: this.storeUrl
       }))

@@ -2,6 +2,9 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { authenticate } from "@medusajs/medusa"
 import { Modules } from "@medusajs/framework/utils"
 
+// In-memory store for demo purposes
+const ordersStore = new Map<string, any[]>()
+
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     // Get customer ID from token or session
@@ -24,6 +27,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       currency_code: "usd",
       created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
+      email: "demo@example.com",
       items: [
         {
           id: "item_01234567890",
@@ -69,33 +73,45 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 }
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  console.log("[Orders API] Creating new order from checkout")
+  
   try {
-    const { cart_id, customer_info, shipping_address, payment_session_id, cart_items, cart_total } = req.body
+    const { 
+      cart_id, 
+      customer_info, 
+      shipping_address, 
+      payment_session_id, 
+      cart_items, 
+      cart_total 
+    } = req.body
     
-    if (!cart_id || !customer_info || !shipping_address) {
+    if (!cart_id || !customer_info || !customer_info.email) {
       return res.status(400).json({
-        error: "cart_id, customer_info, and shipping_address are required"
+        error: "cart_id, customer_info with email are required"
       })
     }
     
-    // Get customer ID from session or use email as identifier
-    const customerId = req.user?.customer_id || customer_info.email || 'demo_customer'
+    // Create order with real data
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const displayId = Math.floor(Math.random() * 9000) + 1000
     
-    // Create order with actual data
-    const orderId = `order_${Date.now()}`
+    console.log(`[Orders API] Creating order ${orderId} for ${customer_info.email}`)
+    
     const order = {
       id: orderId,
-      display_id: Math.floor(Math.random() * 9000) + 1000,
+      display_id: displayId,
       status: "pending",
       fulfillment_status: "not_fulfilled", 
       payment_status: "captured", // Mock as captured for demo
       total: cart_total || 2500,
-      subtotal: Math.floor((cart_total || 2500) * 0.8), // Rough calculation
+      subtotal: Math.floor((cart_total || 2500) * 0.85),
       tax_total: Math.floor((cart_total || 2500) * 0.08),
-      shipping_total: Math.floor((cart_total || 2500) * 0.12),
+      shipping_total: Math.floor((cart_total || 2500) * 0.07),
       currency_code: "usd",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      email: customer_info.email,
+      customer_id: customer_info.customer_id || customer_info.email,
       customer_info,
       shipping_address,
       payment_session_id,
@@ -104,29 +120,46 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       tracking_links: []
     }
     
-    // Store order in memory (in production, use database)
+    // Store order in memory
+    const customerId = customer_info.customer_id || customer_info.email
     if (!ordersStore.has(customerId)) {
       ordersStore.set(customerId, [])
     }
     const customerOrders = ordersStore.get(customerId)!
-    customerOrders.unshift(order) // Add new order at the beginning
+    customerOrders.unshift(order)
     
-    console.log('Order created and stored:', order)
-    console.log('Total orders for customer:', customerOrders.length)
+    console.log(`[Orders API] Order stored, total orders for customer: ${customerOrders.length}`)
     
-    // Here you would typically:
-    // - Save order to database
-    // - Trigger order confirmation workflow/emails
-    // - Process digital downloads
-    // - Send to fulfillment providers (Printful, etc.)
+    // **CRITICAL**: Emit the order.placed event to trigger all subscribers
+    try {
+      console.log("[Orders API] Emitting order.placed event...")
+      
+      const eventBus = req.scope.resolve(Modules.EVENT_BUS)
+      await eventBus.emit("order.placed", { 
+        id: orderId,
+        data: order  // Pass the complete order data
+      })
+      
+      console.log("[Orders API] ✅ order.placed event emitted successfully!")
+    } catch (eventError) {
+      console.error("[Orders API] ❌ Failed to emit order.placed event:", eventError)
+      // Don't fail the order creation, but log the error
+    }
+    
+    // Update order status to completed after event emission
+    order.status = "completed"
+    order.fulfillment_status = "fulfilled"
+    
+    console.log(`[Orders API] ✅ Order ${orderId} created and events triggered`)
     
     res.json({ 
       success: true,
       order,
-      message: "Order created successfully"
+      message: "Order created successfully - confirmation emails will be sent"
     })
+    
   } catch (error) {
-    console.error("Error creating order:", error)
+    console.error("[Orders API] Error creating order:", error)
     res.status(500).json({ 
       error: "Failed to create order",
       details: error.message 

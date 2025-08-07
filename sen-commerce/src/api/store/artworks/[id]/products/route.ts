@@ -25,11 +25,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       if (artwork && artwork.products && artwork.products.length > 0) {
         // Products are already populated from the relation
         products = artwork.products
-      } else if (artwork && artwork.product_ids && Object.keys(artwork.product_ids).length > 0) {
+      } else if (artwork && artwork.product_ids && artwork.product_ids.length > 0) {
         const productService: IProductModuleService = req.scope.resolve(
           Modules.PRODUCT
         )
-        const productIds = Object.keys(artwork.product_ids)
+        const productIds = Array.isArray(artwork.product_ids) ? artwork.product_ids : []
 
         const result = await productService.listProducts(
           { id: productIds },

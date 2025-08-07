@@ -5,91 +5,132 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 exports.default = handleDigitalProducts;
-const utils_1 = require("@medusajs/framework/utils");
 const digital_product_1 = require("../modules/digital-product");
+const email_service_1 = __importDefault(require("../services/email-service"));
 const crypto_1 = __importDefault(require("crypto"));
 async function handleDigitalProducts({ event: { data }, container }) {
     const logger = container.resolve("logger");
     try {
-        logger.info(`Processing digital products for order ${data.id}`);
-        const query = container.resolve(utils_1.ContainerRegistrationKeys.QUERY);
-        const digitalProductService = container.resolve(digital_product_1.DIGITAL_PRODUCT_MODULE);
-        // Get order with line items
-        const { data: [order] } = await query.graph({
-            entity: "order",
-            filters: { id: data.id },
-            fields: [
-                "id",
-                "email",
-                "customer_id",
-                "items.*",
-                "items.product.*"
-            ],
-        });
-        if (!order || !order.items) {
-            logger.warn(`Order ${data.id} not found or has no items`);
+        console.log(`[Digital Products Subscriber] 📱 Processing digital products for order ${data.id}`);
+        // Get order data from event (new structure)
+        const orderData = data.data;
+        if (!orderData || !orderData.items || !orderData.email) {
+            console.log("[Digital Products Subscriber] ❌ No order data or items found, skipping digital products");
             return;
         }
+        console.log(`[Digital Products Subscriber] 🔍 Checking ${orderData.items.length} items for digital products`);
+        const digitalProductService = container.resolve(digital_product_1.DIGITAL_PRODUCT_MODULE);
         // Check each line item for digital products
-        const digitalProductIds = [];
-        // For now, we'll check if products have digital products by querying separately
-        for (const item of order.items) {
-            if (item?.product?.id) {
-                // Query for linked digital products
-                // Since we removed the link, we'll need another way to associate them
-                // For now, let's check if product metadata or title indicates it's digital
-                // This is a placeholder - you'll need to implement your own logic
-                // For example, you could:
-                // 1. Store digital product IDs in product metadata
-                // 2. Use a naming convention
-                // 3. Create a custom field on products
-                logger.info(`Checking product ${item.product.id} for digital products`);
+        const digitalProductItems = [];
+        for (const item of orderData.items) {
+            console.log(`[Digital Products Subscriber] 🏷️ Checking item: ${item.title}`);
+            console.log(`[Digital Products Subscriber] Item metadata:`, item.metadata);
+            // Check if item has digital fulfillment
+            const fulfillmentType = item.fulfillment_type ||
+                item.metadata?.fulfillment_type ||
+                item.product?.metadata?.fulfillment_type;
+            if (fulfillmentType === 'digital' || fulfillmentType === 'digital_download') {
+                // Look for linked digital product ID in metadata
+                const digitalProductId = item.digital_product_id ||
+                    item.metadata?.digital_product_id ||
+                    item.product?.metadata?.digital_product_id;
+                if (digitalProductId) {
+                    digitalProductItems.push({
+                        digitalProductId,
+                        product: item.product || item,
+                        quantity: item.quantity || 1
+                    });
+                    console.log(`[Digital Products Subscriber] ✅ Found digital product ${digitalProductId} for item ${item.title}`);
+                }
+                else {
+                    console.log(`[Digital Products Subscriber] ⚠️ Digital item ${item.title} has no digital_product_id`);
+                }
             }
         }
         // If we found digital products, create download access
-        if (digitalProductIds.length > 0) {
+        if (digitalProductItems.length > 0) {
+            console.log(`[Digital Products Subscriber] 🎯 Processing ${digitalProductItems.length} digital product items`);
             const downloadLinks = [];
-            for (const digitalProductId of digitalProductIds) {
-                const digitalProducts = await digitalProductService.listDigitalProducts({
-                    filters: { id: digitalProductId }
-                });
-                const digitalProduct = digitalProducts[0];
-                if (digitalProduct) {
-                    // Generate secure token
-                    const token = crypto_1.default.randomBytes(32).toString('hex');
-                    // Create download access
-                    await digitalProductService.createDigitalProductDownloads([
-                        {
-                            digital_product_id: digitalProduct.id,
-                            order_id: order.id,
-                            customer_id: order.customer_id ?? order.email ?? undefined,
-                            token,
-                            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-                            is_active: true
-                        }
-                    ]);
-                    downloadLinks.push({
-                        product_name: digitalProduct.name,
-                        download_url: `${process.env.STORE_URL || 'http://localhost:8000'}/download/${token}`,
-                        expires_in_days: 7
+            for (const item of digitalProductItems) {
+                try {
+                    const digitalProducts = await digitalProductService.listDigitalProducts({
+                        filters: { id: item.digitalProductId }
                     });
+                    const digitalProduct = digitalProducts[0];
+                    if (digitalProduct) {
+                        console.log(`[Digital Products Subscriber] 📁 Found digital product: ${digitalProduct.name}`);
+                        // Generate secure token for each quantity
+                        for (let i = 0; i < item.quantity; i++) {
+                            const token = crypto_1.default.randomBytes(32).toString('hex');
+                            // Create download access
+                            await digitalProductService.createDigitalProductDownloads({
+                                digital_product_id: digitalProduct.id,
+                                order_id: orderData.id,
+                                customer_id: orderData.customer_id || orderData.email,
+                                token,
+                                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+                                is_active: true,
+                                download_count: 0
+                            });
+                            downloadLinks.push({
+                                product_name: digitalProduct.name,
+                                download_url: `${process.env.STORE_URL || 'http://localhost:3000'}/api/store/download/${token}`,
+                                expires_in_days: 7
+                            });
+                            console.log(`[Digital Products Subscriber] 🔗 Created download link for ${digitalProduct.name}`);
+                        }
+                    }
+                    else {
+                        console.log(`[Digital Products Subscriber] ❌ Digital product ${item.digitalProductId} not found`);
+                    }
+                }
+                catch (error) {
+                    console.error(`[Digital Products Subscriber] ❌ Error processing digital product ${item.digitalProductId}:`, error);
                 }
             }
             // Send email with download links
             if (downloadLinks.length > 0) {
-                logger.info(`Sending ${downloadLinks.length} download links to ${order.email}`);
-                // TODO: Send email using notification service
-                // For now, just log the links
-                logger.info(`Download links: ${JSON.stringify(downloadLinks)}`);
+                console.log(`[Digital Products Subscriber] 📧 Sending ${downloadLinks.length} download links to ${orderData.email}`);
+                const emailService = new email_service_1.default();
+                // Get customer name
+                const customerName = orderData.customer_info?.name ||
+                    orderData.customer_info?.first_name ||
+                    orderData.email.split('@')[0] || 'Customer';
+                const orderNumber = orderData.id.slice(-8).toUpperCase();
+                const emailData = {
+                    customerEmail: orderData.email,
+                    customerName,
+                    orderId: orderData.id,
+                    orderNumber,
+                    downloadLinks: downloadLinks.map(link => ({
+                        productTitle: link.product_name,
+                        downloadUrl: link.download_url,
+                        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+                    }))
+                };
+                try {
+                    await emailService.sendDigitalDownloadLinks(emailData);
+                    console.log(`[Digital Products Subscriber] ✅ Download links email sent successfully to ${orderData.email}`);
+                }
+                catch (error) {
+                    console.error(`[Digital Products Subscriber] ❌ Failed to send download links email:`, error);
+                }
             }
+            else {
+                console.log(`[Digital Products Subscriber] ⚠️ No download links generated, skipping email`);
+            }
+        }
+        else {
+            console.log(`[Digital Products Subscriber] ℹ️ No digital products found in order ${data.id}`);
         }
     }
     catch (error) {
-        logger.error(`Error processing digital products for order ${data.id}:`, error);
+        console.error(`[Digital Products Subscriber] ❌ Error processing digital products for order ${data.id}:`, error);
+        console.error("[Digital Products Subscriber] Full error stack:", error.stack);
         // Don't throw - we don't want to fail the order
     }
 }
 exports.config = {
     event: "order.placed",
 };
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaGFuZGxlLWRpZ2l0YWwtcHJvZHVjdHMuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi9zcmMvc3Vic2NyaWJlcnMvaGFuZGxlLWRpZ2l0YWwtcHJvZHVjdHMudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7O0FBTUEsd0NBbUdDO0FBeEdELHFEQUFxRTtBQUNyRSxnRUFBbUU7QUFFbkUsb0RBQTJCO0FBRVosS0FBSyxVQUFVLHFCQUFxQixDQUFDLEVBQ2xELEtBQUssRUFBRSxFQUFFLElBQUksRUFBRSxFQUNmLFNBQVMsRUFDc0I7SUFDL0IsTUFBTSxNQUFNLEdBQUcsU0FBUyxDQUFDLE9BQU8sQ0FBQyxRQUFRLENBQUMsQ0FBQTtJQUUxQyxJQUFJLENBQUM7UUFDSCxNQUFNLENBQUMsSUFBSSxDQUFDLHlDQUF5QyxJQUFJLENBQUMsRUFBRSxFQUFFLENBQUMsQ0FBQTtRQUUvRCxNQUFNLEtBQUssR0FBRyxTQUFTLENBQUMsT0FBTyxDQUFDLGlDQUF5QixDQUFDLEtBQUssQ0FBQyxDQUFBO1FBQ2hFLE1BQU0scUJBQXFCLEdBQ3pCLFNBQVMsQ0FBQyxPQUFPLENBQUMsd0NBQXNCLENBQUMsQ0FBQTtRQUUzQyw0QkFBNEI7UUFDNUIsTUFBTSxFQUFFLElBQUksRUFBRSxDQUFDLEtBQUssQ0FBQyxFQUFFLEdBQUcsTUFBTSxLQUFLLENBQUMsS0FBSyxDQUFDO1lBQzFDLE1BQU0sRUFBRSxPQUFPO1lBQ2YsT0FBTyxFQUFFLEVBQUUsRUFBRSxFQUFFLElBQUksQ0FBQyxFQUFFLEVBQUU7WUFDeEIsTUFBTSxFQUFFO2dCQUNOLElBQUk7Z0JBQ0osT0FBTztnQkFDUCxhQUFhO2dCQUNiLFNBQVM7Z0JBQ1QsaUJBQWlCO2FBQ2xCO1NBQ0YsQ0FBQyxDQUFBO1FBRUYsSUFBSSxDQUFDLEtBQUssSUFBSSxDQUFDLEtBQUssQ0FBQyxLQUFLLEVBQUUsQ0FBQztZQUMzQixNQUFNLENBQUMsSUFBSSxDQUFDLFNBQVMsSUFBSSxDQUFDLEVB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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaGFuZGxlLWRpZ2l0YWwtcHJvZHVjdHMuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi8uLi9zcmMvc3Vic2NyaWJlcnMvaGFuZGxlLWRpZ2l0YWwtcHJvZHVjdHMudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7O0FBT0Esd0NBNklDO0FBbEpELGdFQUFtRTtBQUVuRSw4RUFBb0Q7QUFDcEQsb0RBQTJCO0FBRVosS0FBSyxVQUFVLHFCQUFxQixDQUFDLEVBQ2xELEtBQUssRUFBRSxFQUFFLElBQUksRUFBRSxFQUNmLFNBQVMsRUFDa0M7SUFDM0MsTUFBTSxNQUFNLEdBQUcsU0FBUyxDQUFDLE9BQU8sQ0FBQyxRQUFRLENBQUMsQ0FBQTtJQUUxQyxJQUFJLENBQUM7UUFDSCxPQUFPLENBQUMsR0FBRyxDQUFDLDBFQUEwRSxJQUFJLENBQUMsRUFBRSxFQUFFLENBQUMsQ0FBQTtRQUVoRyw0Q0FBNEM7UUFDNUMsTUFBTSxTQUFTLEdBQUcsSUFBSSxDQUFDLElBQUksQ0FBQTtRQUMzQixJQUFJLENBQUMsU0FBUyxJQUFJLENBQUMsU0FBUyxDQUFDLEtBQUssSUFBSSxDQUFDLFNBQVMsQ0FBQyxLQUFLLEVBQUUsQ0FBQztZQUN2RCxPQUFPLENBQUMsR0FBRyxDQUFDLHlGQUF5RixDQUFDLENBQUE7WUFDdEcsT0FBTTtRQUNSLENBQUM7UUFFRCxPQUFPLENBQUMsR0FBRyxDQUFDLDZDQUE2QyxTQUFTLENBQUMsS0FBSyxDQUFDLE1BQU0sNkJBQTZCLENBQUMsQ0FBQTtRQUU3RyxNQUFNLHFCQUFxQixHQUN6QixTQUFTLENBQUMsT0FBTyxDQUFDLHdDQUFzQixDQUFDLENBQUE7UUFFM0MsNENBQTRDO1FBQzVDLE1BQU0sbUJBQW1CLEdBQXNFLEVBQUUsQ0FBQTtRQUVqRyxLQUFLLE1BQU0sSUFBSSxJQUFJLFNBQVMsQ0FBQyxLQUFLLEVBQUUsQ0FBQztZQUNuQyxPQUFPLENBQUMsR0FBRyxDQUFDLG9EQUFvRCxJQUFJLENBQUMsS0FBSyxFQUFFLENBQUMsQ0FBQTtZQUM3RSxPQUFPLENBQUMsR0FBRyxDQUFDLDhDQUE4QyxFQUFFLElBQUksQ0FBQyxRQUFRLENBQUMsQ0FBQTtZQUUxRSx3Q0FBd0M7WUFDeEMsTUFBTSxlQUFlLEdBQUcsSUFBSSxDQUFDLGdCQUFnQjtnQkFDdEIsSUFBSSxDQUFDLFFBQVEsRUFBRSxnQkFBZ0I7Z0JBQy9CLElBQUksQ0FBQyxPQUFPLEVBQUUsUUFBUSxFQUFFLGdCQUFnQixDQUFBO1lBRS9ELElBQUksZUFBZSxLQUFLLFNBQVMsSUFBSSxlQUFlLEtBQUssa0JBQWtCLEVBQUUsQ0FBQztnQkFDNUUsaURBQWlEO2dCQUNqRCxNQUFNLGdCQUFnQixHQUFHLElBQUksQ0FBQyxrQkFBa0I7b0JBQ3hCLElBQUksQ0FBQyxRQUFRLEVBQUUsa0JBQWtCO29CQUNqQyxJQUFJLENBQUMsT0FBTyxFQUFFLFFBQVEsRUFBRSxrQkFBa0IsQ0FBQTtnQkFFbEUsSUFBSSxnQkFBZ0IsRUFBRSxDQUFDO29CQUNyQixtQkFBbUIsQ0FBQyxJQUFJLENBQUM7d0JBQ3ZCLGdCQUFnQjt3QkFDaEIsT0FBTyxFQUFFLElBQUksQ0FBQyxPQUFPLElBQUksSUFBSTt3QkFDN0IsUUFBUSxFQUFFLElBQUksQ0FBQyxRQUFRLElBQUksQ0FBQztxQkFDN0IsQ0FBQyxDQUFBO29CQUNGLE9BQU8sQ0FBQyxHQUFHLENBQUMseURBQXlELGdCQUFnQixhQUFhLElBQUksQ0FBQyxLQUFLLEVBQUUsQ0FBQyxDQUFBO2dCQUNqSCxDQUFDO3FCQUFNLENBQUM7b0JBQ04sT0FBTyxDQUFDLEdBQUcsQ0FBQyxpREFBaUQsSUFBSSxDQUFDLEtBQUssNEJBQTRCLENBQUMsQ0FBQTtnQkFDdEcsQ0FBQztZQUNILENBQUM7UUFDSCxDQUFDO1FBRUQsdURBQXVEO1FBQ3ZELElBQUksbUJBQW1CLENBQUMsTUFBTSxHQUFHLENBQUMsRUFBRSxDQUFDO1lBQ25DLE9BQU8sQ0FBQyxHQUFHLENBQUMsK0NBQStDLG1CQUFtQixDQUFDLE1BQU0sd0JBQXdCLENBQUMsQ0FBQTtZQUU5RyxNQUFNLGFBQWEsR0FBVSxFQUFFLENBQUE7WUFFL0IsS0FBSyxNQUFNLElBQUksSUFBSSxtQkFBbUIsRUFBRSxDQUFDO2dCQUN2QyxJQUFJLENBQUM7b0JBQ0gsTUFBTSxlQUFlLEdBQUcsTUFBTSxxQkFBcUIsQ0FBQyxtQkFBbUIsQ0FBQzt3QkFDdEUsT0FBTyxFQUFFLEVBQUUsRUFBRSxFQUFFLElBQUksQ0FBQyxnQkFBZ0IsRUFBRTtxQkFDdkMsQ0FBQyxDQUFBO29CQUNGLE1BQU0sY0FBYyxHQUFHLGVBQWUsQ0FBQyxDQUFDLENBQUMsQ0FBQTtvQkFFekMsSUFBSSxjQUFjLEVBQUUsQ0FBQzt3QkFDbkIsT0FBTyxDQUFDLEdBQUcsQ0FBQywyREFBMkQsY0FBYyxDQUFDLElBQUksRUFBRSxDQUFDLENBQUE7d0JBRTdGLDBDQUEwQzt3QkFDMUMsS0FBSyxJQUFJLENBQUMsR0FBRyxDQUFDLEVBQUUsQ0FBQyxHQUFHLElBQUksQ0FBQyxRQUFRLEVBQUUsQ0FBQyxFQUFFLEVBQUUsQ0FBQzs0QkFDdkMsTUFBTSxLQUFLLEdBQUcsZ0JBQU0sQ0FBQyxXQUFXLENBQUMsRUFBRSxDQUFDLENBQUMsUUFBUSxDQUFDLEtBQUssQ0FBQyxDQUFBOzRCQUVwRCx5QkFBeUI7NEJBQ3pCLE1BQU0scUJBQXFCLENBQUMsNkJBQTZCLENBQUM7Z0NBQ3hELGtCQUFrQixFQUFFLGNBQWMsQ0FBQyxFQUFFO2dDQUNyQyxRQUFRLEVBQUUsU0FBUyxDQUFDLEVBQUU7Z0NBQ3RCLFdBQVcsRUFBRSxTQUFTLENBQUMsV0FBVyxJQUFJLFNBQVMsQ0FBQyxLQUFLO2dDQUNyRCxLQUFLO2dDQUNMLFVBQVUsRUFBRSxJQUFJLElBQUksQ0FBQyxJQUFJLENBQUMsR0FBRyxFQUFFLEdBQUcsQ0FBQyxHQUFHLEVBQUUsR0FBRyxFQUFFLEdBQUcsRUFBRSxHQUFHLElBQUksQ0FBQyxFQUFFLFNBQVM7Z0NBQ3JFLFNBQVMsRUFBRSxJQUFJO2dDQUNmLGNBQWMsRUFBRSxDQUFDOzZCQUNsQixDQUFDLENBQUE7NEJBRUYsYUFBYSxDQUFDLElBQUksQ0FBQztnQ0FDakIsWUFBWSxFQUFFLGNBQWMsQ0FBQyxJQUFJO2dDQUNqQyxZQUFZLEVBQUUsR0FBRyxPQUFPLENBQUMsR0FBRyxDQUFDLFNBQVMsSUFBSSx1QkFBdUIsdUJBQXVCLEtBQUssRUFBRTtnQ0FDL0YsZUFBZSxFQUFFLENBQUM7NkJBQ25CLENBQUMsQ0FBQTs0QkFFRixPQUFPLENBQUMsR0FBRyxDQUFDLDhEQUE4RCxjQUFjLENBQUMsSUFBSSxFQUFFLENBQUMsQ0FBQTt3QkFDbEcsQ0FBQztvQkFDSCxDQUFDO3lCQUFNLENBQUM7d0JBQ04sT0FBTyxDQUFDLEdBQUcsQ0FBQyxtREFBbUQsSUFBSSxDQUFDLGdCQUFnQixZQUFZLENBQUMsQ0FBQTtvQkFDbkcsQ0FBQztnQkFDSCxDQUFDO2dCQUFDLE9BQU8sS0FBSyxFQUFFLENBQUM7b0JBQ2YsT0FBTyxDQUFDLEtBQUssQ0FBQyxvRUFBb0UsSUFBSSxDQUFDLGdCQUFnQixHQUFHLEVBQUUsS0FBSyxDQUFDLENBQUE7Z0JBQ3BILENBQUM7WUFDSCxDQUFDO1lBRUQsaUNBQWlDO1lBQ2pDLElBQUksYUFBYSxDQUFDLE1BQU0sR0FBRyxDQUFDLEVBQUUsQ0FBQztnQkFDN0IsT0FBTyxDQUFDLEdBQUcsQ0FBQyw0Q0FBNEMsYUFBYSxDQUFDLE1BQU0sc0JBQXNCLFNBQVMsQ0FBQyxLQUFLLEVBQUUsQ0FBQyxDQUFBO2dCQUVwSCxNQUFNLFlBQVksR0FBRyxJQUFJLHVCQUFZLEVBQUUsQ0FBQTtnQkFFdkMsb0JBQW9CO2dCQUNwQixNQUFNLFlBQVksR0FBRyxTQUFTLENBQUMsYUFBYSxFQUFFLElBQUk7b0JBQy9CLFNBQVMsQ0FBQyxhQUFhLEVBQUUsVUFBVTtvQkFDbkMsU0FBUyxDQUFDLEtBQUssQ0FBQyxLQUFLLENBQUMsR0FBRyxDQUFDLENBQUMsQ0FBQyxDQUFDLElBQUksVUFBVSxDQUFBO2dCQUM5RCxNQUFNLFdBQVcsR0FBRyxTQUFTLENBQUMsRUFBRSxDQUFDLEtBQUssQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLFdBQVcsRUFBRSxDQUFBO2dCQUV4RCxNQUFNLFNBQVMsR0FBRztvQkFDaEIsYUFBYSxFQUFFLFNBQVMsQ0FBQyxLQUFLO29CQUM5QixZQUFZO29CQUNaLE9BQU8sRUFBRSxTQUFTLENBQUMsRUFBRTtvQkFDckIsV0FBVztvQkFDWCxhQUFhLEVBQUUsYUFBYSxDQUFDLEdBQUcsQ0FBQyxJQUFJLENBQUMsRUFBRSxDQUFDLENBQUM7d0JBQ3hDLFlBQVksRUFBRSxJQUFJLENBQUMsWUFBWTt3QkFDL0IsV0FBVyxFQUFFLElBQUksQ0FBQyxZQUFZO3dCQUM5QixTQUFTLEVBQUUsSUFBSSxJQUFJLENBQUMsSUFBSSxDQUFDLEdBQUcsRUFBRSxHQUFHLENBQUMsR0FBRyxFQUFFLEdBQUcsRUFBRSxHQUFHLEVBQUUsR0FBRyxJQUFJLENBQUMsQ0FBQyxrQkFBa0IsRUFBRTtxQkFDL0UsQ0FBQyxDQUFDO2lCQUNKLENBQUE7Z0JBRUQsSUFBSSxDQUFDO29CQUNILE1BQU0sWUFBWSxDQUFDLHdCQUF3QixDQUFDLFNBQVMsQ0FBQyxDQUFBO29CQUN0RCxPQUFPLENBQUMsR0FBRyxDQUFDLDZFQUE2RSxTQUFTLENBQUMsS0FBSyxFQUFFLENBQUMsQ0FBQTtnQkFDN0csQ0FBQztnQkFBQyxPQUFPLEtBQUssRUFBRSxDQUFDO29CQUNmLE9BQU8sQ0FBQyxLQUFLLENBQUMsc0VBQXNFLEVBQUUsS0FBSyxDQUFDLENBQUE7Z0JBQzlGLENBQUM7WUFDSCxDQUFDO2lCQUFNLENBQUM7Z0JBQ04sT0FBTyxDQUFDLEdBQUcsQ0FBQyw4RUFBOEUsQ0FBQyxDQUFBO1lBQzdGLENBQUM7UUFDSCxDQUFDO2FBQU0sQ0FBQztZQUNOLE9BQU8sQ0FBQyxHQUFHLENBQUMsdUVBQXVFLElBQUksQ0FBQyxFQUFFLEVBQUUsQ0FBQyxDQUFBO1FBQy9GLENBQUM7SUFFSCxDQUFDO0lBQUMsT0FBTyxLQUFLLEVBQUUsQ0FBQztRQUNmLE9BQU8sQ0FBQyxLQUFLLENBQUMsK0VBQStFLElBQUksQ0FBQyxFQUFFLEdBQUcsRUFBRSxLQUFLLENBQUMsQ0FBQTtRQUMvRyxPQUFPLENBQUMsS0FBSyxDQUFDLGlEQUFpRCxFQUFFLEtBQUssQ0FBQyxLQUFLLENBQUMsQ0FBQTtRQUM3RSxnREFBZ0Q7SUFDbEQsQ0FBQztBQUNILENBQUM7QUFFWSxRQUFBLE1BQU0sR0FBcUI7SUFDdEMsS0FBSyxFQUFFLGNBQWM7Q0FDdEIsQ0FBQSJ9
