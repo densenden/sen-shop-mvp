@@ -8,8 +8,9 @@ import { authenticate } from "@medusajs/medusa"
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { id } = req.params
+    const { artwork_id, template_ids } = req.body
     
-    console.log(`[DEBUG] Generating mockups for product ${id}`)
+    console.log(`[DEBUG] Generating mockups for product ${id} with artwork ${artwork_id}`)
     
     const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
     
@@ -31,15 +32,37 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.status(400).json({ error: "No Printful product ID found" })
     }
     
+    // Get artwork URL if artwork_id provided
+    let artworkUrl = product.metadata?.artwork_url || "https://files.cdn.printful.com/files/a84/a842c58bc25b3d0169edf368bd5676c9_preview.png"
+    
+    if (artwork_id) {
+      try {
+        const response = await fetch(`${req.protocol}://${req.get('host')}/admin/artworks`, {
+          headers: {
+            'Cookie': req.headers.cookie || ''
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          const artwork = data.artworks?.find((a: any) => a.id === artwork_id)
+          
+          if (artwork?.image_url) {
+            artworkUrl = artwork.image_url
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch artwork:", error)
+        // Continue with default artwork URL
+      }
+    }
+    
     // Get Printful service
     const printfulService = req.scope.resolve("printfulModule") as any
     
     if (!printfulService.generateAndWaitForMockups) {
       return res.status(500).json({ error: "Mockup generation not available" })
     }
-    
-    // Use default artwork or get from product metadata
-    const artworkUrl = product.metadata?.artwork_url || "https://files.cdn.printful.com/files/a84/a842c58bc25b3d0169edf368bd5676c9_preview.png"
     
     // Get variant IDs (limit to first 3 for mockup generation)
     const variantIds = product.variants?.slice(0, 3).map(v => v.id) || []

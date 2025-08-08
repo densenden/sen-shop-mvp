@@ -54,7 +54,7 @@ const FulfillmentDashboardPage = () => {
       setLoading(true)
       
       // Fetch real fulfillment orders from API
-      const response = await fetch("/api/admin/fulfillment-orders")
+      const response = await fetch("/admin/fulfillment-orders", { credentials: "include" })
       if (response.ok) {
         const data = await response.json()
         const fulfillmentOrders = data.orders || []

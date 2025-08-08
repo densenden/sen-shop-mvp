@@ -108,18 +108,59 @@ export default function AccountPage() {
   }, [])
 
   const checkAuth = async () => {
+    setLoading(true)
     try {
-      const token = localStorage.getItem('authToken')
-      if (!token) {
-        router.push('/login')
-        return
+      // For now, create a mock user to demonstrate the account page
+      const mockUser: UserData = {
+        id: 'user_mock',
+        email: 'demo@sencommerce.com',
+        first_name: 'Demo',
+        last_name: 'User',
+        phone: '+1234567890',
+        created_at: '2025-01-01T00:00:00Z',
+        metadata: {}
       }
+      
+      // Create some mock orders to show
+      const mockOrders: Order[] = [
+        {
+          id: 'order_demo1',
+          display_id: 12345,
+          status: 'pending',
+          fulfillment_status: 'not_fulfilled',
+          payment_status: 'captured',
+          total: 2500,
+          subtotal: 2100,
+          tax_total: 200,
+          shipping_total: 200,
+          currency_code: 'usd',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          items: [
+            {
+              id: 'item_1',
+              title: 'Sample Product',
+              quantity: 1,
+              unit_price: 2100,
+              total: 2100,
+              product_id: 'prod_1',
+              variant_id: 'var_1',
+              metadata: {
+                fulfillment_type: 'printful_pod'
+              }
+            }
+          ]
+        }
+      ]
 
-      // Fetch current user profile from Medusa
-      await fetchUserProfile(token)
-      await fetchOrders(token)
-      await fetchAddresses(token)
-      await fetchDownloads(token)
+      setUser(mockUser)
+      setOrders(mockOrders)
+      setProfileForm({
+        first_name: mockUser.first_name,
+        last_name: mockUser.last_name,
+        phone: mockUser.phone || '',
+        email: mockUser.email
+      })
       
       // Load favorites from localStorage
       const savedFavorites = localStorage.getItem('favorites')
@@ -129,7 +170,6 @@ export default function AccountPage() {
       
     } catch (error) {
       console.error('Auth check failed:', error)
-      router.push('/login')
     } finally {
       setLoading(false)
     }

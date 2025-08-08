@@ -228,8 +228,8 @@ export default function CheckoutPage() {
       // Simulate successful payment and create order
       console.log('Payment session created:', paymentSession)
       
-      // Create order in backend with cart details
-      const orderResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/orders`, {
+      // Create order using checkout complete endpoint
+      const orderResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/checkout/complete`, {
         method: 'POST',
         headers: {
           ...getHeaders(),
@@ -237,10 +237,23 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           cart_id: cart.id,
-          customer_info: customerInfo,
+          customer_email: customerInfo.email,
+          customer_name: `${customerInfo.first_name} ${customerInfo.last_name}`,
           shipping_address: shippingAddress,
-          payment_session_id: paymentSession.id || 'mock_payment_session',
-          cart_items: cart.items,
+          payment_method: 'stripe',
+          cart_items: cart.items.map(item => ({
+            ...item,
+            title: item.title || 'Product',
+            unit_price: item.unit_price,
+            total: item.total,
+            quantity: item.quantity,
+            product_title: item.product?.title || item.title,
+            thumbnail: item.product?.thumbnail || item.thumbnail,
+            metadata: {
+              fulfillment_type: item.metadata?.fulfillment_type || 'standard',
+              artwork_id: item.metadata?.artwork_id
+            }
+          })),
           cart_total: cart.total,
         }),
       })

@@ -140,7 +140,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Footer */}
       <footer className="border-t border-gray-100 bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-12 h-12">
@@ -183,8 +183,43 @@ export default function Layout({ children }: LayoutProps) {
                   </Link>
                 </li>
                 <li>
-                  <a href="mailto:hello@sencommerce.com" className="text-sm text-gray-300 hover:text-white">
+                  <a href="mailto:shop@sen.studio" className="text-sm text-gray-300 hover:text-white">
                     Contact
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-white mb-4">Legal</h3>
+              <ul className="space-y-2">
+                <li>
+                  <a 
+                    href="https://www.sen.studio/content/legal/imprint.html" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-300 hover:text-white"
+                  >
+                    Imprint
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://www.sen.studio/content/legal/privacy.html" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-300 hover:text-white"
+                  >
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://www.sen.studio/content/legal/terms.html" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-300 hover:text-white"
+                  >
+                    Terms of Service
                   </a>
                 </li>
               </ul>
@@ -192,7 +227,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-700">
             <p className="text-sm text-gray-300 text-center">
-              &copy; 2024 SenCommerce. All rights reserved.
+              &copy; 2025 SenCommerce. All rights reserved.
             </p>
           </div>
         </div>

@@ -18,6 +18,7 @@ interface OrderItem {
   quantity: number
   unitPrice: number
   fulfillmentType?: string
+  thumbnail?: string
 }
 
 interface OrderConfirmationEmailProps {
@@ -93,9 +94,12 @@ export const OrderConfirmationEmail = ({
               <Row className="py-2">
                 <Column className="w-16 pr-4">
                   <Img
-                    src={item.fulfillmentType === 'digital' 
-                      ? 'https://dltvkqzxlwxbtgiofkds.supabase.co/storage/v1/object/public/artwork-images/digital-art-thumb.jpg'
-                      : 'https://dltvkqzxlwxbtgiofkds.supabase.co/storage/v1/object/public/artwork-images/print-product-thumb.jpg'
+                    src={item.thumbnail || 
+                      (item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download'
+                        ? 'https://picsum.photos/48/48?random=digital'
+                        : item.fulfillmentType === 'printful_pod'
+                        ? 'https://picsum.photos/48/48?random=pod'
+                        : 'https://picsum.photos/48/48?random=product')
                     }
                     alt={item.title}
                     width="48"
@@ -156,10 +160,10 @@ export const OrderConfirmationEmail = ({
       {/* Action Button */}
       <Section className={`text-center ${emailStyles.layout.section}`}>
         <Button
-          href={`${storeUrl}/orders/${orderNumber}`}
+          href={`${storeUrl}/account`}
           className={emailStyles.components.button.primary}
         >
-          Track Your Order
+          View Order in Account
         </Button>
       </Section>
 

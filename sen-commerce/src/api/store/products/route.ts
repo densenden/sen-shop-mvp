@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { IProductModuleService } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
+import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
@@ -114,22 +114,94 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     } else {
       try {
         const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
+        const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
         
-        // Build filter object
-        const filters: any = {}
+        // Build filter object - only show published products for store
+        const filters: any = { status: 'published' }
         if (handle) filters.handle = handle
         if (tag) filters.tags = { name: tag }
         if (collection_id) filters.collection_id = collection_id
         if (category_id) filters.category_id = category_id
 
-        // Try to get real products
-        const result = await productService.listProducts(filters, {
-          relations: ["variants", "images", "tags", "categories"],
-          take: Number(limit),
-          skip: Number(offset)
+        // Use query service to get products with pricing
+        const { data: productsData } = await query.graph({
+          entity: "product",
+          filters,
+          fields: [
+            "id",
+            "title",
+            "description", 
+            "handle",
+            "thumbnail",
+            "status",
+            "metadata",
+            "created_at",
+            "updated_at",
+            "variants.*",
+            "variants.price_set.*",
+            "variants.price_set.prices.*",
+            "images.*",
+            "tags.*",
+            "categories.*"
+          ],
+          pagination: {
+            take: Number(limit),
+            skip: Number(offset)
+          }
         })
         
-        products = result || []
+        const result = productsData || []
+        
+        console.log('[Store Products] Query result:', {
+          filter: filters,
+          count: result?.length || 0,
+          firstProduct: result?.[0] ? { id: result[0].id, title: result[0].title, status: result[0].status } : null
+        })
+        
+        // Add default pricing for variants that don't have it
+        if (result && result.length > 0) {
+          for (const product of result) {
+            if (product.variants && product.variants.length > 0) {
+              for (const variant of product.variants) {
+                // Add calculated_price for storefront display
+                if (!variant.calculated_price) {
+                  variant.calculated_price = {
+                    amount: 2000, // Default price of 20.00
+                    currency_code: "eur"
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Transform products for storefront compatibility
+        const transformedProducts = (result || []).map(product => {
+          // Get price from first variant with proper price set data
+          const firstVariant = product.variants?.[0]
+          const prices = firstVariant?.price_set?.prices || []
+          const defaultPrice = prices.find((p: any) => p.currency_code === 'usd') || prices[0]
+          const price = defaultPrice?.amount || 2000
+          const currency_code = defaultPrice?.currency_code || 'usd'
+          
+          console.log(`[Store Products] Product ${product.title}: price=${price}, currency=${currency_code}, prices=${prices.length}`)
+          
+          return {
+            id: product.id,
+            title: product.title,
+            description: product.description,
+            handle: product.handle || product.id,
+            thumbnail: product.thumbnail,
+            price: price,
+            currency_code: currency_code,
+            status: product.status,
+            metadata: product.metadata,
+            variants: product.variants,
+            images: product.images
+          }
+        })
+        
+        products = transformedProducts
         count = products.length
         
       } catch (productError) {

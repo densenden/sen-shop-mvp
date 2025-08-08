@@ -12,7 +12,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       return res.status(404).json({ error: "Collection not found" })
     }
     
-    res.json(collection)
+    res.json({ collection })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

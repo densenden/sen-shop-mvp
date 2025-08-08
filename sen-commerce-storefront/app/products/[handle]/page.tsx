@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Heart, ShoppingBag, Download, Truck, Star, Share2 } from 'lucide-react'
+import { ArrowLeft, Heart, ShoppingBag, Download, Truck, Star, Share2, Palette, Grid3x3, Info, Package } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
@@ -23,6 +23,8 @@ interface Product {
     fulfillment_type?: string
     source_provider?: string
     artwork_id?: string
+    artist_name?: string
+    collection_id?: string
   }
 }
 
@@ -30,8 +32,38 @@ interface ProductVariant {
   id: string
   title: string
   price: number
+  calculated_price?: {
+    amount: number
+    currency_code: string
+  }
+  prices?: Array<{
+    amount: number
+    currency_code: string
+  }>
   sku?: string
   inventory_quantity?: number
+}
+
+interface Artwork {
+  id: string
+  title: string
+  description?: string
+  image_url: string
+  artwork_collection_id?: string
+  collection?: Collection
+}
+
+interface Collection {
+  id: string
+  name: string
+  description?: string
+  topic?: string
+  purpose?: string
+  brand_story?: string
+  genesis_story?: string
+  design_philosophy?: string
+  month_created?: string
+  thumbnail_url?: string
 }
 
 export default function ProductPage() {
@@ -47,6 +79,9 @@ export default function ProductPage() {
   const [addingToCart, setAddingToCart] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [artwork, setArtwork] = useState<Artwork | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [activeTab, setActiveTab] = useState<'artwork' | 'collection' | 'product' | 'shipping'>('artwork')
 
   useEffect(() => {
     if (handle) {
@@ -55,9 +90,15 @@ export default function ProductPage() {
   }, [handle])
 
   useEffect(() => {
-    // Check if product is in favorites
     const favorites = JSON.parse(localStorage.getItem('favorites') || '[]')
     setIsFavorite(favorites.includes(product?.id))
+  }, [product?.id])
+
+  useEffect(() => {
+    if (product) {
+      // Always search for artwork that contains this product ID (single source of truth)
+      fetchArtworkByProductId(product.id)
+    }
   }, [product?.id])
 
   const fetchProduct = async () => {
@@ -65,6 +106,22 @@ export default function ProductPage() {
       setLoading(true)
       console.log('Fetching product for handle:', handle)
       
+      // First try individual product endpoint
+      const individualResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/products/${handle}`, {
+        headers: getHeaders()
+      })
+      
+      if (individualResponse.ok) {
+        const data = await individualResponse.json()
+        console.log('Individual Product API Response:', data)
+        
+        if (data.product) {
+          processProduct(data.product)
+          return
+        }
+      }
+      
+      // Fallback to listing all products
       const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/products`, {
         headers: getHeaders()
       })
@@ -72,26 +129,10 @@ export default function ProductPage() {
         const data = await response.json()
         console.log('Products API Response:', data)
         
-        // Find product by handle or id
         const productData = data.products?.find((p: Product) => p.handle === handle || p.id === handle)
         
         if (productData) {
-          // Process Medusa product data structure
-          const productWithImages = {
-            ...productData,
-            thumbnail: productData.thumbnail,
-            images: productData.images?.map((img: any) => typeof img === 'string' ? img : img.url) || [productData.thumbnail],
-            variants: productData.variants?.length > 0 ? productData.variants : [{
-              id: `${productData.id}-default`,
-              title: 'Default',
-              price: productData.price,
-              sku: productData.handle,
-              inventory_quantity: 100
-            }]
-          }
-          
-          setProduct(productWithImages)
-          setSelectedVariant(productWithImages.variants[0])
+          processProduct(productData)
         } else {
           setError('Product not found')
         }
@@ -109,6 +150,96 @@ export default function ProductPage() {
     }
   }
 
+  const processProduct = (productData: any) => {
+    const productWithImages = {
+      ...productData,
+      thumbnail: productData.thumbnail,
+      images: productData.images?.map((img: any) => typeof img === 'string' ? img : img.url) || [productData.thumbnail],
+      variants: productData.variants?.length > 0 ? productData.variants : [{
+        id: `${productData.id}-default`,
+        title: 'Default',
+        price: productData.price || 2000,
+        calculated_price: productData.calculated_price,
+        prices: productData.prices,
+        sku: productData.handle,
+        inventory_quantity: 100
+      }]
+    }
+    
+    setProduct(productWithImages)
+    setSelectedVariant(productWithImages.variants[0])
+  }
+
+  const fetchArtworkByProductId = async (productId: string) => {
+    try {
+      console.log(`[Product Detail] Searching for artwork containing product ${productId}`)
+      
+      // Search all artworks for one that contains this product ID (single source of truth)
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/admin/artworks`, {
+        headers: getHeaders()
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const artworkData = data.artworks?.find((a: any) => 
+          a.product_ids && Array.isArray(a.product_ids) && a.product_ids.includes(productId)
+        )
+        
+        if (artworkData) {
+          console.log(`[Product Detail] Found artwork: ${artworkData.title}`)
+          
+          // Fetch collection data if artwork has a collection
+          if (artworkData.artwork_collection_id) {
+            try {
+              console.log(`[Collection Debug] Fetching collection ${artworkData.artwork_collection_id}`)
+              const collectionResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/admin/artwork-collections/${artworkData.artwork_collection_id}`, {
+                headers: getHeaders()
+              })
+              console.log(`[Collection Debug] Collection response status: ${collectionResponse.status}`)
+              if (collectionResponse.ok) {
+                const collectionData = await collectionResponse.json()
+                console.log(`[Collection Debug] Collection data received:`, collectionData)
+                artworkData.collection = collectionData.collection
+              } else {
+                const errorText = await collectionResponse.text()
+                console.error(`[Collection Debug] Collection fetch failed:`, errorText)
+              }
+            } catch (error) {
+              console.error('[Collection Debug] Error fetching collection:', error)
+            }
+          } else {
+            console.log(`[Collection Debug] No artwork_collection_id found for artwork ${artworkData.id}`)
+          }
+          
+          setArtwork(artworkData)
+          fetchRelatedProducts(artworkData.id)
+        } else {
+          console.log(`[Product Detail] No artwork found for product ${productId}`)
+          setArtwork(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching artwork:', error)
+      setArtwork(null)
+    }
+  }
+
+  const fetchRelatedProducts = async (artworkId: string) => {
+    try {
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/products?artwork_id=${artworkId}`, {
+        headers: getHeaders()
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const related = data.products?.filter((p: Product) => p.id !== product?.id) || []
+        setRelatedProducts(related.slice(0, 8))
+      }
+    } catch (error) {
+      console.error('Error fetching related products:', error)
+    }
+  }
+
   const addToCart = async () => {
     if (!product || !selectedVariant) return
 
@@ -120,10 +251,7 @@ export default function ProductPage() {
         quantity
       })
       
-      // Use the same cart service as the artwork pages
       await cartService.addItem(product.id, selectedVariant.id, quantity)
-      
-      // Show success message or redirect to cart
       router.push('/cart')
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -145,7 +273,41 @@ export default function ProductPage() {
     setIsFavorite(!isFavorite)
   }
 
-  const formatPrice = (price: number, currency: string = 'usd') => {
+  const handleShare = async () => {
+    if (!product) return
+    
+    const shareData = {
+      title: product.title,
+      text: product.description || `Check out ${product.title} on SenCommerce`,
+      url: window.location.href
+    }
+    
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(window.location.href)
+        alert('Link copied to clipboard!')
+      }
+    } catch (error) {
+      console.error('Error sharing:', error)
+    }
+  }
+
+  const formatPrice = (variant: ProductVariant | null, product: Product) => {
+    if (!variant) return '$0.00'
+    
+    const price = variant.calculated_price?.amount || 
+                  variant.prices?.[0]?.amount || 
+                  variant.price || 
+                  product.price || 
+                  0
+    
+    const currency = variant.calculated_price?.currency_code || 
+                     variant.prices?.[0]?.currency_code || 
+                     product.currency_code || 
+                     'usd'
+    
     const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
     const safeCurrency = (currency || 'usd').toUpperCase()
     
@@ -196,7 +358,7 @@ export default function ProductPage() {
         <div className="mb-8">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center text-blue-600 hover:text-blue-500"
+            className="inline-flex items-center text-gray-600 hover:text-gray-800"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -214,14 +376,14 @@ export default function ProductPage() {
                     <button
                       key={index}
                       onClick={() => setActiveImageIndex(index)}
-                      className={`relative h-24 cursor-pointer rounded-md flex items-center justify-center text-sm font-medium uppercase text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring focus:ring-opacity-50 focus:ring-offset-4 ${
-                        index === activeImageIndex ? 'ring-2 ring-blue-500' : ''
+                      className={`relative h-24 cursor-pointer rounded border-2 ${
+                        index === activeImageIndex ? 'border-gray-900' : 'border-gray-200'
                       }`}
                     >
                       <img
                         src={image}
                         alt={`${product.title} ${index + 1}`}
-                        className="h-full w-full object-cover object-center rounded-md"
+                        className="h-full w-full object-cover rounded"
                       />
                     </button>
                   ))}
@@ -235,10 +397,10 @@ export default function ProductPage() {
                 <img
                   src={product.images?.[activeImageIndex] || product.thumbnail}
                   alt={product.title}
-                  className="h-full w-full object-cover object-center sm:rounded-lg"
+                  className="h-full w-full object-cover object-center border border-gray-200"
                 />
               ) : (
-                <div className="h-96 w-full bg-gray-200 rounded-lg flex items-center justify-center">
+                <div className="h-96 w-full bg-gray-100 border border-gray-200 flex items-center justify-center">
                   <span className="text-gray-400">No Image Available</span>
                 </div>
               )}
@@ -247,27 +409,26 @@ export default function ProductPage() {
 
           {/* Product info */}
           <div className="mt-10 px-4 sm:px-0 sm:mt-16 lg:mt-0">
-            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+            <h1 className="text-3xl font-medium tracking-tight text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               {product.title}
             </h1>
 
             <div className="mt-3">
-              <h2 className="sr-only">Product information</h2>
               <p className="text-3xl text-gray-900">
-                {formatPrice(selectedVariant?.price || product.price, product.currency_code)}
+                {formatPrice(selectedVariant, product)}
               </p>
             </div>
 
             {/* Product type badge */}
             <div className="mt-4">
               {product.metadata?.fulfillment_type === 'digital_download' && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium text-gray-700">
                   <Download className="h-4 w-4 mr-1" />
                   Digital Download
                 </span>
               )}
               {product.metadata?.fulfillment_type === 'printful_pod' && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <span className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium text-gray-700">
                   <Truck className="h-4 w-4 mr-1" />
                   Print on Demand
                 </span>
@@ -281,53 +442,20 @@ export default function ProductPage() {
                   {[0, 1, 2, 3, 4].map((rating) => (
                     <Star
                       key={rating}
-                      className="text-yellow-400 h-5 w-5 flex-shrink-0 fill-current"
+                      className="text-gray-300 h-5 w-5 flex-shrink-0 fill-current"
                     />
                   ))}
                 </div>
                 <p className="sr-only">5 out of 5 stars</p>
-                <a href="#" className="ml-3 text-sm font-medium text-blue-600 hover:text-blue-500">
+                <a href="#" className="ml-3 text-sm font-medium text-gray-600 hover:text-gray-800">
                   117 reviews
                 </a>
               </div>
             </div>
 
             <div className="mt-6">
-              <h3 className="sr-only">Description</h3>
               <div className="text-base text-gray-700 space-y-6">
                 <p>{product.description || 'No description available.'}</p>
-              </div>
-            </div>
-
-            {/* Product details */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-gray-900">Product Details</h3>
-                <button
-                  onClick={toggleFavorite}
-                  className="ml-4 py-2 px-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <Heart className={`h-5 w-5 ${isFavorite ? 'text-red-500 fill-current' : ''}`} />
-                </button>
-              </div>
-              
-              <div className="mt-4 prose prose-sm text-gray-700">
-                <ul>
-                  <li>High-quality materials</li>
-                  <li>Sustainably produced</li>
-                  {product.metadata?.fulfillment_type === 'digital_download' && (
-                    <>
-                      <li>Instant download after purchase</li>
-                      <li>Multiple format options available</li>
-                    </>
-                  )}
-                  {product.metadata?.fulfillment_type === 'printful_pod' && (
-                    <>
-                      <li>Made to order</li>
-                      <li>Worldwide shipping available</li>
-                    </>
-                  )}
-                </ul>
               </div>
             </div>
 
@@ -340,13 +468,13 @@ export default function ProductPage() {
                     <button
                       key={variant.id}
                       onClick={() => setSelectedVariant(variant)}
-                      className={`px-4 py-2 text-sm font-medium rounded-md border ${
+                      className={`px-4 py-2 text-sm font-medium border ${
                         selectedVariant?.id === variant.id
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-gray-900 bg-gray-100 text-gray-900'
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      {variant.title} - {formatPrice(variant.price, product.currency_code)}
+                      {variant.title} - {formatPrice(variant, product)}
                     </button>
                   ))}
                 </div>
@@ -364,7 +492,7 @@ export default function ProductPage() {
                     id="quantity"
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border-gray-300 text-sm"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                       <option key={num} value={num}>
@@ -379,7 +507,7 @@ export default function ProductPage() {
                 <button
                   onClick={addToCart}
                   disabled={addingToCart || !selectedVariant}
-                  className="flex-1 bg-blue-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-blue-600 border border-transparent py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {addingToCart ? (
                     <>
@@ -395,30 +523,362 @@ export default function ProductPage() {
                 </button>
 
                 <button
-                  type="button"
-                  className="flex-1 bg-gray-50 border border-gray-300 rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={toggleFavorite}
+                  className="py-3 px-6 border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  <Share2 className="h-5 w-5 mr-2" />
-                  Share
+                  <Heart className={`h-5 w-5 ${isFavorite ? 'text-red-500 fill-current' : ''}`} />
+                </button>
+
+                <button
+                  onClick={handleShare}
+                  type="button"
+                  className="py-3 px-6 border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Share2 className="h-5 w-5" />
                 </button>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Shipping info */}
-            <div className="mt-8 border-t border-gray-200 pt-8">
-              <h3 className="text-sm font-medium text-gray-900">Shipping & Returns</h3>
-              <div className="mt-4 text-sm text-gray-700">
-                {product.metadata?.fulfillment_type === 'digital_download' ? (
-                  <p>Digital products are delivered instantly via email after purchase.</p>
+        {/* Tab Section */}
+        <div className="mt-16 border-t border-gray-200 pt-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('artwork')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'artwork'
+                    ? 'border-gray-900 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                About Artwork
+              </button>
+              <button
+                onClick={() => setActiveTab('collection')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'collection'
+                    ? 'border-gray-900 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                About Collection
+              </button>
+              <button
+                onClick={() => setActiveTab('product')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'product'
+                    ? 'border-gray-900 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                About Product
+              </button>
+              <button
+                onClick={() => setActiveTab('shipping')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'shipping'
+                    ? 'border-gray-900 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Shipping & Returns
+              </button>
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="py-8">
+            {activeTab === 'artwork' && (
+              <div className="max-w-4xl">
+                {artwork ? (
+                  <div className="space-y-6">
+                    {/* Artwork Preview */}
+                    <div>
+                      {artwork.image_url && (
+                        <img
+                          src={artwork.image_url}
+                          alt={artwork.title}
+                          className="w-full max-w-md h-auto border border-gray-200 mb-6"
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Artwork Details */}
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-medium text-gray-900">{artwork.title}</h3>
+                      {artwork.description && (
+                        <p className="text-gray-700 leading-relaxed">{artwork.description}</p>
+                      )}
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    <p>Free shipping on orders over $50.</p>
-                    <p>Standard shipping takes 5-7 business days.</p>
-                    <p>30-day return policy for all physical products.</p>
-                  </>
+                  <div className="py-8">
+                    <p className="text-gray-600">No artwork information available for this product.</p>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
+
+            {activeTab === 'collection' && (
+              <div className="max-w-4xl">
+                {console.log('[Collection Tab Debug] Artwork:', artwork) || console.log('[Collection Tab Debug] Collection:', artwork?.collection)}
+                {artwork?.collection ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xl font-medium text-gray-900 mb-4">{artwork.collection.name}</h3>
+                      {artwork.collection.description && (
+                        <p className="text-gray-700 leading-relaxed mb-6">{artwork.collection.description}</p>
+                      )}
+                    </div>
+                    
+                    {artwork.collection.topic && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Topic</h4>
+                        <p className="text-gray-700 mb-4">{artwork.collection.topic}</p>
+                      </div>
+                    )}
+                    
+                    {artwork.collection.purpose && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Purpose</h4>
+                        <p className="text-gray-700 mb-4">{artwork.collection.purpose}</p>
+                      </div>
+                    )}
+                    
+                    {artwork.collection.brand_story && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Brand Story</h4>
+                        <p className="text-gray-700 mb-4">{artwork.collection.brand_story}</p>
+                      </div>
+                    )}
+                    
+                    {artwork.collection.design_philosophy && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Design Philosophy</h4>
+                        <p className="text-gray-700 mb-4">{artwork.collection.design_philosophy}</p>
+                      </div>
+                    )}
+                    
+                    {artwork.collection.genesis_story && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Genesis Story</h4>
+                        <p className="text-gray-700 mb-4">{artwork.collection.genesis_story}</p>
+                      </div>
+                    )}
+                    
+                    {artwork.collection.month_created && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Created</h4>
+                        <p className="text-gray-700">{artwork.collection.month_created}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : artwork ? (
+                  <div className="py-8">
+                    <h3 className="text-xl font-medium text-gray-900 mb-4">Collection</h3>
+                    {artwork.artwork_collection_id ? (
+                      <p className="text-gray-600">Collection information is being loaded...</p>
+                    ) : (
+                      <p className="text-gray-600">This artwork is not part of a specific collection.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <p className="text-gray-600">No artwork information available for this product.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'product' && (
+              <div className="max-w-4xl space-y-6">
+                {product.metadata?.fulfillment_type === 'printful_pod' ? (
+                  <div>
+                    <h3 className="text-xl font-medium text-gray-900 mb-4">Printful Product Details</h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Material & Construction</h4>
+                        <p className="text-gray-700">High-quality materials sourced from trusted suppliers</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Printing Process</h4>
+                        <p className="text-gray-700">Advanced direct-to-garment (DTG) printing for vibrant, long-lasting colors</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Quality Assurance</h4>
+                        <p className="text-gray-700">Each item is carefully inspected before shipping</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Processing Time</h4>
+                        <p className="text-gray-700">2-7 business days for production</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Environmental Impact</h4>
+                        <p className="text-gray-700">Made to order to reduce waste and environmental impact</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : product.metadata?.fulfillment_type === 'digital_download' ? (
+                  <div>
+                    <h3 className="text-xl font-medium text-gray-900 mb-4">Digital File Details</h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">File Formats</h4>
+                        <p className="text-gray-700">High-resolution PNG, JPG, and vector formats included</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Resolution</h4>
+                        <p className="text-gray-700">300 DPI for print-ready quality</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Color Space</h4>
+                        <p className="text-gray-700">RGB for digital use, CMYK for print applications</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">File Sizes</h4>
+                        <p className="text-gray-700">Multiple sizes included for various use cases</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Delivery</h4>
+                        <p className="text-gray-700">Instant download after purchase completion</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Usage Rights</h4>
+                        <p className="text-gray-700">Personal and commercial use license included</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-xl font-medium text-gray-900 mb-4">Product Information</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                        <p className="text-gray-700">{product.description || 'No detailed description available.'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'shipping' && (
+              <div className="max-w-4xl space-y-6">
+                <div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-4">Shipping Information</h3>
+                  
+                  {product.metadata?.fulfillment_type === 'digital_download' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Digital Delivery</h4>
+                        <p className="text-gray-700">Files are delivered instantly via email after purchase</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">No Physical Shipping</h4>
+                        <p className="text-gray-700">This is a digital product - no physical item will be shipped</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Access</h4>
+                        <p className="text-gray-700">Download links remain active for 30 days after purchase</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Processing Time</h4>
+                        <p className="text-gray-700">2-7 business days for production and processing</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Shipping Options</h4>
+                        <p className="text-gray-700">Standard shipping (5-10 business days) and Express shipping (2-5 business days) available</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Free Shipping</h4>
+                        <p className="text-gray-700">Free standard shipping on orders over $50</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">International Shipping</h4>
+                        <p className="text-gray-700">We ship worldwide - additional charges may apply</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-4">Returns & Exchanges</h3>
+                  
+                  {product.metadata?.fulfillment_type === 'digital_download' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Digital Product Policy</h4>
+                        <p className="text-gray-700">Due to the digital nature of this product, all sales are final</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Quality Guarantee</h4>
+                        <p className="text-gray-700">If you experience any issues with file quality or download, contact us for support</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Return Window</h4>
+                        <p className="text-gray-700">30 days from delivery date for returns</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Return Conditions</h4>
+                        <p className="text-gray-700">Items must be unused, unwashed, and in original condition</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Return Process</h4>
+                        <p className="text-gray-700">Contact our support team to initiate a return and receive a prepaid return label</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Exchanges</h4>
+                        <p className="text-gray-700">Free exchanges for size or defect issues within 30 days</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Refunds</h4>
+                        <p className="text-gray-700">Full refunds processed within 5-7 business days after we receive the returned item</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-4">Customer Support</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Contact Us</h4>
+                      <p className="text-gray-700">Email: support@sencommerce.com</p>
+                      <p className="text-gray-700">Response time: Within 24 hours</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

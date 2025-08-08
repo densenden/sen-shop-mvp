@@ -83,7 +83,7 @@ class EmailService {
       }))
 
       const { data, error } = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `SenCommerce <${this.fromEmail}>`,
         to: customerEmail,
         subject: 'Welcome to SenCommerce - Your Digital Art Journey Begins! 🎨',
         html,
@@ -116,7 +116,7 @@ class EmailService {
       }))
 
       const { data: result, error } = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `SenCommerce <${this.fromEmail}>`,
         to: data.customerEmail,
         subject: `Order Confirmation #${data.orderNumber} - SenCommerce`,
         html,
@@ -154,7 +154,7 @@ class EmailService {
       }))
 
       const { data: result, error } = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `SenCommerce <${this.fromEmail}>`,
         to: data.customerEmail,
         subject: `Your Digital Downloads Are Ready! 🎨 - Order #${data.orderNumber}`,
         html,
@@ -187,7 +187,7 @@ class EmailService {
       }))
 
       const { data: result, error } = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `SenCommerce <${this.fromEmail}>`,
         to: data.customerEmail,
         subject: `Payment Confirmed 💳 - Order #${data.orderNumber}`,
         html,
@@ -215,7 +215,7 @@ class EmailService {
     try {
       // Send a simple test email
       const { data, error } = await this.resend.emails.send({
-        from: this.fromEmail,
+        from: `SenCommerce <${this.fromEmail}>`,
         to: this.fromEmail, // Send to self for testing
         subject: 'Resend Test - SenCommerce Email Service',
         html: `

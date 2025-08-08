@@ -137,6 +137,17 @@ const ProductDetailPage = () => {
 
       // Set form values
       const prod = productData.product
+      
+      // Redirect to specialized edit pages based on product type
+      if (prod.metadata?.fulfillment_type === 'printful_pod') {
+        navigate(`/products/${id}/pod-edit`)
+        return
+      } else if (prod.metadata?.fulfillment_type === 'digital') {
+        // navigate(`/products/${id}/digital-edit`) // TODO: Create digital edit page
+      } else if (prod.metadata?.fulfillment_type === 'service') {
+        // navigate(`/products/${id}/service-edit`) // TODO: Create service edit page
+      }
+      
       setTitle(prod.title || "")
       setSubtitle(prod.subtitle || "")
       setDescription(prod.description || "")

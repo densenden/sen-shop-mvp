@@ -104,11 +104,22 @@ const CreateProductPage = () => {
       setError("Please fill in all required fields")
       return
     }
+    
+    if (productType === 'digital' && !selectedDigitalProduct) {
+      setError("Please select a digital product")
+      return
+    }
+    
+    if (productType === 'printful_pod' && !selectedPrintfulProduct) {
+      setError("Please select a Printful product")
+      return
+    }
 
     try {
       setCreating(true)
       
       const requestBody = {
+        ...(selectedArtwork ? { artwork_id: selectedArtwork } : {}),
         product_type: productType,
         title,
         description,
@@ -587,7 +598,7 @@ const CreateProductPage = () => {
           </Button>
           <Button
             type="submit"
-            disabled={creating || !title || !price}
+            disabled={creating || !title || !price || (productType === 'digital' && !selectedDigitalProduct) || (productType === 'printful_pod' && !selectedPrintfulProduct)}
             className="flex items-center gap-2"
           >
             {creating ? (

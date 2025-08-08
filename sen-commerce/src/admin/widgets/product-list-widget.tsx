@@ -461,6 +461,7 @@ const ProductListWidget = () => {
                   <SortIcon field="status" />
                 </div>
               </Table.HeaderCell>
+              <Table.HeaderCell>Price</Table.HeaderCell>
               <Table.HeaderCell>Artwork</Table.HeaderCell>
               <Table.HeaderCell className="text-right">Actions</Table.HeaderCell>
             </Table.Row>
@@ -514,6 +515,59 @@ const ProductListWidget = () => {
                     </Badge>
                   </Table.Cell>
                   <Table.Cell>
+                    <div className="text-sm font-medium text-gray-900">
+                      {product.variants && product.variants.length > 0 ? (
+                        product.variants.length === 1 ? (
+                          // Single variant - show its price
+                          (() => {
+                            const variant = product.variants[0]
+                            const price = variant.calculated_price?.amount || 
+                                         variant.prices?.[0]?.amount || 
+                                         2000
+                            const currency = variant.calculated_price?.currency_code || 
+                                           variant.prices?.[0]?.currency_code || 
+                                           'EUR'
+                            return new Intl.NumberFormat('en-US', {
+                              style: 'currency',
+                              currency: currency.toUpperCase()
+                            }).format(price / 100)
+                          })()
+                        ) : (
+                          // Multiple variants - show price range
+                          (() => {
+                            const prices = product.variants.map(v => 
+                              v.calculated_price?.amount || 
+                              v.prices?.[0]?.amount || 
+                              2000
+                            )
+                            const minPrice = Math.min(...prices)
+                            const maxPrice = Math.max(...prices)
+                            const currency = product.variants[0]?.calculated_price?.currency_code || 
+                                           product.variants[0]?.prices?.[0]?.currency_code || 
+                                           'EUR'
+                            
+                            if (minPrice === maxPrice) {
+                              return new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: currency.toUpperCase()
+                              }).format(minPrice / 100)
+                            } else {
+                              return `${new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: currency.toUpperCase()
+                              }).format(minPrice / 100)} - ${new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: currency.toUpperCase()
+                              }).format(maxPrice / 100)}`
+                            }
+                          })()
+                        )
+                      ) : (
+                        <span className="text-gray-400">No variants</span>
+                      )}
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell>
                     {artwork ? (
                       <div className="flex items-center gap-2">
                         {artwork.image_url ? (
@@ -538,7 +592,19 @@ const ProductListWidget = () => {
                   <Table.Cell>
                     <div className="flex items-center justify-end gap-2">
                       <IconButton
-                        onClick={() => navigate(`/products/${product.id}`)}
+                        onClick={() => {
+                          // Navigate to specialized edit page based on product type
+                          const fulfillmentType = product.metadata?.fulfillment_type
+                          if (fulfillmentType === 'printful_pod') {
+                            navigate(`/products/${product.id}/pod-edit`)
+                          } else if (fulfillmentType === 'digital') {
+                            navigate(`/products/${product.id}`) // TODO: Use digital-edit when created
+                          } else if (fulfillmentType === 'service') {
+                            navigate(`/products/${product.id}`) // TODO: Use service-edit when created
+                          } else {
+                            navigate(`/products/${product.id}`)
+                          }
+                        }}
                         size="small"
                         variant="transparent"
                       >
@@ -559,7 +625,19 @@ const ProductListWidget = () => {
                           </IconButton>
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Content>
-                          <DropdownMenu.Item onClick={() => navigate(`/products/${product.id}`)}>
+                          <DropdownMenu.Item onClick={() => {
+                            // Navigate to specialized edit page based on product type
+                            const fulfillmentType = product.metadata?.fulfillment_type
+                            if (fulfillmentType === 'printful_pod') {
+                              navigate(`/products/${product.id}/pod-edit`)
+                            } else if (fulfillmentType === 'digital') {
+                              navigate(`/products/${product.id}`) // TODO: Use digital-edit when created
+                            } else if (fulfillmentType === 'service') {
+                              navigate(`/products/${product.id}`) // TODO: Use service-edit when created
+                            } else {
+                              navigate(`/products/${product.id}`)
+                            }
+                          }}>
                             Edit Product
                           </DropdownMenu.Item>
                           <DropdownMenu.Item onClick={() => navigator.clipboard.writeText(product.id)}>

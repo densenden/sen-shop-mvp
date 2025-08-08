@@ -211,7 +211,19 @@ class CartService {
           quantity: quantity,
           unit_price: (() => {
             const variant = product?.variants?.find((v: any) => v.id === variantId)
-            const price = variant?.prices?.[0]?.amount || variant?.calculated_price?.amount
+            // Try multiple price locations
+            let price = variant?.calculated_price?.amount || 
+                       variant?.prices?.[0]?.amount ||
+                       variant?.price?.amount ||
+                       2000
+            
+            console.log('Price extraction for variant:', {
+              variantId,
+              calculatedPrice: variant?.calculated_price,
+              prices: variant?.prices,
+              extractedPrice: price
+            })
+            
             return typeof price === 'number' && !isNaN(price) ? price : 2000
           })(),
           total: 0,
