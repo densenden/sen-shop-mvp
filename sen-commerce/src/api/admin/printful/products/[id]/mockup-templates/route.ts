@@ -4,12 +4,12 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { id: printfulProductId } = req.params
     
-    const PRINTFUL_API_KEY = process.env.PRINTFUL_API_KEY
+    const PRINTFUL_API_KEY = process.env.PRINTFUL_API_TOKEN || process.env.PRINTFUL_API_KEY
     if (!PRINTFUL_API_KEY) {
       return res.status(500).json({ error: "Printful API key not configured" })
     }
 
-    // Fetch mockup templates from Printful API v2
+    // Fetch mockup templates from Printful Beta API v2
     const response = await fetch(`https://api.printful.com/mockup-generator/templates/${printfulProductId}`, {
       headers: {
         'Authorization': `Bearer ${PRINTFUL_API_KEY}`,

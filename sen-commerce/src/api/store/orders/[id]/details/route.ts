@@ -10,6 +10,9 @@ export const GET = async (
 ) => {
   try {
     const { id: orderId } = req.params
+    console.log(`[Order Details] Fetching order: ${orderId}`)
+    
+    // Get order from database
     
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     const digitalProductService: DigitalProductModuleService = 
@@ -33,9 +36,8 @@ export const GET = async (
     })
     
     if (!order) {
-      return res.status(404).json({ 
-        error: "Order not found" 
-      })
+      console.log(`[Order Details] Order not found: ${orderId}`)
+      return res.status(404).json({ error: "Order not found" })
     }
     
     // Get download links for digital products
@@ -43,26 +45,33 @@ export const GET = async (
     
     if (order.items) {
       // Get all download access records for this order
-      const downloads = await digitalProductService.listDigitalProductDownloads({
-        filters: { 
+      try {
+        const downloads = await digitalProductService.listDigitalProductDownloads({
           order_id: orderId,
           is_active: true
-        },
-        relations: ["digital_product"]
-      })
-      
-      // Map downloads to items
-      for (const download of downloads) {
-        if (download.digital_product) {
-          downloadLinks.push({
-            token: download.token,
-            product_name: download.digital_product.name,
-            download_url: `${process.env.STORE_URL || 'http://localhost:9000'}/store/download/${download.token}`,
-            expires_at: download.expires_at,
-            download_count: download.download_count,
-            max_downloads: download.digital_product.max_downloads || -1
-          })
+        }, {
+          relations: ["digital_product"]
+        })
+        
+        // Process downloads if any found
+        if (downloads && downloads.length > 0) {
+          // Map downloads to items
+          for (const download of downloads) {
+            if (download.digital_product) {
+              downloadLinks.push({
+                token: download.token,
+                product_name: download.digital_product.name,
+                download_url: `${process.env.STORE_URL || 'http://localhost:9000'}/store/download/${download.token}`,
+                expires_at: download.expires_at,
+                download_count: download.download_count,
+                max_downloads: download.digital_product.max_downloads || -1
+              })
+            }
+          }
         }
+      } catch (downloadError) {
+        console.warn('[Order Details] Could not fetch digital downloads:', downloadError)
+        // Continue without digital downloads
       }
     }
     
@@ -72,7 +81,7 @@ export const GET = async (
       email: order.email,
       customer_id: order.customer_id,
       total: order.total || 0,
-      currency_code: order.currency_code || 'usd',
+      currency_code: order.currency_code || 'eur',
       created_at: order.created_at,
       status: order.status,
       items: order.items?.map((item: any) => ({

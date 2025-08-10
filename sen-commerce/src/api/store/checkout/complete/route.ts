@@ -50,23 +50,25 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       // Generate proper Medusa order number pattern
       const timestamp = Date.now()
       const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase()
-      const displayId = `SC-${randomSuffix}`
+      const displayIdString = `SC-${randomSuffix}`
+      // Use a smaller number for display_id to avoid integer overflow
+      const displayId = Math.floor(Math.random() * 999999)
       
-      // Create order data
+      // Create order data - mark as captured for sandbox testing
       const orderData = {
-        display_id: timestamp, // Use timestamp as numeric display_id
+        display_id: displayId, // Use smaller number to avoid integer overflow
         status: "pending",
         fulfillment_status: "not_fulfilled", 
-        payment_status: "captured",
+        payment_status: "captured", // Force captured for sandbox/testing
         total,
         subtotal,
         tax_total,
         shipping_total,
-        currency_code: "usd",
+        currency_code: req.body.currency_code || "eur",
         email: customer_email,
         customer_id: null, // Guest checkout
         metadata: {
-          display_number: displayId,
+          display_number: displayIdString,
           customer_name: customer_name || customer_email.split('@')[0],
           checkout_completed_at: new Date().toISOString()
         },
@@ -109,7 +111,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       console.log("[Checkout Complete] Creating order with data:", JSON.stringify(orderData, null, 2))
       
       // Create the order
-      order = await orderService.createOrders(orderData)
+      const orders = await orderService.createOrders(orderData)
+      order = Array.isArray(orders) ? orders[0] : orders
       orderId = order.id
       
       console.log(`[Checkout Complete] Order created in database: ${orderId}`)
@@ -117,67 +120,43 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     } catch (dbError) {
       console.error("[Checkout Complete] Failed to create order in database:", dbError)
       
-      // Fallback to mock order for now so checkout doesn't fail
-      orderId = `order_${timestamp}`
-      order = {
-        id: orderId,
-        display_id: timestamp,
-        status: "pending",
-        fulfillment_status: "not_fulfilled",
-        payment_status: "captured",
-        total: total,
-        subtotal: subtotal,
-        tax_total: tax_total,
-        shipping_total: shipping_total,
-        currency_code: "usd",
-        created_at: new Date().toISOString(),
-        email: customer_email,
-        customer_email,
-        customer_name: customer_name || customer_email.split('@')[0],
-        shipping_address,
-        payment_method,
-        metadata: {
-          display_number: displayId,
-          customer_name: customer_name || customer_email.split('@')[0],
-          checkout_completed_at: new Date().toISOString()
-        },
-        items: (cart_items || []).map((item: any) => {
-          const unitPrice = item.unit_price || item.price || item.total || 0
-          const quantity = item.quantity || 1
-          return {
-            ...item,
-            title: item.title || item.product_title || "Product",
-            quantity: quantity,
-            unit_price: unitPrice,
-            total: unitPrice * quantity,
-            thumbnail: item.thumbnail || item.product?.thumbnail,
-            fulfillment_type: item.metadata?.fulfillment_type || item.fulfillment_type || "standard",
-            product: {
-              title: item.product_title || item.title || "Product",
-              thumbnail: item.thumbnail || item.product?.thumbnail,
-              metadata: {
-                fulfillment_type: item.metadata?.fulfillment_type || item.fulfillment_type || "standard"
-              }
-            }
-          }
-        })
-      }
-      
-      console.log(`[Checkout Complete] Using fallback mock order: ${orderId}`)
+      // Return error instead of creating fake orders
+      return res.status(500).json({
+        error: "Order creation failed",
+        message: "Unable to create order in database. Please try again or contact support.",
+        details: dbError.message
+      })
     }
     
     console.log(`[Checkout Complete] Order created: ${orderId}`)
     console.log(`[Checkout Complete] Customer: ${customer_email}`)
     
-    // Create Printful order if order contains POD products
+    // Order successfully created in database
+    
+    // Create Printful order - force creation for all physical products in testing
     let printfulOrderCreated = false
-    const printfulItems = (cart_items || []).filter((item: any) => 
-      item.metadata?.fulfillment_type === 'printful_pod'
-    )
+    
+    // Log all items for debugging
+    console.log(`[Checkout Complete] All cart items:`, (cart_items || []).map(item => ({
+      title: item.title,
+      product_id: item.product_id,
+      fulfillment_type: item.metadata?.fulfillment_type || item.fulfillment_type,
+      product_metadata: item.product?.metadata
+    })))
+    
+    // Identify Printful items based on metadata
+    const printfulItems = (cart_items || []).filter((item: any) => {
+      const fulfillmentType = item.metadata?.fulfillment_type || item.fulfillment_type || item.product?.metadata?.fulfillment_type
+      console.log(`[Checkout Complete] Item ${item.title}: fulfillment_type = ${fulfillmentType}`)
+      return fulfillmentType === 'printful_pod'
+    })
+    
+    console.log(`[Checkout Complete] Found ${printfulItems.length} Printful POD items out of ${cart_items?.length || 0} total items`)
     
     if (printfulItems.length > 0) {
       try {
-        console.log(`[Checkout Complete] Creating Printful order for ${printfulItems.length} POD items`)
+        console.log(`[Checkout Complete] Creating Printful order for ${printfulItems.length} POD items (${cart_items?.length || 0} total items)`)
+        console.log(`[Checkout Complete] All items:`, (cart_items || []).map(i => ({ title: i.title, fulfillment: i.metadata?.fulfillment_type || i.fulfillment_type })))
         
         const printfulResponse = await fetch(`http://localhost:9000/admin/printful/orders/create`, {
           method: 'POST',
@@ -234,8 +213,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           total: item.total || (item.unit_price * item.quantity) || 0,
           fulfillmentType: item.fulfillment_type || item.metadata?.fulfillment_type || "standard"
         })),
-        totalAmount: order.total || total,
-        currencyCode: "usd"
+        totalAmount: order.total || cart_total || 2500,
+        currencyCode: order.currency_code || req.body.currency_code || "eur"
       }
       
       console.log("[Checkout Complete] Sending order confirmation email")

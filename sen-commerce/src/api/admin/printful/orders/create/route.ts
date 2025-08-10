@@ -181,34 +181,85 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.status(400).json({ error: "No valid Printful items to create order" })
     }
     
-    // Send order to Printful API v2
-    const PRINTFUL_API_KEY = process.env.PRINTFUL_API_KEY
-    if (!PRINTFUL_API_KEY) {
-      return res.status(500).json({ error: "Printful API key not configured" })
-    }
+    // Always send to real Printful API if API key is available
+    const PRINTFUL_API_KEY = process.env.PRINTFUL_API_TOKEN || process.env.PRINTFUL_API_KEY
     
-    console.log("[PRINTFUL ORDER] Sending order to Printful:", JSON.stringify(printfulOrder, null, 2))
+    console.log("[PRINTFUL ORDER] Printful order prepared:")
+    console.log("- Recipients:", printfulOrder.recipient)
+    console.log("- Items count:", printfulOrder.items?.length)
+    console.log("- Items:", printfulOrder.items?.map(item => ({
+      product_id: item.product_id,
+      variant_id: item.variant_id,
+      quantity: item.quantity,
+      name: item.name
+    })))
+    console.log("- Retail costs:", printfulOrder.retail_costs)
     
-    const printfulResponse = await fetch('https://api.printful.com/orders', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PRINTFUL_API_KEY}`,
+    let printfulOrderData: any
+    
+    if (PRINTFUL_API_KEY) {
+      // Call real Printful API
+      console.log("[PRINTFUL ORDER] Sending order to Printful API...")
+      
+      // Use Printful API v2 with proper authentication
+      const apiUrl = process.env.PRINTFUL_API_URL || 'https://api.printful.com'
+      
+      console.log("[PRINTFUL ORDER] Using API URL:", apiUrl)
+      console.log("[PRINTFUL ORDER] API Key exists:", !!PRINTFUL_API_KEY)
+      console.log("[PRINTFUL ORDER] Store ID:", process.env.PRINTFUL_STORE_ID || 'not set')
+      
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(printfulOrder)
-    })
-    
-    const printfulResult = await printfulResponse.json()
-    
-    if (!printfulResponse.ok) {
-      console.error("[PRINTFUL ORDER] Failed to create Printful order:", printfulResult)
-      return res.status(printfulResponse.status).json({
-        error: "Failed to create Printful order",
-        details: printfulResult
+      }
+      
+      // For Printful Beta API v2, use Bearer token format
+      headers['Authorization'] = `Bearer ${PRINTFUL_API_KEY}`
+      
+      // Add store ID if provided
+      if (process.env.PRINTFUL_STORE_ID) {
+        headers['X-PF-Store-Id'] = process.env.PRINTFUL_STORE_ID
+      }
+      
+      console.log("[PRINTFUL ORDER] Request headers:", Object.keys(headers))
+      
+      const printfulResponse = await fetch(`${apiUrl}/orders`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(printfulOrder)
+      })
+      
+      const printfulResult = await printfulResponse.json()
+      
+      console.log("[PRINTFUL ORDER] Response status:", printfulResponse.status)
+      console.log("[PRINTFUL ORDER] Response headers:", Object.fromEntries(printfulResponse.headers))
+      
+      if (!printfulResponse.ok) {
+        console.error("[PRINTFUL ORDER] Failed to create Printful order:")
+        console.error("Status:", printfulResponse.status)
+        console.error("Response:", printfulResult)
+        
+        return res.status(printfulResponse.status).json({
+          error: "Failed to create Printful order",
+          status: printfulResponse.status,
+          printful_error: printfulResult,
+          debugging: {
+            api_url: apiUrl,
+            has_api_key: !!PRINTFUL_API_KEY,
+            api_key_format: 'Bearer',
+            has_store_id: !!process.env.PRINTFUL_STORE_ID,
+            order_items: printfulOrder.items?.length || 0
+          }
+        })
+      }
+      
+      printfulOrderData = printfulResult.result
+    } else {
+      console.log("[PRINTFUL ORDER] No Printful API key configured")
+      return res.status(500).json({
+        error: "Printful API key not configured",
+        details: "Please set PRINTFUL_API_KEY environment variable"
       })
     }
-    
-    const printfulOrderData = printfulResult.result
     
     console.log(`[PRINTFUL ORDER] Successfully created Printful order: ${printfulOrderData.id}`)
     

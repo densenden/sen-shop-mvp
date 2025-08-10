@@ -39,11 +39,17 @@ export const OrderConfirmationEmail = ({
     { title: 'Premium Product', quantity: 1, unitPrice: 2999, fulfillmentType: 'digital' }
   ],
   totalAmount = 2999,
-  currencyCode = 'USD',
+  currencyCode = 'EUR',
   storeUrl = 'https://shop.sen.studio'
 }: OrderConfirmationEmailProps) => {
   
-  const formatPrice = (price: number) => `$${(price / 100).toFixed(2)}`
+  const formatPrice = (price: number, currency: string = 'EUR') => {
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase()
+    })
+    return formatter.format(price / 100)
+  }
   const hasDigitalProducts = items.some(item => item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download')
   const hasPrintProducts = items.some(item => item.fulfillmentType === 'printful_pod')
 
@@ -79,7 +85,7 @@ export const OrderConfirmationEmail = ({
           </Text>
           
           <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
-            <strong>Total:</strong> {formatPrice(totalAmount)} {currencyCode.toUpperCase()}
+            <strong>Total:</strong> {formatPrice(totalAmount, currencyCode)}
           </Text>
         </Section>
 
@@ -113,13 +119,13 @@ export const OrderConfirmationEmail = ({
                   </Text>
                   <Text className={`text-${emailStyles.colors.text.light} text-sm`}>
                     {item.fulfillmentType === 'digital' && '📱 Digital Download'}
-                    {item.fulfillmentType === 'printful_pod' && '🖨️ Print-on-Demand'}
+                    {item.fulfillmentType === 'printful_pod' && '📦 Physical Product'}
                     {!item.fulfillmentType && '📦 Product'}
                   </Text>
                 </Column>
                 <Column className="text-right">
                   <Text className={`text-${emailStyles.colors.text.secondary} font-medium`}>
-                    {formatPrice(item.unitPrice * item.quantity)}
+                    {formatPrice(item.unitPrice * item.quantity, currencyCode)}
                   </Text>
                 </Column>
               </Row>
@@ -138,12 +144,12 @@ export const OrderConfirmationEmail = ({
           </Section>
         )}
 
-        {/* Print Products Notice */}
+        {/* Physical Products Notice */}
         {hasPrintProducts && (
           <Section className={`bg-green-50 p-4 rounded-lg ${emailStyles.layout.sectionSmall}`}>
-            <Text className="text-green-800 font-semibold mb-2">🖨️ Print-on-Demand Items</Text>
+            <Text className="text-green-800 font-semibold mb-2">📦 Physical Items</Text>
             <Text className="text-green-700 text-sm">
-              Your print-on-demand items will be processed and shipped within 2-3 business days. You'll receive tracking information once shipped.
+              Your physical items will be processed and shipped within 2-3 business days. You'll receive tracking information once shipped.
             </Text>
           </Section>
         )}

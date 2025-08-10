@@ -76,34 +76,14 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
                 {
                   id: `${product.id}-default`,
                   title: "Default",
-                  prices: [{ amount: 2500, currency_code: "usd" }]
+                  prices: [{ amount: 2500, currency_code: "eur" }]
                 }
               ]
             }))
           } else {
-            // If no products found, create mock ones
-            products = [
-              {
-                id: "t-shirt-with-artwork",
-                title: "T-Shirt with this Artwork",
-                handle: "t-shirt-with-artwork",
-                description: "High-quality cotton t-shirt featuring this artwork",
-                thumbnail: null,
-                images: [],
-                variants: [
-                  {
-                    id: "variant-1",
-                    title: "S",
-                    prices: [
-                      { amount: 2500, currency_code: "usd" }
-                    ]
-                  }
-                ],
-                metadata: {
-                  artwork_id: artwork_id
-                }
-              }
-            ]
+            // No products found, return empty array instead of fake data
+            console.log('[Store Products] No products found for artwork:', artwork_id)
+            products = []
           }
         } catch (fallbackError) {
           console.error("Fallback product fetch failed:", fallbackError)
@@ -158,17 +138,18 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           firstProduct: result?.[0] ? { id: result[0].id, title: result[0].title, status: result[0].status } : null
         })
         
-        // Add default pricing for variants that don't have it
+        // Add calculated EUR pricing from price_set data
         if (result && result.length > 0) {
           for (const product of result) {
             if (product.variants && product.variants.length > 0) {
               for (const variant of product.variants) {
-                // Add calculated_price for storefront display
-                if (!variant.calculated_price) {
-                  variant.calculated_price = {
-                    amount: 2000, // Default price of 20.00
-                    currency_code: "eur"
-                  }
+                // Get EUR price from price_set, prioritize EUR currency
+                const eurPrice = variant.price_set?.prices?.find(p => p.currency_code === 'eur')
+                const fallbackPrice = variant.price_set?.prices?.[0]
+                
+                variant.calculated_price = {
+                  amount: eurPrice?.amount || fallbackPrice?.amount || 10, // Default to 10 cents (€0.10) if no price found
+                  currency_code: 'eur'
                 }
               }
             }
@@ -180,9 +161,9 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           // Get price from first variant with proper price set data
           const firstVariant = product.variants?.[0]
           const prices = firstVariant?.price_set?.prices || []
-          const defaultPrice = prices.find((p: any) => p.currency_code === 'usd') || prices[0]
+          const defaultPrice = prices.find((p: any) => p.currency_code === 'eur') || prices[0]
           const price = defaultPrice?.amount || 2000
-          const currency_code = defaultPrice?.currency_code || 'usd'
+          const currency_code = 'eur' // Force EUR for all products
           
           console.log(`[Store Products] Product ${product.title}: price=${price}, currency=${currency_code}, prices=${prices.length}`)
           
