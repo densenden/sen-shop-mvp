@@ -111,7 +111,23 @@ export default function OrderSuccessPage() {
                 {orderDetails.items.map((item: any, index: number) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      {item.fulfillment_type === 'digital' ? (
+                      {item.thumbnail ? (
+                        item.product_handle ? (
+                          <Link href={`/products/${item.product_handle}`}>
+                            <img 
+                              src={item.thumbnail}
+                              alt={item.title}
+                              className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:border-blue-500 transition-colors cursor-pointer"
+                            />
+                          </Link>
+                        ) : (
+                          <img 
+                            src={item.thumbnail}
+                            alt={item.title}
+                            className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                          />
+                        )
+                      ) : item.fulfillment_type === 'digital' ? (
                         <div className="p-2 bg-blue-100 rounded-lg">
                           <Download className="h-6 w-6 text-blue-600" />
                         </div>
@@ -121,17 +137,23 @@ export default function OrderSuccessPage() {
                         </div>
                       )}
                       <div>
-                        <h3 className="font-medium text-gray-900">{item.title}</h3>
+                        {item.product_handle ? (
+                          <Link href={`/products/${item.product_handle}`}>
+                            <h3 className="font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer">{item.title}</h3>
+                          </Link>
+                        ) : (
+                          <h3 className="font-medium text-gray-900">{item.title}</h3>
+                        )}
                         <p className="text-sm text-gray-600">
                           {item.fulfillment_type === 'digital' ? 'Digital Download' : 
                            item.fulfillment_type === 'printful_pod' ? 'Print on Demand' : 'Physical Product'}
                         </p>
-                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        <p className="text-xs text-gray-500">Qty: {item.quantity || 1}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-gray-900">
-                        {formatPrice(item.total || item.unit_price, orderDetails.currency_code)}
+                        {formatPrice(item.total || item.unit_price || 0, orderDetails.currency_code)}
                       </p>
                     </div>
                   </div>

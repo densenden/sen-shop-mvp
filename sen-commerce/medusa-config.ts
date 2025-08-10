@@ -5,6 +5,7 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd());
 export default defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    redisUrl: process.env.REDIS_URL,
     http: {
       storeCors: process.env.STORE_CORS!,
       adminCors: process.env.ADMIN_CORS!,
@@ -19,6 +20,22 @@ export default defineConfig({
     outDir: "./build"
   },
   modules: [
+    {
+      resolve: "@medusajs/medusa/cache-redis",
+      options: { 
+        redisUrl: process.env.CACHE_REDIS_URL,
+        ttl: 30, // 30 seconds default cache expiration
+        namespace: "medusa:"
+      },
+    },
+    {
+      resolve: "@medusajs/medusa/stock-location",
+      options: {
+        database: {
+          clientUrl: process.env.DATABASE_URL,
+        }
+      }
+    },
     {
       resolve: "./src/modules/artwork-module",
       alias: "artworkModuleService",
