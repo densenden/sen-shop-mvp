@@ -43,30 +43,33 @@ export const GET = async (
     // Get download links for digital products
     const downloadLinks: any[] = []
     
-    if (order.items) {
+    // Only check for digital downloads if there are items with digital fulfillment
+    const hasDigitalItems = order.items?.some((item: any) => 
+      item.metadata?.fulfillment_type === 'digital_download' ||
+      item.fulfillment_type === 'digital_download'
+    )
+    
+    if (hasDigitalItems) {
       // Get all download access records for this order
       try {
         const downloads = await digitalProductService.listDigitalProductDownloads({
           order_id: orderId,
           is_active: true
-        }, {
-          relations: ["digital_product"]
         })
         
         // Process downloads if any found
         if (downloads && downloads.length > 0) {
           // Map downloads to items
           for (const download of downloads) {
-            if (download.digital_product) {
-              downloadLinks.push({
-                token: download.token,
-                product_name: download.digital_product.name,
-                download_url: `${process.env.STORE_URL || 'http://localhost:9000'}/store/download/${download.token}`,
-                expires_at: download.expires_at,
-                download_count: download.download_count,
-                max_downloads: download.digital_product.max_downloads || -1
-              })
-            }
+            // Use download properties directly without relation
+            downloadLinks.push({
+              token: download.token,
+              product_name: download.product_name || 'Digital Product',
+              download_url: `${process.env.STORE_URL || 'http://localhost:9000'}/store/download/${download.token}`,
+              expires_at: download.expires_at,
+              download_count: download.download_count,
+              max_downloads: download.max_downloads || -1
+            })
           }
         }
       } catch (downloadError) {

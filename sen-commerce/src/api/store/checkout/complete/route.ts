@@ -102,7 +102,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
               fulfillment_type: item.metadata?.fulfillment_type || item.fulfillment_type || "standard",
               artwork_id: item.metadata?.artwork_id,
               product_title: item.title || item.product_title || "Product",
-              thumbnail: item.thumbnail || item.product?.thumbnail
+              thumbnail: item.thumbnail || item.product?.thumbnail,
+              printful_product_id: item.metadata?.printful_product_id || item.product?.metadata?.printful_product_id,
+              // Preserve all original metadata from the product
+              ...(item.product?.metadata || {}),
+              ...(item.metadata || {})
             }
           }
         })
@@ -158,11 +162,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         console.log(`[Checkout Complete] Creating Printful order for ${printfulItems.length} POD items (${cart_items?.length || 0} total items)`)
         console.log(`[Checkout Complete] All items:`, (cart_items || []).map(i => ({ title: i.title, fulfillment: i.metadata?.fulfillment_type || i.fulfillment_type })))
         
-        const printfulResponse = await fetch(`http://localhost:9000/admin/printful/orders/create`, {
+        const publishableKey = process.env.MEDUSA_PUBLISHABLE_KEY || 'pk_0b024fc90febe17f54a9359f1e0d24141802d6e4b951bf227649695ee31895e0'
+        
+        const printfulResponse = await fetch(`http://localhost:9000/store/printful/orders/create`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-medusa-admin-token': 'admin_token' // Simple admin authentication
+            'x-publishable-api-key': publishableKey
           },
           body: JSON.stringify({
             medusa_order_id: orderId,
