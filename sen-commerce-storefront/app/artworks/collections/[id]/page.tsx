@@ -72,11 +72,11 @@ export default function CollectionDetailPage() {
     }
   }
 
-  const formatPrice = (price: number, currency: string = 'usd') => {
+  const formatPrice = (price: number, currency: string = 'EUR') => {
     const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
-    const safeCurrency = (currency || 'usd').toUpperCase()
+    const safeCurrency = (currency || 'EUR').toUpperCase()
     
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('de-DE', {
       style: 'currency',
       currency: safeCurrency
     }).format(safePrice / 100)

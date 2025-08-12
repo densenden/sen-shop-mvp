@@ -1,6 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
-import { IProductModuleService } from "@medusajs/types"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { ARTWORK_MODULE } from "../../../../modules/artwork-module"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -9,7 +8,6 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     console.log("Fetching artwork collection for store:", id)
     
     const artworkModuleService = req.scope.resolve(ARTWORK_MODULE) as any
-    const productModuleService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
     
     // Get the specific collection
     const collection = await artworkModuleService.retrieveArtworkCollection(id)
@@ -26,9 +24,19 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       })
       console.log("Artworks found:", artworks?.length || 0)
       
-      // Get all products
-      const allProducts = await productModuleService.listProducts({}, {
-        relations: ["variants"]
+      // Get all products with pricing using query service for better price data
+      const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+      const { data: allProducts } = await query.graph({
+        entity: 'product',
+        fields: [
+          'id',
+          'title',
+          'handle',
+          'thumbnail',
+          'variants.*',
+          'variants.price_set.*',
+          'variants.price_set.prices.*'
+        ]
       })
       console.log("Products found:", allProducts?.length || 0)
       
@@ -40,12 +48,20 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           for (const productId of artwork.product_ids) {
             const product = allProducts.find(p => p.id === productId)
             if (product) {
+              // Get price from first variant with proper price set data
+              const firstVariant = product.variants?.[0]
+              const prices = firstVariant?.price_set?.prices || []
+              const eurPrice = prices.find((p: any) => p.currency_code === 'eur') || prices[0]
+              const price = eurPrice?.amount || 0
+              const currencyCode = 'eur' // Force EUR
+              
               artworkProducts.push({
                 id: product.id,
                 title: product.title,
                 handle: product.handle || product.id,
                 thumbnail: product.thumbnail,
-                // Don't add mock pricing - let the frontend handle pricing display
+                price: price,
+                currency_code: currencyCode
               })
             }
           }
@@ -70,6 +86,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       })
       
     } catch (artworkError) {
+      console.error("Error fetching artworks:", artworkError)
       console.log("Could not fetch artworks, returning collection without artworks:", artworkError.message)
       res.json({
         collection: {

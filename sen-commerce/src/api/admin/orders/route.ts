@@ -1,28 +1,42 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
+import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   console.log("[Admin Orders] Fetching orders list")
   
   try {
-    const orderService = req.scope.resolve(Modules.ORDER)
+    const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+    
+    // Use query service to get orders with summary data
+    const { data: ordersList } = await query.graph({
+      entity: "order",
+      fields: [
+        "id",
+        "display_id",
+        "status", 
+        "payment_status",
+        "fulfillment_status",
+        "created_at",
+        "updated_at",
+        "email",
+        "currency_code",
+        "metadata",
+        "summary.*",
+        "summary.totals"
+      ],
+      pagination: {
+        take: 50,
+        skip: 0
+      }
+    })
     
     // Try to fetch orders from database
     let orders = []
     try {
-      const ordersList = await orderService.listOrders(
-        {},
-        {
-          take: 50,
-          skip: 0,
-          relations: ['items']
-        }
-      )
+      // Sort by creation date (newest first)  
+      const sortedOrders = (ordersList || []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       
-      // Sort by creation date (newest first)
-      ordersList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      
-      orders = ordersList.map(order => {
+      orders = sortedOrders.map(order => {
         // Format timestamp for better display
         const createdDate = new Date(order.created_at)
         const formattedDateTime = createdDate.toLocaleString('de-DE', {
@@ -35,6 +49,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           timeZone: 'Europe/Berlin'
         })
         
+        // Get total from summary if available
+        const orderTotal = order.summary?.totals?.current_order_total || 0
+        
         return {
           id: order.id,
           display_id: order.display_id,
@@ -44,8 +61,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           email: order.email,
           payment_status: order.payment_status || 'captured',
           fulfillment_status: order.fulfillment_status || 'not_fulfilled',
-          total: order.total || 0,
-          amount: order.total || 0, // Duplicate for compatibility
+          total: orderTotal,
+          amount: orderTotal, // Duplicate for compatibility
           currency_code: 'EUR', // Force EUR for admin display
           formatted_date: formattedDateTime, // Add formatted date for display
           // Add payment collection structure that admin UI expects
@@ -53,14 +70,14 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
             {
               id: `payment_col_${order.id}`,
               status: 'captured',
-              amount: order.total || 0,
+              amount: orderTotal,
               currency_code: 'EUR'
             }
           ],
         payments: [
           {
             id: `payment_${order.id}`,
-            amount: order.total || 0,
+            amount: orderTotal,
             currency_code: 'EUR',
             provider_id: 'stripe',
             captured_at: order.created_at,

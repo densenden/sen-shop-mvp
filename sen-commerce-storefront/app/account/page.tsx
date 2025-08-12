@@ -110,57 +110,40 @@ export default function AccountPage() {
   const checkAuth = async () => {
     setLoading(true)
     try {
-      // For now, create a mock user to demonstrate the account page
-      const mockUser: UserData = {
-        id: 'user_mock',
-        email: 'demo@sencommerce.com',
-        first_name: 'Demo',
-        last_name: 'User',
-        phone: '+1234567890',
-        created_at: '2025-01-01T00:00:00Z',
-        metadata: {}
-      }
+      // Check for stored user data
+      const storedUser = localStorage.getItem('user')
+      const authToken = localStorage.getItem('authToken')
       
-      // Create some mock orders to show
-      const mockOrders: Order[] = [
-        {
-          id: 'order_demo1',
-          display_id: 12345,
-          status: 'pending',
-          fulfillment_status: 'not_fulfilled',
-          payment_status: 'captured',
-          total: 2500,
-          subtotal: 2100,
-          tax_total: 200,
-          shipping_total: 200,
-          currency_code: 'usd',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          items: [
-            {
-              id: 'item_1',
-              title: 'Sample Product',
-              quantity: 1,
-              unit_price: 2100,
-              total: 2100,
-              product_id: 'prod_1',
-              variant_id: 'var_1',
-              metadata: {
-                fulfillment_type: 'printful_pod'
-              }
-            }
-          ]
+      if (storedUser) {
+        const userData = JSON.parse(storedUser)
+        
+        // Use real user data
+        const user: UserData = {
+          id: userData.id || userData.uid || 'user_' + Date.now(),
+          email: userData.email || 'discord@deniskreuzer.dk',
+          first_name: userData.first_name || userData.name?.split(' ')[0] || 'Denis',
+          last_name: userData.last_name || userData.name?.split(' ').slice(1).join(' ') || 'Kreuzer',
+          phone: userData.phone || '',
+          created_at: userData.created_at || new Date().toISOString(),
+          metadata: userData.metadata || {}
         }
-      ]
-
-      setUser(mockUser)
-      setOrders(mockOrders)
-      setProfileForm({
-        first_name: mockUser.first_name,
-        last_name: mockUser.last_name,
-        phone: mockUser.phone || '',
-        email: mockUser.email
-      })
+        
+        setUser(user)
+        setProfileForm({
+          first_name: user.first_name,
+          last_name: user.last_name,
+          phone: user.phone || '',
+          email: user.email
+        })
+        
+        // Fetch real orders for this user
+        await fetchUserOrders(user.email)
+        
+      } else {
+        // No user logged in, redirect to login
+        router.push('/login')
+        return
+      }
       
       // Load favorites from localStorage
       const savedFavorites = localStorage.getItem('favorites')
@@ -170,6 +153,7 @@ export default function AccountPage() {
       
     } catch (error) {
       console.error('Auth check failed:', error)
+      router.push('/login')
     } finally {
       setLoading(false)
     }
@@ -201,6 +185,72 @@ export default function AccountPage() {
     }
   }
 
+  const fetchUserOrders = async (email: string) => {
+    try {
+      console.log(`[Account] Fetching orders for user email: ${email}`)
+      
+      // Get order IDs from localStorage for this specific user email
+      const userOrdersKey = `userOrders_${email}`
+      const orderIds = localStorage.getItem(userOrdersKey)
+      let userOrderIds: string[] = []
+      if (orderIds) {
+        userOrderIds = JSON.parse(orderIds)
+        console.log(`[Account] Found ${userOrderIds.length} order IDs in localStorage for ${email}:`, userOrderIds)
+      }
+      
+      // Try to fetch orders from the account orders API
+      let apiUrl = `${MEDUSA_API_CONFIG.baseUrl}/store/account/orders?customer_email=${encodeURIComponent(email)}`
+      if (userOrderIds.length > 0) {
+        apiUrl += `&order_ids=${userOrderIds.join(',')}`
+      }
+      
+      const response = await fetch(apiUrl, {
+        headers: getHeaders()
+      })
+      
+      let orders: Order[] = []
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Orders from API:', data)
+        orders = data.orders || []
+      } else {
+        console.error('Failed to fetch orders from API:', response.status)
+      }
+      
+      // Also try to get orders by ID from localStorage as fallback/supplement
+      for (const orderId of userOrderIds) {
+        try {
+          const detailResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/orders/${orderId}/details`, {
+            headers: getHeaders()
+          })
+          if (detailResponse.ok) {
+            const detailData = await detailResponse.json()
+            if (detailData.order) {
+              // Check if we already have this order from the API call
+              const existingOrder = orders.find(o => o.id === orderId)
+              if (!existingOrder) {
+                console.log(`[Account] Adding order from localStorage: ${orderId}`)
+                orders.push(detailData.order)
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch order ${orderId}:`, err)
+        }
+      }
+      
+      // Sort by creation date (newest first)
+      orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      
+      console.log(`[Account] Final orders count: ${orders.length}`)
+      setOrders(orders)
+    } catch (error) {
+      console.error('Error fetching user orders:', error)
+      setOrders([])
+    }
+  }
+  
   const fetchOrders = async (token: string) => {
     try {
       const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/orders`, {
@@ -287,6 +337,20 @@ export default function AccountPage() {
   }
 
   const handleLogout = () => {
+    // Clear all user-specific data
+    const currentUser = localStorage.getItem('user')
+    if (currentUser) {
+      try {
+        const userData = JSON.parse(currentUser)
+        if (userData.email) {
+          // Clear user-specific orders
+          localStorage.removeItem(`userOrders_${userData.email}`)
+        }
+      } catch (e) {
+        console.error('Error clearing user data:', e)
+      }
+    }
+    
     localStorage.removeItem('authToken')
     localStorage.removeItem('user')
     router.push('/')
@@ -325,7 +389,8 @@ export default function AccountPage() {
     })
   }
 
-  const getOrderStatusColor = (status: string) => {
+  const getOrderStatusColor = (status: string | null | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800'
     switch (status.toLowerCase()) {
       case 'completed':
         return 'bg-green-100 text-green-800'
@@ -340,7 +405,8 @@ export default function AccountPage() {
     }
   }
 
-  const getFulfillmentStatusColor = (status: string) => {
+  const getFulfillmentStatusColor = (status: string | null | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800'
     switch (status.toLowerCase()) {
       case 'fulfilled':
         return 'bg-green-100 text-green-800'
@@ -355,7 +421,8 @@ export default function AccountPage() {
     }
   }
 
-  const getPaymentStatusIcon = (status: string) => {
+  const getPaymentStatusIcon = (status: string | undefined) => {
+    if (!status) return <RefreshCw className="h-4 w-4 text-gray-600" />
     switch (status.toLowerCase()) {
       case 'captured':
         return <CheckCircle className="h-4 w-4 text-green-600" />
@@ -558,10 +625,10 @@ export default function AccountPage() {
                               <div className="text-sm text-gray-600">{formatDate(order.created_at)}</div>
                               <div className="flex items-center space-x-2 mt-1">
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getOrderStatusColor(order.status)}`}>
-                                  {order.status}
+                                  {order.status || 'Unknown'}
                                 </span>
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                  {order.fulfillment_status}
+                                  {order.fulfillment_status || 'Not fulfilled'}
                                 </span>
                               </div>
                             </div>
@@ -572,7 +639,7 @@ export default function AccountPage() {
                               <div className="flex items-center justify-end space-x-1 mt-1">
                                 {getPaymentStatusIcon(order.payment_status)}
                                 <span className="text-sm text-gray-600 capitalize">
-                                  {order.payment_status}
+                                  {order.payment_status || 'pending'}
                                 </span>
                               </div>
                             </div>
@@ -632,10 +699,10 @@ export default function AccountPage() {
                               </div>
                               <div className="flex items-center justify-end space-x-2 mt-1">
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getOrderStatusColor(order.status)}`}>
-                                  {order.status}
+                                  {order.status || 'Unknown'}
                                 </span>
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                  {order.fulfillment_status}
+                                  {order.fulfillment_status || 'Not fulfilled'}
                                 </span>
                               </div>
                             </div>

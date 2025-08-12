@@ -166,14 +166,14 @@ export default function CheckoutPage() {
     }
   }
 
-  const formatPrice = (amount: number, currencyCode: string = 'USD') => {
+  const formatPrice = (amount: number, currencyCode: string = 'EUR') => {
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currencyCode.toUpperCase(),
       }).format(amount / 100)
     } catch (error) {
-      return `$${(amount / 100).toFixed(2)}`
+      return `€${(amount / 100).toFixed(2)}`
     }
   }
 
@@ -255,6 +255,7 @@ export default function CheckoutPage() {
             }
           })),
           cart_total: cart.total,
+          currency_code: cart.currency_code,
         }),
       })
 
@@ -264,6 +265,33 @@ export default function CheckoutPage() {
         orderId = orderData.order?.id || orderId;
       }
 
+      // Store order ID associated with customer email
+      const userOrdersKey = `userOrders_${customerInfo.email}`
+      const userOrders = JSON.parse(localStorage.getItem(userOrdersKey) || '[]')
+      userOrders.push(orderId)
+      localStorage.setItem(userOrdersKey, JSON.stringify(userOrders))
+      
+      // Store/update customer email for account matching
+      const currentUser = localStorage.getItem('user')
+      if (currentUser) {
+        const userData = JSON.parse(currentUser)
+        userData.email = customerInfo.email  // Update with checkout email
+        userData.first_name = customerInfo.first_name
+        userData.last_name = customerInfo.last_name
+        userData.phone = customerInfo.phone
+        localStorage.setItem('user', JSON.stringify(userData))
+      } else {
+        // Create user data from checkout info
+        const userData = {
+          email: customerInfo.email,
+          first_name: customerInfo.first_name,
+          last_name: customerInfo.last_name,
+          phone: customerInfo.phone,
+          created_at: new Date().toISOString()
+        }
+        localStorage.setItem('user', JSON.stringify(userData))
+      }
+      
       // Clear cart and redirect to order success with order ID
       await cartService.clearCart()
       router.push(`/order-success?order=${orderId}&total=${cart.total}&currency=${cart.currency_code}`)
