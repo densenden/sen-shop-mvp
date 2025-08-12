@@ -1,4 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { Modules } from "@medusajs/framework/utils"
 import jwt from "jsonwebtoken"
 import EmailService from "../../../../services/email-service"
 
@@ -12,16 +13,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
     }
 
-    const customerService = req.scope.resolve("customerModule")
+    const customerModuleService = req.scope.resolve(Modules.CUSTOMER)
+    
+    // Check if customer already exists
+    const existingCustomers = await customerModuleService.listCustomers({
+      email: email
+    })
+
+    if (existingCustomers && existingCustomers.length > 0) {
+      return res.status(409).json({
+        error: "An account with this email already exists"
+      })
+    }
     
     // Create customer with account
-    const customer = await customerService.createCustomer({
+    const customer = await customerModuleService.createCustomers({
       email,
-      password,
       first_name,
       last_name,
       phone,
       has_account: true,
+      metadata: {
+        password_hash: password // TODO: Hash this properly
+      }
     })
 
     // Generate JWT token

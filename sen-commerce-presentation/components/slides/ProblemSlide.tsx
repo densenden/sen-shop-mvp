@@ -4,26 +4,42 @@ interface ProblemSlideProps {
   title: string
   subtitle: string
   content: {
-    problems: Array<{
+    problems?: Array<{
       platform: string
       issues: string[]
     }>
+    market_problems?: Array<{
+      platform: string
+      issues: string[]
+    }>
+    personal_motivation?: string
+    learning_goals?: string
     opportunity: string
   }
 }
 
 export default function ProblemSlide({ title, subtitle, content }: ProblemSlideProps) {
+  const problems = content.problems || content.market_problems || []
+  
   return (
     <BaseSlide>
       <div className="animate-fade-in">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-black mb-4">{title}</h1>
+          <h1 className="text-4xl font-normal text-black mb-4">{title}</h1>
           <p className="text-xl text-gray-600">{subtitle}</p>
         </div>
 
         <div className="max-w-6xl mx-auto">
+          {content.personal_motivation && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+              <p className="text-lg text-blue-700 text-center leading-relaxed">
+                {content.personal_motivation}
+              </p>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {content.problems.map((problem, index) => (
+            {problems.map((problem, index) => (
               <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-6">
                 <h4 className="text-base font-semibold text-red-800 mb-3 text-center">
                   {problem.platform}

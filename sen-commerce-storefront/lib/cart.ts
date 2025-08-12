@@ -201,6 +201,7 @@ class CartService {
       } else {
         console.log('Adding new item to cart')
         // Add new item
+        const variant = product?.variants?.find((v: any) => v.id === variantId)
         const newItem: CartItem = {
           id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           cart_id: cart.id,
@@ -211,28 +212,35 @@ class CartService {
           quantity: quantity,
           unit_price: (() => {
             const variant = product?.variants?.find((v: any) => v.id === variantId)
-            // Try multiple price locations
-            let price = variant?.calculated_price?.amount || 
+            // Use calculated_price for EUR pricing, fallback to price_set for other currencies
+            let price = variant?.calculated_price?.amount ||
+                       variant?.price_set?.prices?.find(p => p.currency_code === 'eur')?.amount ||
+                       variant?.price_set?.prices?.[0]?.amount ||
                        variant?.prices?.[0]?.amount ||
                        variant?.price?.amount ||
-                       2000
+                       1000
             
             console.log('Price extraction for variant:', {
               variantId,
               calculatedPrice: variant?.calculated_price,
+              priceSet: variant?.price_set,
               prices: variant?.prices,
               extractedPrice: price
             })
             
-            return typeof price === 'number' && !isNaN(price) ? price : 2000
+            return typeof price === 'number' && !isNaN(price) ? price : 1000
           })(),
           total: 0,
-          currency_code: 'usd',
+          currency_code: 'eur',
+          metadata: {
+            fulfillment_type: product?.metadata?.fulfillment_type || 'standard'
+          },
           product: product ? {
             id: product.id,
             title: product.title,
             handle: product.handle,
-            thumbnail: product.thumbnail
+            thumbnail: product.thumbnail,
+            metadata: product.metadata
           } : undefined
         }
         newItem.total = newItem.unit_price * quantity
@@ -261,7 +269,7 @@ class CartService {
     console.log('Creating new local cart')
     const cart: Cart = {
       id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      currency_code: 'usd',
+      currency_code: 'eur',
       items: [],
       subtotal: 0,
       tax_total: 0,
@@ -434,9 +442,9 @@ class CartService {
 export const cartService = new CartService()
 
 // Utility functions
-export const formatPrice = (price: number, currency: string = 'usd'): string => {
+export const formatPrice = (price: number, currency: string = 'eur'): string => {
   const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
-  const safeCurrency = (currency || 'usd').toUpperCase()
+  const safeCurrency = (currency || 'eur').toUpperCase()
   
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

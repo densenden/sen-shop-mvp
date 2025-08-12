@@ -18,7 +18,7 @@ export default function DiagramSlide({ title, subtitle, content }: DiagramSlideP
     <BaseSlide>
       <div className="animate-fade-in">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-black mb-4">{title}</h1>
+          <h1 className="text-4xl font-normal text-black mb-4">{title}</h1>
           <p className="text-xl text-gray-600">{subtitle}</p>
         </div>
 
@@ -27,10 +27,6 @@ export default function DiagramSlide({ title, subtitle, content }: DiagramSlideP
           
           {/* Architecture Diagram */}
           <div className="bg-white border-2 border-gray-200 rounded-lg p-8">
-            <div className="text-center font-bold text-lg mb-6 text-gray-800 border-b pb-4">
-              SenShop MVP Architecture
-            </div>
-            
             <div className="grid grid-cols-1 gap-6">
               {content.components.map((component, index) => (
                 <div key={index} className="border border-gray-300 rounded-lg p-6">

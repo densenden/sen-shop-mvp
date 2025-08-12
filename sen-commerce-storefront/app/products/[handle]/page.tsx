@@ -36,6 +36,12 @@ interface ProductVariant {
     amount: number
     currency_code: string
   }
+  price_set?: {
+    prices?: Array<{
+      amount: number
+      currency_code: string
+    }>
+  }
   prices?: Array<{
     amount: number
     currency_code: string
@@ -155,10 +161,15 @@ export default function ProductPage() {
       ...productData,
       thumbnail: productData.thumbnail,
       images: productData.images?.map((img: any) => typeof img === 'string' ? img : img.url) || [productData.thumbnail],
-      variants: productData.variants?.length > 0 ? productData.variants : [{
+      variants: productData.variants?.length > 0 ? productData.variants.map((v: any) => ({
+        ...v,
+        price_set: v.price_set, // Ensure price_set is preserved
+        price: v.price || v.price_set?.prices?.[0]?.amount || productData.price || 0
+      })) : [{
         id: `${productData.id}-default`,
         title: 'Default',
-        price: productData.price || 2000,
+        price: productData.price || 0,
+        price_set: productData.price_set,
         calculated_price: productData.calculated_price,
         prices: productData.prices,
         sku: productData.handle,
@@ -297,24 +308,40 @@ export default function ProductPage() {
   const formatPrice = (variant: ProductVariant | null, product: Product) => {
     if (!variant) return '$0.00'
     
-    const price = variant.calculated_price?.amount || 
+    // Use calculated_price for EUR pricing, fallback to price_set for other currencies  
+    const price = variant.calculated_price?.currency_code === 'eur' ? variant.calculated_price.amount :
+                  variant.price_set?.prices?.[0]?.amount ||
                   variant.prices?.[0]?.amount || 
                   variant.price || 
                   product.price || 
                   0
     
-    const currency = variant.calculated_price?.currency_code || 
+    const currency = variant.calculated_price?.currency_code === 'eur' ? 'eur' :
+                     variant.price_set?.prices?.[0]?.currency_code ||
                      variant.prices?.[0]?.currency_code || 
                      product.currency_code || 
-                     'usd'
+                     'eur'
     
     const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
-    const safeCurrency = (currency || 'usd').toUpperCase()
+    const safeCurrency = (currency || 'eur').toUpperCase()
     
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: safeCurrency
     }).format(safePrice / 100)
+  }
+
+  const getVariantDisplayName = (variant: ProductVariant, product: Product) => {
+    // Clean up variant title by removing product name prefix
+    // Example: "KRIA Unisex Athletic Shorts / XS" -> "XS"
+    if (variant.title && variant.title.includes(' / ')) {
+      return variant.title.split(' / ').pop() || variant.title
+    }
+    // If title starts with product name, remove it
+    if (variant.title && product.title && variant.title.startsWith(product.title)) {
+      return variant.title.replace(product.title, '').trim().replace(/^[\/-]\s*/, '')
+    }
+    return variant.title || 'Default'
   }
 
   if (loading) {
@@ -474,7 +501,7 @@ export default function ProductPage() {
                           : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      {variant.title} - {formatPrice(variant, product)}
+                      {getVariantDisplayName(variant, product)} - {formatPrice(variant, product)}
                     </button>
                   ))}
                 </div>

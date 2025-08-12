@@ -162,7 +162,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           const firstVariant = product.variants?.[0]
           const prices = firstVariant?.price_set?.prices || []
           const defaultPrice = prices.find((p: any) => p.currency_code === 'eur') || prices[0]
-          const price = defaultPrice?.amount || 2000
+          const price = defaultPrice?.amount || 0
           const currency_code = 'eur' // Force EUR for all products
           
           console.log(`[Store Products] Product ${product.title}: price=${price}, currency=${currency_code}, prices=${prices.length}`)

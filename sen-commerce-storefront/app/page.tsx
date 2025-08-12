@@ -83,7 +83,7 @@ export default function HomePage() {
     return true
   })
 
-  const formatPrice = (price: number, currency: string = 'usd') => {
+  const formatPrice = (price: number, currency: string = 'eur') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase()

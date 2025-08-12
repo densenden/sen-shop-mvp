@@ -18,7 +18,7 @@ export default function TitleSlide({ title, subtitle, content }: TitleSlideProps
   return (
     <BaseSlide>
       <div className="text-center animate-fade-in">
-        <h1 className="text-7xl font-bold text-black mb-6">
+        <h1 className="text-5xl font-normal text-black mb-6">
           {title}
         </h1>
         <h2 className="text-2xl text-gray-600 mb-12 max-w-4xl mx-auto">

@@ -1,0 +1,906 @@
+openapi: 3.0.3
+info:
+  title: SenCommerce API
+  description: |
+    Comprehensive API documentation for SenCommerce - A modern e-commerce platform with digital art sales and print-on-demand capabilities.
+    
+    ## Features
+    - **Digital Art Management**: Custom artwork and collection management system
+    - **Print-on-Demand**: Integrated Printful fulfillment for physical products
+    - **Digital Downloads**: Secure token-based digital product delivery
+    - **Multi-channel Sales**: Both digital and physical product sales
+    - **Admin Dashboard**: Complete content management system
+    
+    ## Authentication
+    - **Admin APIs**: Bearer token or session-based authentication
+    - **Store APIs**: JWT-based customer authentication for protected endpoints
+    - **Public APIs**: No authentication required for browsing catalogs
+    
+    ## External Integrations
+    - **Printful API v2**: Product sync and order fulfillment
+    - **Stripe**: Payment processing
+    - **Supabase**: File storage and database
+  version: 1.0.0
+  contact:
+    name: Denis Kreuzer
+    email: contact@sencommerce.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:9000/api
+    description: Local development server (Backend)
+  - url: http://localhost:3000/api
+    description: Local development server (Storefront)
+  - url: https://your-production-domain.com/api
+    description: Production server
+
+tags:
+  - name: Health
+    description: System health and status endpoints
+  - name: Admin - Artworks
+    description: Artwork management for admin users
+  - name: Admin - Collections
+    description: Artwork collection management
+  - name: Admin - Digital Products
+    description: Digital product management with file uploads
+  - name: Admin - Products
+    description: Product catalog management
+  - name: Admin - Printful
+    description: Print-on-demand integration management
+  - name: Admin - Orders
+    description: Order management and fulfillment
+  - name: Store - Products
+    description: Public product catalog
+  - name: Store - Artworks
+    description: Public artwork browsing
+  - name: Store - Cart
+    description: Shopping cart management
+  - name: Store - Auth
+    description: Customer authentication
+  - name: Store - Orders
+    description: Customer order management
+  - name: Store - Downloads
+    description: Digital product downloads
+  - name: Webhooks
+    description: External service webhooks
+
+paths:
+  # Health Endpoints
+  /health:
+    get:
+      tags: [Health]
+      summary: System health check
+      description: Returns the health status of the system and connected services
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "connected"
+                      printful:
+                        type: string
+                        example: "connected"
+                      supabase:
+                        type: string
+                        example: "connected"
+
+  # Admin - Artworks
+  /admin/artworks:
+    get:
+      tags: [Admin - Artworks]
+      summary: List all artworks
+      description: Retrieve a list of all artworks with optional collection information
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: collection_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of artworks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artworks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Artwork'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+    post:
+      tags: [Admin - Artworks]
+      summary: Create new artwork
+      description: Create a new artwork with image upload
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+                collection_id:
+                  type: string
+                midjourney_version:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+              required: [title, image]
+      responses:
+        '201':
+          description: Artwork created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artwork'
+
+  /admin/artworks/{id}:
+    get:
+      tags: [Admin - Artworks]
+      summary: Get artwork by ID
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Artwork details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artwork'
+        '404':
+          description: Artwork not found
+    put:
+      tags: [Admin - Artworks]
+      summary: Update artwork
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                collection_id:
+                  type: string
+                midjourney_version:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Artwork updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artwork'
+    delete:
+      tags: [Admin - Artworks]
+      summary: Delete artwork
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Artwork deleted successfully
+
+  # Admin - Collections
+  /admin/artwork-collections:
+    get:
+      tags: [Admin - Collections]
+      summary: List artwork collections
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      responses:
+        '200':
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collections:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ArtworkCollection'
+    post:
+      tags: [Admin - Collections]
+      summary: Create artwork collection
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_public:
+                  type: boolean
+                  default: true
+              required: [name]
+      responses:
+        '201':
+          description: Collection created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtworkCollection'
+
+  # Admin - Digital Products
+  /admin/digital-products:
+    get:
+      tags: [Admin - Digital Products]
+      summary: List digital products
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      responses:
+        '200':
+          description: List of digital products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  digital_products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DigitalProduct'
+    post:
+      tags: [Admin - Digital Products]
+      summary: Create digital product
+      description: Create a digital product with file upload (max 50MB)
+      security:
+        - BearerAuth: []
+        - SessionAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: float
+                download_limit:
+                  type: integer
+                  default: 5
+                expires_in_days:
+                  type: integer
+                  default: 7
+              required: [name, file, price]
+      responses:
+        '201':
+          description: Digital product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DigitalProduct'
+
+  # Store - Products
+  /store/products:
+    get:
+      tags: [Store - Products]
+      summary: Browse product catalog
+      description: Get published products with filtering options
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: handle
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: collection_id
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: string
+        - name: artwork_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  count:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /store/products/{id}:
+    get:
+      tags: [Store - Products]
+      summary: Get product details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  # Store - Cart
+  /store/cart:
+    get:
+      tags: [Store - Cart]
+      summary: Get current cart
+      security:
+        - JWTAuth: []
+      responses:
+        '200':
+          description: Current cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+    delete:
+      tags: [Store - Cart]
+      summary: Clear cart
+      security:
+        - JWTAuth: []
+      responses:
+        '204':
+          description: Cart cleared
+
+  /store/cart/items:
+    post:
+      tags: [Store - Cart]
+      summary: Add item to cart
+      security:
+        - JWTAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                variant_id:
+                  type: string
+                quantity:
+                  type: integer
+                  default: 1
+              required: [variant_id]
+      responses:
+        '201':
+          description: Item added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+
+  # Store - Auth
+  /store/auth/login:
+    post:
+      tags: [Store - Auth]
+      summary: Customer login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required: [email, password]
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+
+  /store/auth/register:
+    post:
+      tags: [Store - Auth]
+      summary: Customer registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+              required: [email, password, first_name, last_name]
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+
+  # Store - Downloads
+  /store/download/{token}:
+    get:
+      tags: [Store - Downloads]
+      summary: Download digital product
+      description: Secure download using token (expires after time limit or download count)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Token not found or expired
+        '410':
+          description: Download limit exceeded
+
+  # Webhooks
+  /webhooks/printful:
+    post:
+      tags: [Webhooks]
+      summary: Printful webhook handler
+      description: Handles Printful webhook events for order and product updates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [order_updated, product_updated]
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Webhook processed successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    SessionAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+    JWTAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Artwork:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        image_url:
+          type: string
+          format: uri
+        collection_id:
+          type: string
+        midjourney_version:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        collection:
+          $ref: '#/components/schemas/ArtworkCollection'
+
+    ArtworkCollection:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        is_public:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        artworks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artwork'
+
+    DigitalProduct:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        file_url:
+          type: string
+          format: uri
+        file_size:
+          type: integer
+        file_type:
+          type: string
+        price:
+          type: number
+          format: float
+        download_limit:
+          type: integer
+        expires_in_days:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        handle:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, proposed, published, rejected]
+        thumbnail:
+          type: string
+          format: uri
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              url:
+                type: string
+                format: uri
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+        tags:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              value:
+                type: string
+        collection_id:
+          type: string
+        category_id:
+          type: string
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        sku:
+          type: string
+        barcode:
+          type: string
+        inventory_quantity:
+          type: integer
+        manage_inventory:
+          type: boolean
+        allow_backorder:
+          type: boolean
+        prices:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              currency_code:
+                type: string
+              amount:
+                type: integer
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              option_id:
+                type: string
+              value:
+                type: string
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+        region_id:
+          type: string
+        customer_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          type: integer
+        total:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+        cart_id:
+          type: string
+        variant_id:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: integer
+        total:
+          type: integer
+        variant:
+          $ref: '#/components/schemas/ProductVariant'
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        has_account:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, archived, canceled, requires_action]
+        fulfillment_status:
+          type: string
+          enum: [not_fulfilled, partially_fulfilled, fulfilled, returned, partially_returned, canceled, requires_action]
+        payment_status:
+          type: string
+          enum: [not_paid, awaiting, captured, partially_refunded, refunded, canceled, requires_action]
+        display_id:
+          type: integer
+        cart_id:
+          type: string
+        customer_id:
+          type: string
+        email:
+          type: string
+          format: email
+        region_id:
+          type: string
+        currency_code:
+          type: string
+        tax_rate:
+          type: number
+        subtotal:
+          type: integer
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+        shipping_address:
+          type: object
+        billing_address:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

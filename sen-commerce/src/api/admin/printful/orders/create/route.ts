@@ -4,11 +4,12 @@ import { IOrderModuleService, IProductModuleService } from "@medusajs/types"
 import { authenticate } from "@medusajs/medusa"
 
 interface PrintfulOrderItem {
-  product_id: string
-  variant_id?: string
+  sync_variant_id?: number  // For synced products
+  external_variant_id?: string  // For manual products
+  variant_id?: number  // Printful variant ID
   quantity: number
-  name: string
-  retail_price: string
+  name?: string  // Optional custom name
+  retail_price?: string
   files?: Array<{
     type: string
     url: string
@@ -112,10 +113,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       },
       items: [],
       retail_costs: {
-        currency: order.currency_code?.toUpperCase() || 'USD',
-        subtotal: ((order.total || order.subtotal || 0) / 100).toString(), // Convert from cents
-        shipping: ((order.shipping_total || 0) / 100).toString(),
-        tax: ((order.tax_total || 0) / 100).toString(),
+        currency: order.currency_code?.toUpperCase() || 'EUR',
+        subtotal: ((order.subtotal || order.total || 0) / 100).toFixed(2), // Convert from cents to decimal string
+        shipping: ((order.shipping_total || 0) / 100).toFixed(2),
+        tax: ((order.tax_total || 0) / 100).toFixed(2),
+        discount: ((order.discount_total || 0) / 100).toFixed(2)
       },
       packing_slip: {
         email: process.env.STORE_EMAIL || 'shop@sen.studio',
@@ -124,17 +126,18 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
     }
     
-    // Convert order items to Printful format
+    // Convert order items to Printful format (v1 API)
     for (const item of printfulItems) {
+      // Get Printful product ID from metadata (this is the sync_product_id from Printful)
       const printfulProductId = item.product?.metadata?.printful_product_id || 
-                               item.metadata?.printful_product_id ||
-                               'fallback_product_123' // Fallback for testing
-      const printfulVariantId = item.product?.metadata?.printful_variant_id || 
-                               item.metadata?.printful_variant_id
+                               item.metadata?.printful_product_id
       
-      if (!printfulProductId || printfulProductId === 'fallback_product_123') {
-        console.warn(`Product ${item.product?.id || 'unknown'} has no printful_product_id, using fallback`)
+      if (!printfulProductId) {
+        console.warn(`Product ${item.product?.id || 'unknown'} has no printful_product_id in metadata, skipping`)
+        continue
       }
+      
+      console.log(`[PRINTFUL ORDER] Processing item: ${item.title}, printful_product_id: ${printfulProductId}`)
       
       // Get artwork URL for this product
       let artworkUrl = item.product?.metadata?.artwork_url || 
@@ -159,11 +162,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
       
       const printfulItem: PrintfulOrderItem = {
-        product_id: printfulProductId,
-        variant_id: printfulVariantId,
+        sync_variant_id: parseInt(printfulProductId), // Use the printful_product_id as sync_variant_id
         quantity: item.quantity || 1,
-        name: item.title || item.product?.title || 'Custom Product',
-        retail_price: ((item.unit_price || 0) / 100).toString(),
+        retail_price: ((item.unit_price || 0) / 100).toFixed(2),  // Format as decimal string
       }
       
       // Add artwork file if available
@@ -188,10 +189,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     console.log("- Recipients:", printfulOrder.recipient)
     console.log("- Items count:", printfulOrder.items?.length)
     console.log("- Items:", printfulOrder.items?.map(item => ({
-      product_id: item.product_id,
-      variant_id: item.variant_id,
+      sync_variant_id: item.sync_variant_id,
       quantity: item.quantity,
-      name: item.name
+      retail_price: item.retail_price,
+      has_files: !!item.files?.length
     })))
     console.log("- Retail costs:", printfulOrder.retail_costs)
     

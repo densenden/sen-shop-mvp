@@ -68,8 +68,8 @@ const VariantPricesPage = () => {
           currency_code: p.currency_code.toUpperCase()
         })))
       } else {
-        // Default to USD price
-        setPrices([{ amount: 25.00, currency_code: 'USD' }])
+        // Default to EUR price
+        setPrices([{ amount: 25.00, currency_code: 'EUR' }])
       }
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -80,7 +80,7 @@ const VariantPricesPage = () => {
   }
 
   const handleAddPrice = () => {
-    setPrices([...prices, { amount: 0, currency_code: 'USD' }])
+    setPrices([...prices, { amount: 0, currency_code: 'EUR' }])
   }
 
   const handleRemovePrice = (index: number) => {
@@ -276,7 +276,7 @@ const VariantPricesPage = () => {
                     id={`currency-${index}`}
                     value={price.currency_code}
                     onChange={(e) => handlePriceChange(index, 'currency_code', e.target.value.toUpperCase())}
-                    placeholder="USD"
+                    placeholder="EUR"
                     maxLength={3}
                     required
                   />
@@ -328,7 +328,7 @@ const VariantPricesPage = () => {
       <Container className="p-4 bg-blue-50 border-blue-200">
         <h3 className="font-medium text-blue-800 mb-2">💡 Pricing Tips</h3>
         <div className="text-sm text-blue-700 space-y-1">
-          <p>• Use standard currency codes like USD, EUR, GBP</p>
+          <p>• Use standard currency codes like EUR, USD, GBP</p>
           <p>• Prices are stored in the smallest currency unit (cents)</p>
           <p>• You can set different prices for different markets</p>
           <p>• At least one price is required for the variant to be purchasable</p>

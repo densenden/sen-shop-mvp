@@ -33,7 +33,7 @@ export default function FlowSlide({ title, subtitle, content }: FlowSlideProps) 
     <BaseSlide>
       <div className="animate-fade-in">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-black mb-4">{title}</h1>
+          <h1 className="text-4xl font-normal text-black mb-4">{title}</h1>
           <p className="text-xl text-gray-600">{subtitle}</p>
         </div>
 

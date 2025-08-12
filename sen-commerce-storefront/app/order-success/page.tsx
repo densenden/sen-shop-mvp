@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, Download, Package, Mail, Home } from 'lucide-react'
 import Layout from '../components/Layout'
+import { MEDUSA_API_CONFIG, getHeaders } from '../../lib/config'
 
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams()
@@ -18,21 +19,27 @@ export default function OrderSuccessPage() {
     const fetchOrderDetails = async () => {
       if (orderId) {
         try {
-          const response = await fetch(`http://localhost:9000/store/orders/${orderId}/details`)
+          const response = await fetch(`http://localhost:9000/store/orders/${orderId}/details`, {
+            headers: getHeaders()
+          })
           if (response.ok) {
             const data = await response.json()
             setOrderDetails(data.order)
           } else {
-            // Fallback to URL parameters if API fails
+            // Fallback to URL parameters if API fails - but with better defaults
             setOrderDetails({
               id: orderId,
-              total: total ? parseInt(total) : 2500,
-              currency_code: currency || 'usd',
+              total: total ? parseInt(total) : 10, // Use 10 cents (€0.10) as realistic fallback
+              currency_code: 'eur', // Force EUR
               items: [
                 {
-                  title: 'Order Items',
-                  fulfillment_type: 'mixed',
-                  description: 'Your purchased items are being processed'
+                  title: 'Product Order',
+                  quantity: 1,
+                  unit_price: total ? parseInt(total) : 10,
+                  total: total ? parseInt(total) : 10,
+                  fulfillment_type: 'standard',
+                  thumbnail: null,
+                  product_handle: 'product'
                 }
               ],
               created_at: new Date().toISOString()
@@ -40,16 +47,20 @@ export default function OrderSuccessPage() {
           }
         } catch (error) {
           console.error('Error fetching order details:', error)
-          // Fallback to URL parameters
+          // Fallback to URL parameters with better structure
           setOrderDetails({
             id: orderId,
-            total: total ? parseInt(total) : 2500,
-            currency_code: currency || 'usd',
+            total: total ? parseInt(total) : 10,
+            currency_code: 'eur', // Force EUR
             items: [
               {
-                title: 'Order Items',
-                fulfillment_type: 'mixed',
-                description: 'Your purchased items are being processed'
+                title: 'Order Product',
+                quantity: 1,
+                unit_price: total ? parseInt(total) : 10,
+                total: total ? parseInt(total) : 10,
+                fulfillment_type: 'standard',
+                thumbnail: null,
+                product_handle: 'product'
               }
             ],
             created_at: new Date().toISOString()
@@ -72,9 +83,9 @@ export default function OrderSuccessPage() {
     )
   }
 
-  const formatPrice = (price: number, currency: string = 'usd') => {
+  const formatPrice = (price: number, currency: string = 'eur') => {
     const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
-    const safeCurrency = (currency || 'usd').toUpperCase()
+    const safeCurrency = (currency || 'eur').toUpperCase()
     
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

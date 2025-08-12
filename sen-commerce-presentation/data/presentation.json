@@ -24,7 +24,7 @@
       "delay": 2,
       "content": {
         "title": "Modern Tech Stack",
-        "subtitle": "Medusa.js v2 + Vite + Next.js",
+        "subtitle": "Medusa.js v2 + React + TypeScript",
         "highlight": "TypeScript"
       }
     },
@@ -97,7 +97,7 @@
       "subtitle": "Digital Art & Print-on-Demand E-commerce Platform",
       "content": {
         "project": "SenCommerce MVP",
-        "built_with": "Medusa.js v2 + Vite + Next.js 14 + TypeScript",
+        "built_with": "Medusa.js v2 + React + TypeScript",
         "timeline": "3 months development (May-Aug 2025)",
         "status": "Production-ready backend, functional storefront",
         "presenter": "Denis Kreuzer",
@@ -106,38 +106,81 @@
       }
     },
     {
-      "id": "architecture",
-      "type": "diagram",
-      "title": "System Architecture",
-      "subtitle": "Modern full-stack e-commerce platform",
+      "id": "professional-background",
+      "type": "professional-overview",
+      "title": "Professional Background",
+      "subtitle": "Creative Director & Full-Stack Developer (Learning)",
       "content": {
-        "diagram": "architecture-overview",
-        "description": "Comprehensive e-commerce platform with separate frontend and backend, integrated with multiple external services",
-        "components": [
+        "image": "/images/about.png",
+        "sections": [
           {
-            "layer": "Frontend Applications",
-            "items": ["Next.js 14 Storefront (Customer-facing)", "Vite Admin Dashboard (Content management)"]
+            "title": "Creative Director & Entrepreneur",
+            "description": "Extensive experience in branding, campaign & event conception, corporate design, visual communication",
+            "icon": "🎨"
           },
           {
-            "layer": "Backend Core", 
-            "items": ["Medusa.js v2 Framework", "Custom Modules (Artwork, Digital Products, Printful)", "REST API (25+ endpoints)", "Built with Vite"]
+            "title": "Self-Employed",
+            "description": "Leading own projects and client assignments in design, concept development and technical implementation",
+            "icon": "💼"
           },
           {
-            "layer": "External Services",
-            "items": ["Printful API (POD)", "Stripe (Payments)", "Supabase (Storage & DB)", "Railway/Vercel (Hosting)"]
+            "title": "Design Systems & Branding",
+            "description": "Building consistent visual identities and systematic design libraries",
+            "icon": "🎯"
           }
         ]
       }
     },
     {
-      "id": "architecture-overview",
-      "type": "fullscreen-image",
-      "title": "System Architecture Overview",
-      "subtitle": "Complete platform visualization",
+      "id": "technical-journey",
+      "type": "technical-journey-layout", 
+      "title": "Technical Journey",
+      "subtitle": "From Design to Full-Stack Development",
       "content": {
-        "image_placeholder": "architecture-diagram",
-        "description": "Full system architecture showing frontend, backend, and external services integration",
-        "note": "Comprehensive architecture diagram screenshot"
+        "image": "/images/technicaljourney.png",
+        "sections": [
+          {
+            "title": "Learning Programming",
+            "description": "Focus on Full-stack development (JavaScript, React, Tailwind, TypeScript, Python) for own projects and client solutions"
+          },
+          {
+            "title": "Modern Tech Stack",
+            "description": "Mastering current web technologies to bridge design and development"
+          },
+          {
+            "title": "Problem-Solving Approach",
+            "description": "Combining creative thinking with technical implementation to solve real business challenges"
+          },
+          {
+            "title": "Automation Processes",
+            "description": "Building efficient workflows and automated systems to streamline development and business operations"
+          }
+        ]
+      }
+    },
+    {
+      "id": "studio-sen",
+      "type": "professional-overview",
+      "title": "Studio Sen",
+      "subtitle": "Connecting Design, Code & Mindfulness",
+      "content": {
+        "sections": [
+          {
+            "title": "Individual Meditations",
+            "description": "Custom audio meditations for private individuals & companies",
+            "image": "/images/meditation.png"
+          },
+          {
+            "title": "YouTube Content",
+            "description": "Channel with guided meditations reaching thousands of viewers",
+            "image": "/images/youtube.png"
+          },
+          {
+            "title": "Digital Files",
+            "description": "MidJourney-generated designs as high-resolution print files, formerly successful on Etsy, now exclusively through own shop (B2B target: brands, designers, creatives)",
+            "image": "/images/digitalfiles.png"
+          }
+        ]
       }
     },
     {
@@ -166,29 +209,6 @@
       }
     },
     {
-      "id": "challenge",
-      "type": "problem",
-      "title": "The Challenge",
-      "subtitle": "Limitations of existing platforms",
-      "content": {
-        "problems": [
-          {
-            "platform": "Etsy",
-            "issues": ["Limited customization", "High transaction fees", "No brand control", "Marketplace dependency"]
-          },
-          {
-            "platform": "Shopify",
-            "issues": ["Monthly subscription costs", "App dependency", "Limited backend control", "Vendor lock-in"]
-          },
-          {
-            "platform": "Custom Solutions",
-            "issues": ["High development cost", "Long time to market", "Maintenance overhead", "Security concerns"]
-          }
-        ],
-        "opportunity": "Build a flexible, cost-effective e-commerce platform with full control over features and branding"
-      }
-    },
-    {
       "id": "solution",
       "type": "solution",
       "title": "The Solution",
@@ -209,6 +229,40 @@
           "Automated order processing",
           "Real-time inventory and fulfillment tracking"
         ]
+      }
+    },
+    {
+      "id": "architecture",
+      "type": "diagram",
+      "title": "System Architecture",
+      "subtitle": "Modern full-stack e-commerce platform",
+      "content": {
+        "diagram": "architecture-overview",
+        "description": "Comprehensive e-commerce platform with separate frontend and backend, integrated with multiple external services",
+        "components": [
+          {
+            "layer": "Frontend Applications",
+            "items": ["React Storefront (Customer-facing)", "Vite Admin Dashboard (Content management)"]
+          },
+          {
+            "layer": "Backend Core", 
+            "items": ["Medusa.js v2 Framework", "Custom Modules (Artwork, Digital Products, Printful)", "REST API (25+ endpoints)", "Built with Vite"]
+          },
+          {
+            "layer": "External Services",
+            "items": ["Printful API (POD)", "Stripe (Payments)", "Supabase (Storage & DB)", "Resend (Emails)", "Railway/Vercel (Hosting)"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "architecture-overview",
+      "type": "fullscreen-image",
+      "title": "System Architecture Overview",
+      "subtitle": "Complete platform visualization",
+      "content": {
+        "description": "Full system architecture showing frontend, backend, and external services integration",
+        "note": "Comprehensive architecture diagram"
       }
     },
     {
@@ -250,7 +304,7 @@
           {"name": "TypeScript", "role": "Language", "reason": "Type safety and better developer experience"}
         ],
         "frontend_technologies": [
-          {"name": "Next.js 14", "role": "Storefront Framework", "reason": "Server-side rendering for customer-facing site"},
+          {"name": "React 18", "role": "UI Library", "reason": "Component-based user interfaces"},
           {"name": "Vite Admin", "role": "Admin Dashboard", "reason": "Fast admin interface with Medusa"},
           {"name": "Tailwind CSS", "role": "Styling", "reason": "Utility-first responsive design"},
           {"name": "React", "role": "UI Library", "reason": "Component-based user interfaces"}
@@ -370,6 +424,7 @@
       "title": "Database Schema",
       "subtitle": "Entity Relationship Diagram",
       "content": {
+        "image": "/images/database.png",
         "description": "Complete database schema showing all 15+ tables and their relationships",
         "note": "Screenshot of actual database ERD diagram"
       }
@@ -409,7 +464,17 @@
           "JWT authentication for customer sessions",
           "Session-based admin authentication",
           "SQL injection protection via Medusa ORM"
-        ]
+        ],
+        "email_system": {
+          "provider": "Resend",
+          "features": [
+            "Automated order confirmations",
+            "Digital download notifications",
+            "Client communication system",
+            "Branded email templates",
+            "Delivery tracking updates"
+          ]
+        }
       }
     },
     {
@@ -542,7 +607,7 @@
       "title": "Admin Dashboard Screenshots",
       "subtitle": "Real interface examples",
       "content": {
-        "image_placeholder": "admin-interface",
+        "image": "/images/costummodule.png",
         "description": "Artwork management, product sync, and fulfillment dashboard screenshots",
         "note": "Live admin interface demonstrations"
       }
@@ -612,7 +677,7 @@
       "title": "Storefront Interface",
       "subtitle": "Customer shopping experience",
       "content": {
-        "image_placeholder": "storefront",
+        "image": "/images/storefront.png",
         "description": "Live storefront showing product catalog, cart, and checkout flow",
         "note": "Responsive design for all devices"
       }
@@ -628,11 +693,11 @@
           {"name": "Admin Panel", "url": "http://localhost:9000/app", "description": "Management dashboard"}
         ],
         "demo_scenarios": [
+          {"scenario": "Create POD Product", "description": "Set up print-on-demand product with Printful integration"},
+          {"scenario": "Create Artwork Collection", "description": "Organize digital artworks into themed collections"},
+          {"scenario": "Add Artworks", "description": "Upload and manage individual artwork pieces"},
           {"scenario": "Browse Artwork Collections", "description": "Explore organized digital art collections"},
-          {"scenario": "Add Digital Product to Cart", "description": "Experience the shopping flow"},
-          {"scenario": "Complete Checkout", "description": "Stripe payment integration"},
-          {"scenario": "Admin Product Management", "description": "Backend content management"},
-          {"scenario": "Real-time Sync Dashboard", "description": "Monitor system operations"}
+          {"scenario": "Complete Checkout Flow", "description": "End-to-end purchase experience"}
         ],
         "key_demo_points": [
           "Responsive design across devices",
