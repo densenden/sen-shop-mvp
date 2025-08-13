@@ -242,11 +242,11 @@
         "components": [
           {
             "layer": "Frontend Applications",
-            "items": ["React Storefront (Customer-facing)", "Vite Admin Dashboard (Content management)"]
+            "items": ["React Storefront (Customer-facing)", "Vite Admin Dashboard (Compiler creates Admin UI)"]
           },
           {
             "layer": "Backend Core", 
-            "items": ["Medusa.js v2 Framework", "Custom Modules (Artwork, Digital Products, Printful)", "REST API (25+ endpoints)", "Built with Vite"]
+            "items": ["Node.js (Backend Runtime)", "Medusa.js v2 Framework", "Custom Modules (Artwork, Digital Products, Printful)", "REST API (25+ endpoints)"]
           },
           {
             "layer": "External Services",
@@ -261,6 +261,7 @@
       "title": "System Architecture Overview",
       "subtitle": "Complete platform visualization",
       "content": {
+        "image": "/images/architectural-diagram-full.avif",
         "description": "Full system architecture showing frontend, backend, and external services integration",
         "note": "Comprehensive architecture diagram"
       }
@@ -297,17 +298,16 @@
       "subtitle": "Modern, scalable, production-ready",
       "content": {
         "backend_technologies": [
+          {"name": "Node.js", "role": "Backend Runtime", "reason": "JavaScript runtime for server-side development"},
           {"name": "Medusa.js v2.8.4", "role": "Backend Framework", "reason": "Modular e-commerce engine"},
-          {"name": "Vite", "role": "Build Tool", "reason": "Fast development and production builds"},
           {"name": "PostgreSQL", "role": "Database", "reason": "Reliable relational database"},
           {"name": "Medusa Framework ORM", "role": "Database ORM", "reason": "Built-in type-safe ORM with Medusa framework"},
           {"name": "TypeScript", "role": "Language", "reason": "Type safety and better developer experience"}
         ],
         "frontend_technologies": [
-          {"name": "React 18", "role": "UI Library", "reason": "Component-based user interfaces"},
-          {"name": "Vite Admin", "role": "Admin Dashboard", "reason": "Fast admin interface with Medusa"},
-          {"name": "Tailwind CSS", "role": "Styling", "reason": "Utility-first responsive design"},
-          {"name": "React", "role": "UI Library", "reason": "Component-based user interfaces"}
+          {"name": "React 18", "role": "UI Library", "reason": "Component-based user interfaces", "width": "double"},
+          {"name": "Vite", "role": "Compiler", "reason": "Fast development and production builds", "width": "double"},
+          {"name": "Tailwind CSS", "role": "Styling", "reason": "Utility-first responsive design"}
         ],
         "infrastructure": [
           {"name": "Supabase", "role": "File Storage & Database", "reason": "S3-compatible storage with PostgreSQL"},
@@ -332,12 +332,7 @@
         ],
         "why_custom_modules": {
           "problem": "Standard e-commerce modules don't handle specialized use cases like digital art management and print-on-demand workflows",
-          "solution": "Build custom modules for unique business requirements",
-          "examples": [
-            "Artwork Module - manages digital art collections and metadata",
-            "Digital Product Module - handles secure file downloads with tokens",
-            "Printful Module - automates print-on-demand order processing"
-          ]
+          "solution": "Build custom modules for unique business requirements"
         },
         "architecture_advantage": "Modular design allows mixing core Medusa functionality with custom business logic seamlessly"
       }
@@ -354,7 +349,7 @@
           {"name": "Cart Module", "description": "Shopping cart with real-time updates"},
           {"name": "Order Module", "description": "Complete order processing and tracking"},
           {"name": "Customer Module", "description": "User management and authentication"},
-          {"name": "Payment Module", "description": "Stripe integration for secure payments"},
+          {"name": "Payment Module", "description": "Module to connect payment services"},
           {"name": "Fulfillment Module", "description": "Order fulfillment and shipping"}
         ],
         "custom_modules": [
@@ -394,7 +389,7 @@
       "id": "database",
       "type": "database",
       "title": "Database Architecture",
-      "subtitle": "15+ tables with optimized relationships",
+      "subtitle": "Showing part of the 135 tables - high complexity of e-commerce",
       "content": {
         "core_tables": [
           "product", "product_variant", "customer", "cart", "order", "payment", "fulfillment"
@@ -432,7 +427,7 @@
     {
       "id": "api-architecture",
       "type": "api",
-      "title": "API Architecture",
+      "title": "API v1 Architecture",
       "subtitle": "25+ RESTful endpoints with proper authentication",
       "content": {
         "endpoint_structure": {
@@ -453,28 +448,29 @@
           }
         },
         "authentication": {
-          "admin": "Session-based with Medusa auth",
-          "store": "JWT tokens for customers",
-          "downloads": "Cryptographic tokens for security"
+          "admin_dashboard": {
+            "method": "Session-based with Medusa auth",
+            "details": "Secure admin access with role-based permissions"
+          },
+          "store_webhooks": {
+            "method": "API key authentication",
+            "details": "Token-based authentication for external service integration"
+          },
+          "user_account_page": {
+            "method": "JWT tokens for customers",
+            "details": "Secure customer sessions and profile management"
+          },
+          "store_downloads": {
+            "method": "Cryptographic tokens",
+            "details": "Token-based secure downloads - how is store/downloads secured"
+          }
         },
         "security_features": [
           "CORS configuration for frontend domains",
           "File type and size validation (50MB limit)",
           "Token-based secure downloads with expiry",
-          "JWT authentication for customer sessions",
-          "Session-based admin authentication",
           "SQL injection protection via Medusa ORM"
-        ],
-        "email_system": {
-          "provider": "Resend",
-          "features": [
-            "Automated order confirmations",
-            "Digital download notifications",
-            "Client communication system",
-            "Branded email templates",
-            "Delivery tracking updates"
-          ]
-        }
+        ]
       }
     },
     {
@@ -491,30 +487,24 @@
       "id": "user-flow",
       "type": "flow",
       "title": "User Experience Flow",
-      "subtitle": "Seamless journey from browse to fulfillment",
+      "subtitle": "What modules enable us to do on storefront",
       "content": {
-        "digital_product_flow": [
-          "Customer browses artwork collections",
-          "Adds digital product to cart",
-          "Completes checkout with Stripe",
-          "System generates secure download token",
-          "Customer receives email with download link",
-          "Token expires after 7 days or max downloads"
-        ],
-        "print_on_demand_flow": [
-          "Customer selects artwork for printing",
-          "Chooses product type and options",
-          "Completes order with payment",
-          "Order automatically forwarded to Printful",
-          "Real-time webhook updates order status",
-          "Customer receives tracking information"
-        ],
-        "admin_workflow": [
-          "Upload artwork to collections",
-          "Link artworks to products",
-          "Monitor sync status dashboard",
-          "Track order fulfillment",
-          "Manage customer downloads"
+        "module_flows": [
+          {
+            "title": "1. Browse Collection, Choose Artwork",
+            "image": "/images/collection-flow.png",
+            "description": "Digital artwork collection browsing and selection"
+          },
+          {
+            "title": "2. Browse, Choose, Checkout POD Products",
+            "image": "/images/pod-flow.png", 
+            "description": "Print-on-demand product ordering and fulfillment"
+          },
+          {
+            "title": "3. Buy Available Print Files as Supply for Designers and Producers",
+            "image": "/images/digital-flow.png",
+            "description": "Digital file purchases for professional use"
+          }
         ]
       }
     },
@@ -524,6 +514,7 @@
       "title": "Storefront Features",
       "subtitle": "Customer-facing e-commerce functionality",
       "content": {
+        "image": "/images/storefront-screenshot.png",
         "screenshot_type": "storefront",
         "features": [
           {"feature": "Product catalog with filtering", "status": "complete"},
@@ -561,6 +552,7 @@
       "title": "Admin Dashboard",
       "subtitle": "8 custom interfaces for content management",
       "content": {
+        "image": "/images/fulfillment-dashboard.png",
         "dashboard_modules": [
           {
             "name": "Artwork Collections",
@@ -625,23 +617,11 @@
           {"skill": "API Integration", "description": "Multiple third-party service connectivity"},
           {"skill": "Full-Stack Development", "description": "End-to-end feature delivery"}
         ],
-        "problem_solving": [
-          {
-            "challenge": "Medusa service method naming confusion",
-            "solution": "Discovered auto-pluralization in MedusaService base class"
-          },
-          {
-            "challenge": "File upload in admin interface", 
-            "solution": "Built custom upload endpoint with Multer + Supabase integration"
-          },
-          {
-            "challenge": "Secure digital product downloads",
-            "solution": "Implemented token-based system with expiry and download limits"
-          },
-          {
-            "challenge": "Real-time order tracking",
-            "solution": "Webhook integration with comprehensive status synchronization"
-          }
+        "technical_details": [
+          "Medusa service method auto-pluralization discovery",
+          "Custom upload endpoint with Multer + Supabase",
+          "Token-based secure downloads with expiry",
+          "Webhook integration for order tracking"
         ]
       }
     },
@@ -714,27 +694,40 @@
       "title": "Project Roadmap",
       "subtitle": "Future enhancements and scaling plans",
       "content": {
-        "phase_1": {
-          "title": "UX Improvements",
-          "timeline": "Next 4 weeks",
-          "items": ["Professional design system", "Mobile-responsive optimizations", "Loading states and animations", "Enhanced error handling"]
+        "development_timeline": {
+          "completed": "4-5 months development time",
+          "current_status": "Real product ready for market"
         },
-        "phase_2": {
-          "title": "Advanced Features", 
-          "timeline": "2-3 months",
-          "items": ["Multi-language support", "Advanced search and filtering", "Customer reviews and ratings", "Social media integration", "Analytics dashboard"]
+        "next_4_weeks": {
+          "title": "UX Improvements Version 2 Masterschool",
+          "items": [
+            "Creation of products from admin UI (not on Printful)",
+            "Multi-language support", 
+            "Deployment on Vercel (Frontend) and Railway (Backend)",
+            "Load or add multiple images plus video"
+          ]
         },
-        "phase_3": {
+        "advanced_features": {
+          "title": "Production Ready",
+          "items": [
+            "Social media content creation from products (new arrival!, special offer! etc)",
+            "Database filled with 2500+ artworks",
+            "Analytics dashboard",
+            "Reviews and ratings system",
+            "Search filtering capabilities", 
+            "Stripe and orders LIVE (currently sandbox)",
+            "Enhanced display features (gallery view, VR gallery etc.)"
+          ]
+        },
+        "business_scaling": {
           "title": "Business Scaling",
-          "timeline": "3-6 months", 
-          "items": ["Multi-vendor marketplace", "Subscription products", "Loyalty program", "Advanced inventory management", "AI-powered recommendations"]
-        },
-        "immediate_priorities": [
-          "Complete storefront styling",
-          "Implement comprehensive testing",
-          "Production deployment setup",
-          "Performance optimization"
-        ]
+          "items": [
+            "Several more POD services integration",
+            "Availability of products worldwide (different markets, different products)",
+            "Customization possibilities for customers",
+            "Cooperations with artists - I take care of their e-commerce, they just give designs"
+          ]
+        }
       }
     },
     {
@@ -745,16 +738,17 @@
       "content": {
         "project_summary": "Built a comprehensive e-commerce platform with modern technologies, demonstrating full-stack development skills and business logic implementation.",
         "key_metrics": [
-          {"metric": "Development Time", "value": "3 months"},
-          {"metric": "Database Tables", "value": "15+"},
+          {"metric": "Development Time", "value": "4-5 months"},
+          {"metric": "Database Tables", "value": "135 tables"},
           {"metric": "API Endpoints", "value": "25+"},
           {"metric": "Admin Interfaces", "value": "8"},
           {"metric": "External Integrations", "value": "5"}
         ],
         "demo_access": [
           {"name": "GitHub Repository", "url": "https://github.com/densenden/sen-shop-mvp", "type": "primary"},
-          {"name": "Live Storefront", "url": "http://localhost:3000", "type": "secondary"},
-          {"name": "Admin Dashboard", "url": "http://localhost:9000/app", "type": "secondary"}
+          {"name": "Live Storefront", "url": "https://shop.sen.studio", "type": "secondary"},
+          {"name": "Admin Dashboard", "url": "http://localhost:9000/app", "type": "secondary"},
+          {"name": "PDF Download", "url": "#", "type": "pdf", "action": "create_pdf"}
         ],
         "contact_info": {
           "presenter": "Denis Kreuzer",
