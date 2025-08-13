@@ -4,9 +4,14 @@ interface FlowSlideProps {
   title: string
   subtitle: string
   content: {
-    digital_product_flow: string[]
-    print_on_demand_flow: string[]
-    admin_workflow: string[]
+    digital_product_flow?: string[]
+    print_on_demand_flow?: string[]
+    admin_workflow?: string[]
+    module_flows?: Array<{
+      title: string
+      image: string
+      description: string
+    }>
   }
 }
 
@@ -17,7 +22,7 @@ export default function FlowSlide({ title, subtitle, content }: FlowSlideProps) 
         {title}
       </h4>
       <div className="space-y-4">
-        {steps.map((step, index) => (
+        {steps?.map((step, index) => (
           <div key={index} className="flex items-start">
             <div className={`bg-${color}-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-4 mt-1 flex-shrink-0`}>
               {index + 1}
@@ -25,6 +30,26 @@ export default function FlowSlide({ title, subtitle, content }: FlowSlideProps) 
             <p className="text-gray-700 leading-relaxed">{step}</p>
           </div>
         ))}
+      </div>
+    </div>
+  )
+
+  const renderModuleFlow = (moduleFlow: any, index: number) => (
+    <div key={index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="h-48 w-full">
+        <img 
+          src={moduleFlow.image} 
+          alt={moduleFlow.title}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <div className="p-6">
+        <h4 className="text-lg font-semibold text-gray-800 mb-3">
+          {moduleFlow.title}
+        </h4>
+        <p className="text-gray-600 leading-relaxed">
+          {moduleFlow.description}
+        </p>
       </div>
     </div>
   )
@@ -38,41 +63,50 @@ export default function FlowSlide({ title, subtitle, content }: FlowSlideProps) 
         </div>
 
         <div className="max-w-7xl mx-auto">
-          {/* Flow Diagram Screenshots Placeholder */}
-          <div className="mb-12">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                <div className="h-32 flex items-center justify-center bg-gray-50 rounded-lg mb-2">
-                  <div className="text-center">
-                    <div className="text-2xl text-gray-400 mb-1">💳</div>
-                    <div className="text-xs text-gray-500">Digital Flow Screenshot</div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                <div className="h-32 flex items-center justify-center bg-gray-50 rounded-lg mb-2">
-                  <div className="text-center">
-                    <div className="text-2xl text-gray-400 mb-1">🖨️</div>
-                    <div className="text-xs text-gray-500">Print Flow Screenshot</div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                <div className="h-32 flex items-center justify-center bg-gray-50 rounded-lg mb-2">
-                  <div className="text-center">
-                    <div className="text-2xl text-gray-400 mb-1">⚙️</div>
-                    <div className="text-xs text-gray-500">Admin Dashboard</div>
-                  </div>
-                </div>
-              </div>
+          {/* New Module Flows Layout */}
+          {content.module_flows ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {content.module_flows.map((moduleFlow, index) => renderModuleFlow(moduleFlow, index))}
             </div>
-          </div>
+          ) : (
+            /* Original Flow Layout */
+            <>
+              <div className="mb-12">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <div className="h-32 flex items-center justify-center bg-gray-50 rounded-lg mb-2">
+                      <div className="text-center">
+                        <div className="text-2xl text-gray-400 mb-1">💳</div>
+                        <div className="text-xs text-gray-500">Digital Flow Screenshot</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <div className="h-32 flex items-center justify-center bg-gray-50 rounded-lg mb-2">
+                      <div className="text-center">
+                        <div className="text-2xl text-gray-400 mb-1">🖨️</div>
+                        <div className="text-xs text-gray-500">Print Flow Screenshot</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <div className="h-32 flex items-center justify-center bg-gray-50 rounded-lg mb-2">
+                      <div className="text-center">
+                        <div className="text-2xl text-gray-400 mb-1">⚙️</div>
+                        <div className="text-xs text-gray-500">Admin Dashboard</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {renderFlow("Digital Product Flow", content.digital_product_flow, "blue")}
-            {renderFlow("Print-on-Demand Flow", content.print_on_demand_flow, "green")}
-            {renderFlow("Admin Workflow", content.admin_workflow, "purple")}
-          </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {renderFlow("Digital Product Flow", content.digital_product_flow || [], "blue")}
+                {renderFlow("Print-on-Demand Flow", content.print_on_demand_flow || [], "green")}
+                {renderFlow("Admin Workflow", content.admin_workflow || [], "purple")}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </BaseSlide>
