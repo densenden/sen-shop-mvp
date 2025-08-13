@@ -448,22 +448,10 @@
           }
         },
         "authentication": {
-          "admin_dashboard": {
-            "method": "Session-based with Medusa auth",
-            "details": "Secure admin access with role-based permissions"
-          },
-          "store_webhooks": {
-            "method": "API key authentication",
-            "details": "Token-based authentication for external service integration"
-          },
-          "user_account_page": {
-            "method": "JWT tokens for customers",
-            "details": "Secure customer sessions and profile management"
-          },
-          "store_downloads": {
-            "method": "Cryptographic tokens",
-            "details": "Token-based secure downloads - how is store/downloads secured"
-          }
+          "admin_dashboard": "Session-based with Medusa auth - Secure admin access with role-based permissions",
+          "store_webhooks": "API key authentication - Token-based authentication for external service integration",
+          "user_account_page": "JWT tokens for customers - Secure customer sessions and profile management",
+          "store_downloads": "Cryptographic tokens - Token-based secure downloads secured with expiry"
         },
         "security_features": [
           "CORS configuration for frontend domains",
