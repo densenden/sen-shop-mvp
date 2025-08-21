@@ -94,6 +94,20 @@ export default function AccountPage() {
   const [editingProfile, setEditingProfile] = useState(false)
   const [updatingProfile, setUpdatingProfile] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [showAddressForm, setShowAddressForm] = useState(false)
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null)
+  const [addressForm, setAddressForm] = useState({
+    first_name: '',
+    last_name: '',
+    company: '',
+    address_1: '',
+    address_2: '',
+    city: '',
+    province: '',
+    postal_code: '',
+    country_code: 'US',
+    phone: ''
+  })
 
   // Form state for profile editing
   const [profileForm, setProfileForm] = useState({
@@ -136,8 +150,11 @@ export default function AccountPage() {
           email: user.email
         })
         
-        // Fetch real orders for this user
+        // Fetch real orders and other data for this user
         await fetchUserOrders(user.email)
+        await fetchAddresses(user.email)
+        await fetchDownloads(user.email)
+        await fetchFavorites()
         
       } else {
         // No user logged in, redirect to login
@@ -145,11 +162,7 @@ export default function AccountPage() {
         return
       }
       
-      // Load favorites from localStorage
-      const savedFavorites = localStorage.getItem('favorites')
-      if (savedFavorites) {
-        setFavorites(JSON.parse(savedFavorites))
-      }
+      // Favorites are already loaded in fetchFavorites()
       
     } catch (error) {
       console.error('Auth check failed:', error)
@@ -269,13 +282,10 @@ export default function AccountPage() {
     }
   }
 
-  const fetchAddresses = async (token: string) => {
+  const fetchAddresses = async (email: string) => {
     try {
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/addresses`, {
-        headers: {
-          ...getHeaders(),
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/addresses?customer_email=${encodeURIComponent(email)}`, {
+        headers: getHeaders()
       })
       
       if (response.ok) {
@@ -287,18 +297,50 @@ export default function AccountPage() {
     }
   }
 
-  const fetchDownloads = async (token: string) => {
+  const fetchDownloads = async (email: string) => {
     try {
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/downloads`, {
-        headers: {
-          ...getHeaders(),
-          'Authorization': `Bearer ${token}`,
-        },
+      // Fetch digital downloads from the dedicated endpoint
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/downloads?customer_email=${encodeURIComponent(email)}`, {
+        headers: getHeaders()
       })
       
       if (response.ok) {
         const data = await response.json()
+        console.log('[Account] Downloads fetched:', data.downloads)
         setDownloads(data.downloads || [])
+      } else {
+        console.error('Failed to fetch downloads:', response.status)
+        // Fallback: Try to extract from orders
+        const ordersResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/account/orders?customer_email=${encodeURIComponent(email)}`, {
+          headers: getHeaders()
+        })
+        
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json()
+          const digitalDownloads: any[] = []
+          
+          for (const order of ordersData.orders || []) {
+            for (const item of order.items || []) {
+              if (item.metadata?.fulfillment_type === 'digital_download' || item.metadata?.fulfillment_type === 'digital') {
+                const downloadUrl = item.metadata.digital_download_url || 
+                  (item.metadata.supabase_url ? item.metadata.supabase_url : '#')
+                  
+                digitalDownloads.push({
+                  order_id: order.id,
+                  order_display_id: order.display_id,
+                  order_date: order.created_at,
+                  product_name: item.title,
+                  download_url: downloadUrl,
+                  is_expired: false,
+                  download_count: 0,
+                  max_downloads: -1
+                })
+              }
+            }
+          }
+          
+          setDownloads(digitalDownloads)
+        }
       }
     } catch (error) {
       console.error('Error fetching downloads:', error)
@@ -333,6 +375,86 @@ export default function AccountPage() {
       alert('Failed to update profile. Please try again.')
     } finally {
       setUpdatingProfile(false)
+    }
+  }
+
+  const fetchFavorites = async () => {
+    try {
+      // Load favorites from localStorage
+      const savedFavorites = localStorage.getItem('favorites')
+      if (savedFavorites) {
+        const favoriteIds = JSON.parse(savedFavorites)
+        setFavorites(favoriteIds)
+        
+        // Optionally fetch product details for favorites
+        if (favoriteIds.length > 0) {
+          const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/favorites?favorite_ids=${favoriteIds.join(',')}`, {
+            headers: getHeaders()
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            // Store favorite products data if needed
+            localStorage.setItem('favoriteProducts', JSON.stringify(data.favorites))
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error)
+    }
+  }
+
+  const addAddress = async (addressData: any) => {
+    try {
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/addresses`, {
+        method: 'POST',
+        headers: {
+          ...getHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          customer_email: user?.email,
+          ...addressData
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        // Refresh addresses
+        if (user) await fetchAddresses(user.email)
+        return data.address
+      }
+    } catch (error) {
+      console.error('Error adding address:', error)
+      throw error
+    }
+  }
+
+  const downloadMyData = async () => {
+    try {
+      if (!user) return
+      
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/customers/me/export-data?customer_email=${encodeURIComponent(user.email)}`, {
+        headers: getHeaders()
+      })
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = url
+        a.download = `my-data-${Date.now()}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        alert('Failed to download data. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error downloading data:', error)
+      alert('Failed to download data. Please try again.')
     }
   }
 
@@ -730,11 +852,11 @@ export default function AccountPage() {
                                   </p>
                                   {item.metadata?.fulfillment_type && (
                                     <span className={`inline-block px-2 py-1 text-xs font-medium mt-1 ${
-                                      item.metadata.fulfillment_type === 'digital_download'
+                                      (item.metadata.fulfillment_type === 'digital_download' || item.metadata.fulfillment_type === 'digital')
                                         ? 'bg-blue-100 text-blue-800'
                                         : 'bg-green-100 text-green-800'
                                     }`}>
-                                      {item.metadata.fulfillment_type === 'digital_download' ? 'Digital' : 'Physical'}
+                                      {(item.metadata.fulfillment_type === 'digital_download' || item.metadata.fulfillment_type === 'digital') ? 'Digital' : 'Physical'}
                                     </span>
                                   )}
                                 </div>
@@ -942,22 +1064,203 @@ export default function AccountPage() {
                 <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-gray-900">Saved Addresses</h3>
-                    <button className="bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800">
-                      Add Address
-                    </button>
+                    {!showAddressForm && (
+                      <button 
+                        onClick={() => {
+                          setShowAddressForm(true)
+                          setEditingAddress(null)
+                          setAddressForm({
+                            first_name: user?.first_name || '',
+                            last_name: user?.last_name || '',
+                            company: '',
+                            address_1: '',
+                            address_2: '',
+                            city: '',
+                            province: '',
+                            postal_code: '',
+                            country_code: 'US',
+                            phone: user?.phone || ''
+                          })
+                        }}
+                        className="bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800">
+                        Add Address
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="p-6">
-                  {addresses.length === 0 ? (
+                  {showAddressForm && (
+                    <div className="border border-gray-200 p-6 mb-6">
+                      <h4 className="font-medium text-gray-900 mb-4">
+                        {editingAddress ? 'Edit Address' : 'Add New Address'}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                          <input
+                            type="text"
+                            value={addressForm.first_name}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, first_name: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                          <input
+                            type="text"
+                            value={addressForm.last_name}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, last_name: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                          <input
+                            type="text"
+                            value={addressForm.company}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, company: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                          <input
+                            type="tel"
+                            value={addressForm.phone}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, phone: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
+                          <input
+                            type="text"
+                            value={addressForm.address_1}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, address_1: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                            required
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                          <input
+                            type="text"
+                            value={addressForm.address_2}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, address_2: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                          <input
+                            type="text"
+                            value={addressForm.city}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
+                          <input
+                            type="text"
+                            value={addressForm.province}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, province: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                          <input
+                            type="text"
+                            value={addressForm.postal_code}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, postal_code: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Country Code *</label>
+                          <select
+                            value={addressForm.country_code}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, country_code: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900"
+                            required
+                          >
+                            <option value="US">United States</option>
+                            <option value="CA">Canada</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="DE">Germany</option>
+                            <option value="FR">France</option>
+                            <option value="ES">Spain</option>
+                            <option value="IT">Italy</option>
+                            <option value="AU">Australia</option>
+                            <option value="JP">Japan</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex space-x-3 mt-6">
+                        <button
+                          onClick={async () => {
+                            if (addressForm.first_name && addressForm.last_name && 
+                                addressForm.address_1 && addressForm.city && 
+                                addressForm.postal_code) {
+                              try {
+                                await addAddress(addressForm)
+                                setShowAddressForm(false)
+                                setEditingAddress(null)
+                                if (user) await fetchAddresses(user.email)
+                              } catch (error) {
+                                console.error('Failed to add address:', error)
+                              }
+                            }
+                          }}
+                          className="bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800"
+                        >
+                          {editingAddress ? 'Update Address' : 'Save Address'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAddressForm(false)
+                            setEditingAddress(null)
+                          }}
+                          className="border border-gray-300 text-gray-700 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {addresses.length === 0 && !showAddressForm ? (
                     <div className="text-center py-12">
                       <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No addresses saved</h3>
                       <p className="text-gray-600 mb-6">Add an address to make checkout faster.</p>
-                      <button className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800">
+                      <button 
+                        onClick={() => {
+                          setShowAddressForm(true)
+                          setEditingAddress(null)
+                          setAddressForm({
+                            first_name: user?.first_name || '',
+                            last_name: user?.last_name || '',
+                            company: '',
+                            address_1: '',
+                            address_2: '',
+                            city: '',
+                            province: '',
+                            postal_code: '',
+                            country_code: 'US',
+                            phone: user?.phone || ''
+                          })
+                        }}
+                        className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800">
                         Add Address
                       </button>
                     </div>
-                  ) : (
+                  ) : addresses.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {addresses.map((address) => (
                         <div key={address.id} className="border border-gray-100 p-4">
@@ -1000,7 +1303,24 @@ export default function AccountPage() {
                           </div>
                           
                           <div className="flex space-x-2 mt-4">
-                            <button className="text-gray-600 hover:text-gray-900 text-sm font-medium">
+                            <button 
+                              onClick={() => {
+                                setEditingAddress(address)
+                                setAddressForm({
+                                  first_name: address.first_name,
+                                  last_name: address.last_name,
+                                  company: address.company || '',
+                                  address_1: address.address_1,
+                                  address_2: address.address_2 || '',
+                                  city: address.city,
+                                  province: address.province || '',
+                                  postal_code: address.postal_code,
+                                  country_code: address.country_code,
+                                  phone: address.phone || ''
+                                })
+                                setShowAddressForm(true)
+                              }}
+                              className="text-gray-600 hover:text-gray-900 text-sm font-medium">
                               Edit
                             </button>
                             <button className="text-red-600 hover:text-red-700 text-sm font-medium">
@@ -1195,7 +1515,9 @@ export default function AccountPage() {
                         <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm">
                           <span>Change Password</span>
                         </button>
-                        <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm">
+                        <button 
+                          onClick={downloadMyData}
+                          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm">
                           <span>Download My Data</span>
                         </button>
                         <button className="flex items-center space-x-2 text-red-600 hover:text-red-700 text-sm">

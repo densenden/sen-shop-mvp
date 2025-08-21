@@ -1,13 +1,22 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { authenticate } from "@medusajs/medusa"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   console.log("[Admin Orders] Fetching orders list")
   
+  // Add CORS headers for development
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  
+  // Skip authentication for now to debug the issue
+  console.log("[Admin Orders] Skipping authentication for debugging")
+  
   try {
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     
-    // Use query service to get orders with summary data
+    // Query with customer and sales channel information  
     const { data: ordersList } = await query.graph({
       entity: "order",
       fields: [
@@ -20,9 +29,13 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         "updated_at",
         "email",
         "currency_code",
-        "metadata",
         "summary.*",
-        "summary.totals"
+        "customer.id",
+        "customer.email", 
+        "customer.first_name",
+        "customer.last_name",
+        "sales_channel.id",
+        "sales_channel.name"
       ],
       pagination: {
         take: 50,
@@ -49,51 +62,27 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           timeZone: 'Europe/Berlin'
         })
         
-        // Get total from summary if available
+        // Get total from summary totals if available
         const orderTotal = order.summary?.totals?.current_order_total || 0
         
+        console.log(`[Admin Orders] Order ${order.display_id}: total=${orderTotal}, totals:`, order.summary?.totals)
+        
+        // Format customer display name
+        const customerName = order.customer ? 
+          `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : 
+          null
+        
         return {
-          id: order.id,
-          display_id: order.display_id,
-          status: order.status,
-          created_at: order.created_at,
-          updated_at: order.updated_at || order.created_at,
-          email: order.email,
-          payment_status: order.payment_status || 'captured',
-          fulfillment_status: order.fulfillment_status || 'not_fulfilled',
+          ...order,
           total: orderTotal,
-          amount: orderTotal, // Duplicate for compatibility
-          currency_code: 'EUR', // Force EUR for admin display
-          formatted_date: formattedDateTime, // Add formatted date for display
-          // Add payment collection structure that admin UI expects
-          payment_collections: [
-            {
-              id: `payment_col_${order.id}`,
-              status: 'captured',
-              amount: orderTotal,
-              currency_code: 'EUR'
-            }
-          ],
-        payments: [
-          {
-            id: `payment_${order.id}`,
-            amount: orderTotal,
-            currency_code: 'EUR',
-            provider_id: 'stripe',
-            captured_at: order.created_at,
-            data: {}
-          }
-        ],
-        customer: {
-          id: order.customer_id,
-          email: order.email,
-          first_name: order.metadata?.customer_name?.split(' ')[0] || 'Customer',
-          last_name: order.metadata?.customer_name?.split(' ').slice(1).join(' ') || ''
-        },
-        sales_channel: {
-          id: 'default',
-          name: 'Default Sales Channel'
-        }
+          currency_code: order.currency_code || 'EUR',
+          payment_status: order.payment_status || 'awaiting',
+          fulfillment_status: order.fulfillment_status || 'not_fulfilled',
+          customer: order.customer ? {
+            ...order.customer,
+            display_name: customerName || order.customer.email || order.email
+          } : null,
+          sales_channel: order.sales_channel || null
         }
       })
       
@@ -113,6 +102,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
     
     console.log(`[Admin Orders] Returning ${orders.length} total orders`)
+    console.log(`[Admin Orders] Sample order:`, orders[0])
     
     res.json({
       orders,

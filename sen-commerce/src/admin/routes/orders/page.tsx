@@ -24,9 +24,13 @@ const OrdersCustomPage = () => {
 
   const fetchOrders = async () => {
     try {
+      console.log("Fetching orders from frontend...")
       const response = await fetch("/admin/orders")
+      console.log("Response status:", response.status)
       const data = await response.json()
+      console.log("Response data:", data)
       setOrders(data.orders || [])
+      console.log("Orders set:", data.orders?.length || 0)
     } catch (error) {
       console.error("Error fetching orders:", error)
     } finally {

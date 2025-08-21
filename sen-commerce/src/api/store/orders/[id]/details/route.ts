@@ -18,20 +18,31 @@ export const GET = async (
     const digitalProductService: DigitalProductModuleService = 
       req.scope.resolve(DIGITAL_PRODUCT_MODULE)
     
-    // Get order with line items and products
+    // Get order with complete line items, products, and addresses
     const { data: [order] } = await query.graph({
       entity: "order",
       filters: { id: orderId },
       fields: [
         "id",
+        "display_id",
         "email",
         "customer_id", 
         "total",
+        "subtotal",
+        "tax_total",
+        "shipping_total",
         "currency_code",
         "created_at",
+        "updated_at",
         "status",
+        "payment_status",
+        "fulfillment_status",
         "items.*",
-        "items.product.*"
+        "items.product.*",
+        "items.product.images.*",
+        "items.variant.*",
+        "shipping_address.*",
+        "billing_address.*"
       ],
     })
     
@@ -78,24 +89,51 @@ export const GET = async (
       }
     }
     
-    // Format the order data
+    // Format the order data with complete information
     const formattedOrder = {
       id: order.id,
+      display_id: order.display_id || order.id.slice(-6),
       email: order.email,
       customer_id: order.customer_id,
       total: order.total || 0,
+      subtotal: order.subtotal || 0,
+      tax_total: order.tax_total || 0,
+      shipping_total: order.shipping_total || 0,
       currency_code: order.currency_code || 'eur',
       created_at: order.created_at,
-      status: order.status,
-      items: order.items?.map((item: any) => ({
-        id: item.id,
-        title: item.product?.title || item.title || 'Unknown Product',
-        quantity: item.quantity || 1,
-        unit_price: item.unit_price || 0,
-        total: (item.unit_price || 0) * (item.quantity || 1),
-        fulfillment_type: item.product?.metadata?.fulfillment_type || 'physical',
-        thumbnail: item.product?.thumbnail
-      })) || [],
+      updated_at: order.updated_at,
+      status: order.status || 'pending',
+      payment_status: order.payment_status || 'pending',
+      fulfillment_status: order.fulfillment_status || 'not_fulfilled',
+      shipping_address: order.shipping_address || null,
+      billing_address: order.billing_address || null,
+      items: order.items?.map((item: any) => {
+        // Get product image from product or variant
+        let thumbnail = item.product?.thumbnail || null
+        if (!thumbnail && item.product?.images?.length > 0) {
+          thumbnail = item.product.images[0].url
+        }
+        if (!thumbnail && item.variant?.product?.thumbnail) {
+          thumbnail = item.variant.product.thumbnail
+        }
+        
+        return {
+          id: item.id,
+          title: item.title || item.product?.title || item.variant?.title || 'Product',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || item.variant?.calculated_price?.calculated_amount || 0,
+          total: item.total || (item.unit_price * item.quantity) || 0,
+          product_id: item.product_id || item.product?.id,
+          variant_id: item.variant_id || item.variant?.id,
+          product_handle: item.product?.handle || null,
+          thumbnail,
+          metadata: {
+            fulfillment_type: item.metadata?.fulfillment_type || item.product?.metadata?.fulfillment_type || 'standard',
+            digital_download_url: item.metadata?.digital_download_url,
+            artwork_id: item.metadata?.artwork_id || item.product?.metadata?.artwork_id
+          }
+        }
+      }) || [],
       download_links: downloadLinks
     }
     

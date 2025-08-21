@@ -118,7 +118,7 @@ export const OrderConfirmationEmail = ({
                     {item.quantity}x {item.title}
                   </Text>
                   <Text className={`text-${emailStyles.colors.text.light} text-sm`}>
-                    {item.fulfillmentType === 'digital' && '📱 Digital Download'}
+                    {(item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download') && '📱 Digital Download'}
                     {item.fulfillmentType === 'printful_pod' && '📦 Physical Product'}
                     {!item.fulfillmentType && '📦 Product'}
                   </Text>

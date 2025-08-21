@@ -96,8 +96,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
         const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
         
-        // Build filter object - only show published products for store
-        const filters: any = { status: 'published' }
+        // Build filter object - temporarily show all products for debugging
+        const filters: any = {}
         if (handle) filters.handle = handle
         if (tag) filters.tags = { name: tag }
         if (collection_id) filters.collection_id = collection_id
@@ -125,18 +125,32 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
             "categories.*"
           ],
           pagination: {
-            take: Number(limit),
-            skip: Number(offset)
+            take: 200, // Fixed at 200 to get all products
+            skip: 0
           }
         })
         
         const result = productsData || []
         
+        // Also check database directly for comparison
+        const allProducts = await productService.listProducts({}, { take: 100 })
+        console.log('[Store Products] Direct product service count:', allProducts?.length || 0)
+        
         console.log('[Store Products] Query result:', {
           filter: filters,
           count: result?.length || 0,
+          directServiceCount: allProducts?.length || 0,
+          limit: Number(limit) || 100,
+          offset: Number(offset) || 0,
           firstProduct: result?.[0] ? { id: result[0].id, title: result[0].title, status: result[0].status } : null
         })
+        
+        // Log metadata of all products for debugging
+        result.forEach(p => {
+          if (p.metadata?.fulfillment_type === 'digital_download') {
+            console.log('[Store Products] Found digital product:', p.title, p.metadata);
+          }
+        });
         
         // Add calculated EUR pricing from price_set data
         if (result && result.length > 0) {
@@ -146,6 +160,9 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
                 // Get EUR price from price_set, prioritize EUR currency
                 const eurPrice = variant.price_set?.prices?.find(p => p.currency_code === 'eur')
                 const fallbackPrice = variant.price_set?.prices?.[0]
+                
+                // Log price data for debugging
+                console.log(`[Products] Product ${product.title}, Variant: eurPrice=${eurPrice?.amount}, fallbackPrice=${fallbackPrice?.amount}`)
                 
                 variant.calculated_price = {
                   amount: eurPrice?.amount || fallbackPrice?.amount || 10, // Default to 10 cents (€0.10) if no price found

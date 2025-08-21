@@ -24,7 +24,7 @@ export default defineConfig({
       resolve: "@medusajs/medusa/cache-redis",
       options: { 
         redisUrl: process.env.CACHE_REDIS_URL,
-        ttl: 30, // 30 seconds default cache expiration
+        ttl: 30, 
         namespace: "medusa:"
       },
     },
@@ -67,7 +67,7 @@ export default defineConfig({
               region: process.env.S3_REGION || "auto",
               bucket: process.env.S3_BUCKET!,
               endpoint: process.env.S3_ENDPOINT!,
-              // Important for Supabase S3 compatibility
+              // Supabase S3 compatibility
         additional_client_config: {
                 forcePathStyle: true
               }
