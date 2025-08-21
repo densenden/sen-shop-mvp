@@ -37,6 +37,7 @@ export const GET = async (
         "created_at",
         "items.*",
         "items.product.*",
+        "items.product.id",
         "items.product.metadata"
       ],
     })
@@ -70,6 +71,7 @@ export const GET = async (
           o.display_id as order_display_id,
           o.created_at as order_date,
           oli.title as product_name,
+          oli.product_id as product_id,
           oli.metadata->>'digital_download_url' as download_url,
           oli.metadata->>'fulfillment_type' as fulfillment_type
         FROM "order" o
@@ -86,6 +88,7 @@ export const GET = async (
       if (directResult.rows.length > 0) {
         directResult.rows.forEach(row => {
           digitalItems.push({
+            product_id: row.product_id, // Include the actual product ID from database
             order_id: row.order_id,
             order_display_id: row.order_display_id,
             order_date: row.order_date,
@@ -129,6 +132,7 @@ export const GET = async (
             if (downloadUrl) {
               console.log(`[Downloads] Adding digital download for ${productName}`)
               digitalItems.push({
+                product_id: item.product?.id || item.product_id, // Include the actual product ID
                 order_id: order.id,
                 order_display_id: order.display_id,
                 order_date: order.created_at,
@@ -161,6 +165,7 @@ export const GET = async (
                     const dp = digitalProductResult.data[0]
                     console.log(`[Downloads] Found digital product via query: ${dp.name}`)
                     digitalItems.push({
+                      product_id: item.product?.id || item.product_id, // Include the actual product ID
                       order_id: order.id,
                       order_display_id: order.display_id,
                       order_date: order.created_at,

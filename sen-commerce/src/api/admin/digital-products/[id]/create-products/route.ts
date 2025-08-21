@@ -1,103 +1,71 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { DIGITAL_PRODUCT_MODULE } from "../../../../../modules/digital-product"
-import { Modules } from "@medusajs/framework/utils"
 import type { DigitalProductModuleService } from "../../../../../modules/digital-product/services/digital-product-module-service"
-import type { IProductModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
-// POST /admin/digital-products/:id/create-products - Create Medusa products from digital product
-export const POST = async (
-  req: MedusaRequest<{
-    product_title?: string
-    product_description?: string
-    price: number
-    currency_code?: string
-    variants?: Array<{
-      title: string
-      prices: Array<{
-        currency_code: string
-        amount: number
-      }>
-    }>
-  }>,
-  res: MedusaResponse
-) => {
+// POST /admin/digital-products/[id]/create-products - Create Medusa products from digital product
+export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { id } = req.params
-    const digitalProductService: DigitalProductModuleService = 
-      req.scope.resolve(DIGITAL_PRODUCT_MODULE)
-    const productService: IProductModuleService = 
-      req.scope.resolve(Modules.PRODUCT)
+    const digitalProductService = req.scope.resolve(DIGITAL_PRODUCT_MODULE)
     
     // Get the digital product
     const [digitalProduct] = await digitalProductService.listDigitalProducts({
-      filters: { id }
+      id
     })
     
     if (!digitalProduct) {
       return res.status(404).json({ error: "Digital product not found" })
     }
     
-    // Create the product data
+    // Create product with thumbnail as main image
     const productData = {
-      title: req.body.product_title || digitalProduct.name,
-      description: req.body.product_description || digitalProduct.description || "",
+      title: digitalProduct.name,
+      description: digitalProduct.description || `Digital download: ${digitalProduct.name}`,
+      handle: digitalProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       status: "published" as const,
-      is_giftcard: false,
-      discountable: true,
+      thumbnail: digitalProduct.thumbnail_url || digitalProduct.file_url, // Use thumbnail if available, fallback to file URL
       metadata: {
-        fulfillment_type: "digital_download",
+        fulfillment_type: "digital",
         digital_product_id: digitalProduct.id,
-        file_url: digitalProduct.file_url
+        digital_download_url: digitalProduct.file_url
       },
-      options: [
+      variants: [
         {
-          title: "Default",
-          values: ["Default"]
+          title: "Digital Download",
+          prices: [
+            {
+              amount: 1999, // Default price $19.99 (can be changed later)
+              currency_code: "eur"
+            }
+          ],
+          metadata: {
+            fulfillment_type: "digital",
+            digital_product_id: digitalProduct.id,
+            digital_download_url: digitalProduct.file_url
+          }
         }
       ]
     }
     
-    // Create the product
-    const product = await productService.createProducts(productData)
+    // Import the create products workflow
+    const { createProductsWorkflow } = await import("@medusajs/core-flows")
     
-    // Create variant with pricing
-    const variantData = {
-      title: req.body.variants?.[0]?.title || "Default",
-      product_id: product.id,
-      manage_inventory: false,
-      allow_backorder: true,
-      inventory_quantity: 999999, // Digital products have unlimited inventory
-      sku: `DIGITAL-${digitalProduct.id}-${Date.now()}`,
-      options: {
-        "Default": "Default"
-      },
-      prices: req.body.variants?.[0]?.prices || [
-        {
-          currency_code: req.body.currency_code || "usd",
-          amount: req.body.price
-        }
-      ]
-    }
-    
-    // Create the variant
-    const variant = await productService.createProductVariants(variantData)
-    
-    // Update digital product to reference the created product
-    await digitalProductService.updateDigitalProducts({
-      id: digitalProduct.id,
-      printful_product_ids: [product.id]
+    // Create the product using the workflow
+    const { result } = await createProductsWorkflow(req.scope).run({
+      input: { products: [productData] }
     })
+    
+    const product = result[0]
+    console.log(`Created product from digital file: ${product.id}`)
     
     res.json({ 
-      product,
-      variant,
+      product: product,
       digital_product: digitalProduct,
-      message: "Medusa product created successfully from digital product"
+      message: "Product created successfully from digital file"
     })
   } catch (error) {
-    console.error("Error creating products from digital product:", error)
-    res.status(500).json({ 
-      error: error.message || "Failed to create products from digital product" 
-    })
+    console.error("Error creating product from digital file:", error)
+    res.status(500).json({ error: error.message || "Failed to create product" })
   }
 }

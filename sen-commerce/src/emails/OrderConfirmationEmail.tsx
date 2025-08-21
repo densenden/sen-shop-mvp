@@ -62,13 +62,15 @@ export const OrderConfirmationEmail = ({
     >
       {/* Greeting */}
       <Section className={emailStyles.layout.section}>
-        <Text className={`${emailStyles.typography.sizes.base} text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
+        <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.sm}`}>
           Hi {customerName},
         </Text>
         
         <Text className={`text-${emailStyles.colors.text.secondary} ${emailStyles.layout.spacing.md}`}>
-          Thank you for your order! We're excited to get your products to you. Your order has been confirmed and is being processed.
+          Thank you for your order! Your order has been confirmed and is being processed.
         </Text>
+
+        <Hr className="border-gray-200 my-6" />
 
         {/* Order Details Card */}
         <Section className={`${emailStyles.components.card.primary} ${emailStyles.layout.sectionSmall}`}>
@@ -100,13 +102,7 @@ export const OrderConfirmationEmail = ({
               <Row className="py-2">
                 <Column className="w-16 pr-4">
                   <Img
-                    src={item.thumbnail || 
-                      (item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download'
-                        ? 'https://picsum.photos/48/48?random=digital'
-                        : item.fulfillmentType === 'printful_pod'
-                        ? 'https://picsum.photos/48/48?random=pod'
-                        : 'https://picsum.photos/48/48?random=product')
-                    }
+                    src={item.thumbnail || 'https://placehold.co/48x48/f3f4f6/6b7280?text=' + encodeURIComponent(item.title.charAt(0))}
                     alt={item.title}
                     width="48"
                     height="48"
@@ -118,9 +114,9 @@ export const OrderConfirmationEmail = ({
                     {item.quantity}x {item.title}
                   </Text>
                   <Text className={`text-${emailStyles.colors.text.light} text-sm`}>
-                    {(item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download') && '📱 Digital Download'}
-                    {item.fulfillmentType === 'printful_pod' && '📦 Physical Product'}
-                    {!item.fulfillmentType && '📦 Product'}
+                    {(item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download') && 'Digital Download'}
+                    {item.fulfillmentType === 'printful_pod' && 'Physical Product'}
+                    {!item.fulfillmentType && 'Product'}
                   </Text>
                 </Column>
                 <Column className="text-right">
@@ -134,22 +130,45 @@ export const OrderConfirmationEmail = ({
           ))}
         </Section>
 
-        {/* Digital Products Notice */}
+        {/* Digital Products Section */}
         {hasDigitalProducts && (
-          <Section className={`${emailStyles.components.card.secondary} ${emailStyles.layout.sectionSmall}`}>
-            <Text className={`text-${emailStyles.colors.secondary} font-semibold mb-2`}>📱 Digital Products</Text>
-            <Text className={`text-${emailStyles.colors.text.secondary} text-sm`}>
-              Your digital products will be available for download shortly. You'll receive a separate email with secure download links.
-            </Text>
-          </Section>
+          <>
+            <Hr className="border-gray-200 my-6" />
+            <Section className="text-center py-4">
+              <Text className={`text-${emailStyles.colors.text.primary} font-medium text-lg mb-4`}>
+                Digital Products Ready
+              </Text>
+              
+              {items.filter(item => item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download').map((item, index) => (
+                <div key={index} className="mb-6">
+                  <Text className="font-medium text-gray-900 mb-2">{item.title}</Text>
+                  <Text className="text-gray-600 text-sm mb-3">Digital Download</Text>
+                  <Button
+                    href={`${storeUrl}/account/downloads`}
+                    className={`${emailStyles.components.button.black} mx-auto`}
+                  >
+                    Download Now
+                  </Button>
+                  {index < items.filter(item => item.fulfillmentType === 'digital' || item.fulfillmentType === 'digital_download').length - 1 && (
+                    <Hr className="border-gray-200 my-4" />
+                  )}
+                </div>
+              ))}
+              
+              <Text className={`text-${emailStyles.colors.text.light} text-sm mt-4`}>
+                Access all downloads from your account dashboard anytime.
+              </Text>
+            </Section>
+            <Hr className="border-gray-200 my-6" />
+          </>
         )}
 
         {/* Physical Products Notice */}
         {hasPrintProducts && (
-          <Section className={`bg-green-50 p-4 rounded-lg ${emailStyles.layout.sectionSmall}`}>
-            <Text className="text-green-800 font-semibold mb-2">📦 Physical Items</Text>
-            <Text className="text-green-700 text-sm">
-              Your physical items will be processed and shipped within 2-3 business days. You'll receive tracking information once shipped.
+          <Section className={`bg-gray-50 p-4 border-l-4 border-gray-400 ${emailStyles.layout.sectionSmall}`}>
+            <Text className="text-gray-800 font-medium mb-2">Physical Items</Text>
+            <Text className="text-gray-700 text-sm">
+              Physical items will be processed and shipped within 2-3 business days. You'll receive tracking information once shipped.
             </Text>
           </Section>
         )}

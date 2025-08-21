@@ -1939,6 +1939,8 @@ export type DigitalProduct = {
   mime_type: Scalars['String']['output'];
   description: Maybe<Scalars['String']['output']>;
   preview_url: Maybe<Scalars['String']['output']>;
+  thumbnail_url: Maybe<Scalars['String']['output']>;
+  thumbnail_key: Maybe<Scalars['String']['output']>;
   max_downloads: Scalars['Int']['output'];
   expires_at: Maybe<Scalars['DateTime']['output']>;
   created_at: Scalars['DateTime']['output'];

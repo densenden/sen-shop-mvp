@@ -63,6 +63,7 @@ export const emailStyles = {
     button: {
       primary: 'bg-orange-500 text-white px-6 py-3 rounded-lg text-sm font-medium',
       secondary: 'bg-gray-500 text-white px-6 py-3 rounded-lg text-sm font-medium',
+      black: 'bg-black text-white px-8 py-3 rounded text-sm font-medium hover:bg-gray-800 inline-block',
       outline: 'border border-orange-500 text-orange-500 px-6 py-3 rounded-lg text-sm font-medium'
     },
     card: {

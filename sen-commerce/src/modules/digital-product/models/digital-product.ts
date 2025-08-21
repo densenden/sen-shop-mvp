@@ -15,6 +15,8 @@ export const DigitalProduct = model.define("digital_product", {
   // Metadata
   description: model.text().nullable(), // Optional description
   preview_url: model.text().nullable(), // Optional preview image
+  thumbnail_url: model.text().nullable(), // Auto-generated thumbnail URL
+  thumbnail_key: model.text().nullable(), // Thumbnail storage key
   
   // Access control
   max_downloads: model.number().default(-1), // -1 = unlimited

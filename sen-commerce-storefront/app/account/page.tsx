@@ -325,14 +325,18 @@ export default function AccountPage() {
                 const downloadUrl = item.metadata.digital_download_url || 
                   (item.metadata.supabase_url ? item.metadata.supabase_url : '#')
                   
+                const downloadId = `${order.id}_${item.id || Date.now()}`
+                const downloadCounts = getDownloadCounts()
+                
                 digitalDownloads.push({
                   order_id: order.id,
                   order_display_id: order.display_id,
                   order_date: order.created_at,
                   product_name: item.title,
                   download_url: downloadUrl,
+                  download_id: downloadId,
                   is_expired: false,
-                  download_count: 0,
+                  download_count: downloadCounts[downloadId] || 0,
                   max_downloads: -1
                 })
               }
@@ -478,6 +482,32 @@ export default function AccountPage() {
     router.push('/')
   }
 
+  // Function to get download counts from localStorage
+  const getDownloadCounts = (): { [key: string]: number } => {
+    try {
+      const stored = localStorage.getItem('download_counts')
+      return stored ? JSON.parse(stored) : {}
+    } catch {
+      return {}
+    }
+  }
+
+  // Function to update download count
+  const updateDownloadCount = (downloadId: string) => {
+    const counts = getDownloadCounts()
+    counts[downloadId] = (counts[downloadId] || 0) + 1
+    localStorage.setItem('download_counts', JSON.stringify(counts))
+    
+    // Update the downloads state to reflect the new count
+    setDownloads(prevDownloads => 
+      prevDownloads.map(download => 
+        download.download_id === downloadId 
+          ? { ...download, download_count: counts[downloadId] }
+          : download
+      )
+    )
+  }
+
   const downloadDigitalProduct = async (downloadUrl: string, filename: string) => {
     try {
       const response = await fetch(downloadUrl)
@@ -494,6 +524,15 @@ export default function AccountPage() {
       console.error('Download failed:', error)
       alert('Download failed. Please try again.')
     }
+  }
+
+  // Function to handle downloads and track count
+  const handleDownload = (downloadUrl: string, downloadId: string, filename: string) => {
+    // Increment download count
+    updateDownloadCount(downloadId)
+    
+    // Trigger the download
+    window.open(downloadUrl, '_blank')
   }
 
   const formatPrice = (price: number, currency: string) => {
@@ -541,6 +580,24 @@ export default function AccountPage() {
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  // Helper function to check if order contains only digital products
+  const isDigitalOnlyOrder = (order: any) => {
+    if (!order.items || order.items.length === 0) return false
+    return order.items.every((item: any) => 
+      item.metadata?.fulfillment_type === 'digital_download' || 
+      item.metadata?.fulfillment_type === 'digital'
+    )
+  }
+
+  // Helper function to check if order has any digital products
+  const hasDigitalProducts = (order: any) => {
+    if (!order.items || order.items.length === 0) return false
+    return order.items.some((item: any) => 
+      item.metadata?.fulfillment_type === 'digital_download' || 
+      item.metadata?.fulfillment_type === 'digital'
+    )
   }
 
   const getPaymentStatusIcon = (status: string | undefined) => {
@@ -749,9 +806,24 @@ export default function AccountPage() {
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getOrderStatusColor(order.status)}`}>
                                   {order.status || 'Unknown'}
                                 </span>
-                                <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                  {order.fulfillment_status || 'Not fulfilled'}
-                                </span>
+                                {isDigitalOnlyOrder(order) ? (
+                                  <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                                    Download Available
+                                  </span>
+                                ) : hasDigitalProducts(order) ? (
+                                  <>
+                                    <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                                      Download Available
+                                    </span>
+                                    <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
+                                      {order.fulfillment_status || 'Not fulfilled'}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
+                                    {order.fulfillment_status || 'Not fulfilled'}
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="text-right">
@@ -823,9 +895,24 @@ export default function AccountPage() {
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getOrderStatusColor(order.status)}`}>
                                   {order.status || 'Unknown'}
                                 </span>
-                                <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                  {order.fulfillment_status || 'Not fulfilled'}
-                                </span>
+                                {isDigitalOnlyOrder(order) ? (
+                                  <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                                    Download Available
+                                  </span>
+                                ) : hasDigitalProducts(order) ? (
+                                  <>
+                                    <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                                      Download Available
+                                    </span>
+                                    <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
+                                      {order.fulfillment_status || 'Not fulfilled'}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
+                                    {order.fulfillment_status || 'Not fulfilled'}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -864,14 +951,14 @@ export default function AccountPage() {
                                   <div className="font-medium text-gray-900">
                                     {formatPrice(item.total, order.currency_code)}
                                   </div>
-                                  {item.metadata?.fulfillment_type === 'digital_download' && 
+                                  {(item.metadata?.fulfillment_type === 'digital_download' || item.metadata?.fulfillment_type === 'digital') && 
                                    item.metadata?.digital_download_url && (
                                     <button
                                       onClick={() => downloadDigitalProduct(
                                         item.metadata!.digital_download_url!,
                                         `${item.title}.zip`
                                       )}
-                                      className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2 py-1 text-xs font-medium hover:bg-blue-100 mt-1"
+                                      className="flex items-center space-x-1 bg-black text-white px-3 py-2 text-xs font-medium hover:bg-gray-800 mt-1 transition-colors"
                                     >
                                       <Download className="h-3 w-3" />
                                       <span>Download</span>
@@ -1039,15 +1126,17 @@ export default function AccountPage() {
                                   <p className="text-xs text-red-600">Link expired</p>
                                 </div>
                               ) : (
-                                <a
-                                  href={download.download_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  onClick={() => handleDownload(
+                                    download.download_url,
+                                    download.download_id,
+                                    `${download.product_name}.${download.download_url.includes('.zip') ? 'zip' : 'jpg'}`
+                                  )}
                                   className="flex flex-col items-center space-y-2 bg-gray-900 text-white px-4 py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
                                 >
                                   <Download className="h-5 w-5" />
                                   <span>Download</span>
-                                </a>
+                                </button>
                               )}
                             </div>
                           </div>

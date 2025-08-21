@@ -44,7 +44,9 @@ export class DigitalProductModuleService extends MedusaService({
       file_url: uploadResult.url,
       file_key: uploadResult.key,
       file_size: uploadResult.size,
-      mime_type: uploadResult.mimeType
+      mime_type: uploadResult.mimeType,
+      thumbnail_url: uploadResult.thumbnailUrl || null,
+      thumbnail_key: uploadResult.thumbnailKey || null
     })
     
     return digitalProduct
@@ -83,7 +85,7 @@ export class DigitalProductModuleService extends MedusaService({
   }> {
     // Find download record by token
     const [download] = await this.listDigitalProductDownloads({
-      filters: { token },
+      token,
       relations: ["digital_product"]
     })
     
@@ -103,7 +105,7 @@ export class DigitalProductModuleService extends MedusaService({
     
     // Get the digital product
     const [digitalProduct] = await this.listDigitalProducts({
-      filters: { id: download.digital_product_id }
+      id: download.digital_product_id
     })
     
     if (!digitalProduct) {
@@ -130,13 +132,16 @@ export class DigitalProductModuleService extends MedusaService({
     }
   }
 
-  // Delete digital product and its file
+  // Delete digital product and its files (including thumbnail)
   async deleteDigitalProductWithFile(id: string) {
     const [product] = await this.listDigitalProducts({ id })
     
     if (product && product.file_key) {
-      // Delete file from storage
-      await this.fileUploadService_.deleteFile(product.file_key)
+      // Delete file and thumbnail from storage
+      await this.fileUploadService_.deleteFileWithThumbnail(
+        product.file_key, 
+        product.thumbnail_key
+      )
     }
     
     // Delete database record

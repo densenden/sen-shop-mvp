@@ -14,10 +14,8 @@ export const GET = async (
     
     // Find download access by token
     const [downloadAccess] = await digitalProductService.listDigitalProductDownloads({
-      filters: { 
-        token,
-        is_active: true
-      },
+      token,
+      is_active: true,
       relations: ["digital_product"]
     })
     
@@ -42,7 +40,7 @@ export const GET = async (
     
     // Get the digital product
     const [digitalProduct] = await digitalProductService.listDigitalProducts({
-      filters: { id: downloadAccess.digital_product_id }
+      id: downloadAccess.digital_product_id
     })
     
     if (!digitalProduct) {

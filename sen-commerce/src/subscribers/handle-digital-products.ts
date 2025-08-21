@@ -66,7 +66,7 @@ export default async function handleDigitalProducts({
       for (const item of digitalProductItems) {
         try {
           const digitalProducts = await digitalProductService.listDigitalProducts({
-            filters: { id: item.digitalProductId }
+            id: item.digitalProductId
           })
           const digitalProduct = digitalProducts[0]
           

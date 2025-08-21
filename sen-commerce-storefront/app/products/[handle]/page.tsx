@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
 import { cartService } from '../../../lib/cart'
+import { digitalOwnershipService, OwnedDigitalProduct } from '../../../lib/digital-ownership'
 
 interface Product {
   id: string
@@ -88,6 +89,9 @@ export default function ProductPage() {
   const [artwork, setArtwork] = useState<Artwork | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [activeTab, setActiveTab] = useState<'artwork' | 'collection' | 'product' | 'shipping'>('artwork')
+  const [isOwned, setIsOwned] = useState(false)
+  const [ownedProductDetails, setOwnedProductDetails] = useState<OwnedDigitalProduct | null>(null)
+  const [checkingOwnership, setCheckingOwnership] = useState(false)
 
   useEffect(() => {
     if (handle) {
@@ -179,6 +183,9 @@ export default function ProductPage() {
     
     setProduct(productWithImages)
     setSelectedVariant(productWithImages.variants[0])
+    
+    // Check ownership for digital products
+    checkOwnership(productWithImages)
   }
 
   const fetchArtworkByProductId = async (productId: string) => {
@@ -251,6 +258,36 @@ export default function ProductPage() {
     }
   }
 
+  const checkOwnership = async (product: Product) => {
+    if (!digitalOwnershipService.isDigitalProduct(product.metadata)) {
+      return // Not a digital product
+    }
+    
+    setCheckingOwnership(true)
+    try {
+      const owned = await digitalOwnershipService.isProductOwned(product.id)
+      setIsOwned(owned)
+      
+      if (owned) {
+        const details = await digitalOwnershipService.getOwnedProductDetails(product.id)
+        setOwnedProductDetails(details)
+      }
+    } catch (error) {
+      console.error('Error checking ownership:', error)
+    } finally {
+      setCheckingOwnership(false)
+    }
+  }
+
+  const handleDownload = () => {
+    if (ownedProductDetails?.download_url) {
+      window.open(ownedProductDetails.download_url, '_blank')
+    } else {
+      // Fallback: redirect to account page
+      router.push('/account?tab=downloads')
+    }
+  }
+
   const addToCart = async () => {
     if (!product || !selectedVariant) return
 
@@ -262,11 +299,11 @@ export default function ProductPage() {
         quantity
       })
       
-      await cartService.addItem(product.id, selectedVariant.id, quantity)
+      await cartService.addItem(product.id, selectedVariant.id, quantity, product.metadata)
       router.push('/cart')
     } catch (error) {
       console.error('Error adding to cart:', error)
-      alert('Failed to add item to cart. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to add item to cart. Please try again.')
     } finally {
       setAddingToCart(false)
     }
@@ -530,24 +567,55 @@ export default function ProductPage() {
                 </div>
               </div>
 
-              <div className="mt-8 flex space-x-4">
-                <button
-                  onClick={addToCart}
-                  disabled={addingToCart || !selectedVariant}
-                  className="flex-1 bg-blue-600 border border-transparent py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {addingToCart ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Adding...
-                    </>
+              <div className="mt-8">
+                {/* Show info box for unowned digital products only */}
+                {digitalOwnershipService.isDigitalProduct(product?.metadata) && !isOwned && !checkingOwnership && (
+                  <div className="mb-4">
+                    <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded">
+                      <p className="text-blue-800 text-sm">Digital product • Instant download after purchase</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Checking ownership state */}
+                {digitalOwnershipService.isDigitalProduct(product?.metadata) && checkingOwnership && (
+                  <div className="mb-4">
+                    <div className="bg-gray-100 px-4 py-2 rounded text-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mx-auto mb-2"></div>
+                      <span className="text-sm text-gray-600">Checking ownership...</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex space-x-4">
+                  {/* Conditional button: Download if owned, Add to Cart if not */}
+                  {digitalOwnershipService.isDigitalProduct(product?.metadata) && isOwned ? (
+                    <button
+                      onClick={handleDownload}
+                      className="flex-1 bg-black border border-transparent py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-gray-800 transition-colors"
+                    >
+                      <Download className="h-5 w-5 mr-2" />
+                      Download Now
+                    </button>
                   ) : (
-                    <>
-                      <ShoppingBag className="h-5 w-5 mr-2" />
-                      Add to Cart
-                    </>
+                    <button
+                      onClick={addToCart}
+                      disabled={addingToCart || !selectedVariant}
+                      className="flex-1 bg-blue-600 border border-transparent py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {addingToCart ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag className="h-5 w-5 mr-2" />
+                          Add to Cart
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
 
                 <button
                   onClick={toggleFavorite}
@@ -564,6 +632,19 @@ export default function ProductPage() {
                   <Share2 className="h-5 w-5" />
                 </button>
               </div>
+              
+              {/* Ownership info text below buttons - only for owned digital products */}
+              {digitalOwnershipService.isDigitalProduct(product?.metadata) && isOwned && (
+                <div className="mt-3 text-center">
+                  <p className="text-gray-600 text-sm">
+                    You already own this digital product!
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    Purchased on {ownedProductDetails ? new Date(ownedProductDetails.order_date).toLocaleDateString() : 'N/A'} 
+                    • <Link href="/account?tab=downloads" className="underline hover:text-gray-700">View in Account</Link>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

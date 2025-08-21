@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Layout from './components/Layout'
-import { Filter } from 'lucide-react'
+import { Filter, Download, CheckCircle } from 'lucide-react'
 import { MEDUSA_API_CONFIG, getHeaders } from '../lib/config'
+import { digitalOwnershipService } from '../lib/digital-ownership'
 
 interface Product {
   id: string
@@ -22,16 +23,68 @@ interface Product {
   }
 }
 
+// Component to show ownership status for individual products
+const OwnershipIndicator = ({ productId }: { productId: string }) => {
+  const [isOwned, setIsOwned] = useState(false)
+  const [checking, setChecking] = useState(false)
+
+  useEffect(() => {
+    const checkSingleProduct = async () => {
+      setChecking(true)
+      try {
+        const owned = await digitalOwnershipService.isProductOwned(productId)
+        setIsOwned(owned)
+      } catch (error) {
+        console.error('Error checking product ownership:', error)
+      } finally {
+        setChecking(false)
+      }
+    }
+    
+    checkSingleProduct()
+  }, [productId])
+
+  if (checking) {
+    return (
+      <div className="bg-gray-100 text-gray-600 text-xs px-2 py-1 font-medium">
+        <div className="animate-pulse">Checking...</div>
+      </div>
+    )
+  }
+
+  if (isOwned) {
+    return (
+      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 font-medium flex items-center space-x-1">
+        <CheckCircle className="h-3 w-3" />
+        <span>Owned</span>
+      </span>
+    )
+  }
+
+  return null
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('all')
+  const [ownedProducts, setOwnedProducts] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     // Test server connection first
     testServerConnection()
     fetchProducts()
+    checkOwnership()
   }, [])
+
+  const checkOwnership = async () => {
+    try {
+      await digitalOwnershipService.fetchOwnedProducts()
+      // This will be used for quick checking in the product display
+    } catch (error) {
+      console.error('Error fetching ownership info:', error)
+    }
+  }
 
   const testServerConnection = async () => {
     try {
@@ -78,8 +131,9 @@ export default function HomePage() {
 
   const filteredProducts = products.filter(product => {
     if (filterType === 'all') return true
-    if (filterType === 'digital') return product.metadata?.fulfillment_type === 'digital_download'
+    if (filterType === 'digital') return product.metadata?.fulfillment_type === 'digital_download' || product.metadata?.fulfillment_type === 'digital'
     if (filterType === 'pod') return product.metadata?.fulfillment_type === 'printful_pod'
+    if (filterType === 'physical') return product.metadata?.fulfillment_type && product.metadata.fulfillment_type !== 'digital_download' && product.metadata.fulfillment_type !== 'digital' && product.metadata.fulfillment_type !== 'printful_pod'
     return true
   })
 
@@ -119,6 +173,7 @@ export default function HomePage() {
                   { key: 'all', label: 'All' },
                   { key: 'digital', label: 'Digital' },
                   { key: 'pod', label: 'Prints' },
+                  { key: 'physical', label: 'Physical' },
                 ].map((filter) => (
                   <button
                     key={filter.key}
@@ -171,10 +226,17 @@ export default function HomePage() {
                       </div>
                     )}
                     {product.metadata?.fulfillment_type && (
-                      <div className="absolute top-4 left-4">
+                      <div className="absolute top-4 left-4 flex flex-col space-y-1">
                         <span className="bg-white text-gray-900 text-xs px-2 py-1 font-medium">
-                          {product.metadata.fulfillment_type === 'digital_download' ? 'Digital' : 'Print'}
+                          {(product.metadata.fulfillment_type === 'digital_download' || product.metadata.fulfillment_type === 'digital') 
+                            ? 'Digital' 
+                            : product.metadata.fulfillment_type === 'printful_pod' 
+                            ? 'Print' 
+                            : 'Physical'}
                         </span>
+                        {digitalOwnershipService.isDigitalProduct(product.metadata) && (
+                          <OwnershipIndicator productId={product.id} />
+                        )}
                       </div>
                     )}
                   </div>

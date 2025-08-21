@@ -1,11 +1,14 @@
 import { MedusaService } from "@medusajs/framework/utils"
 import { createClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
 
 interface FileUploadResult {
   url: string
   key: string
   size: number
   mimeType: string
+  thumbnailUrl?: string
+  thumbnailKey?: string
 }
 
 // Service to handle file uploads to Supabase "print" bucket
@@ -27,7 +30,34 @@ export class FileUploadService extends MedusaService({}) {
     this.supabase = createClient(supabaseUrl, supabaseKey)
   }
 
-  // Upload a digital product file
+  // Generate thumbnail for image files
+  private async generateThumbnail(buffer: Buffer, mimeType: string): Promise<Buffer | null> {
+    try {
+      // Only generate thumbnails for image files
+      if (!mimeType.startsWith('image/')) {
+        return null
+      }
+
+      // Generate 500px width thumbnail
+      const thumbnail = await sharp(buffer)
+        .resize(500, null, {
+          withoutEnlargement: true,
+          fit: 'inside'
+        })
+        .jpeg({
+          quality: 85,
+          progressive: true
+        })
+        .toBuffer()
+
+      return thumbnail
+    } catch (error) {
+      console.warn('Failed to generate thumbnail:', error)
+      return null
+    }
+  }
+
+  // Upload a digital product file with optional thumbnail generation
   async uploadFile(
     buffer: Buffer, 
     fileName: string, 
@@ -42,7 +72,7 @@ export class FileUploadService extends MedusaService({}) {
       
       console.log(`Uploading file to Supabase: ${uniqueFileName}`)
       
-      // Upload to Supabase
+      // Upload main file to Supabase
       const { data, error } = await this.supabase.storage
         .from(this.bucketName)
         .upload(uniqueFileName, buffer, {
@@ -66,12 +96,42 @@ export class FileUploadService extends MedusaService({}) {
 
       console.log(`File uploaded successfully: ${publicUrl}`)
       
-      return {
+      const result: FileUploadResult = {
         url: publicUrl,
         key: uniqueFileName,
         size: buffer.length,
         mimeType: mimeType
       }
+
+      // Generate and upload thumbnail for images
+      const thumbnailBuffer = await this.generateThumbnail(buffer, mimeType)
+      if (thumbnailBuffer) {
+        const thumbnailFileName = `digital-products/thumbnails/${timestamp}-${randomId}.jpg`
+        
+        console.log(`Uploading thumbnail: ${thumbnailFileName}`)
+        
+        const { data: thumbData, error: thumbError } = await this.supabase.storage
+          .from(this.bucketName)
+          .upload(thumbnailFileName, thumbnailBuffer, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (!thumbError) {
+          const { data: { publicUrl: thumbnailUrl } } = this.supabase.storage
+            .from(this.bucketName)
+            .getPublicUrl(thumbnailFileName)
+          
+          result.thumbnailUrl = thumbnailUrl
+          result.thumbnailKey = thumbnailFileName
+          console.log(`Thumbnail uploaded successfully: ${thumbnailUrl}`)
+        } else {
+          console.warn('Failed to upload thumbnail:', thumbError)
+        }
+      }
+      
+      return result
     } catch (error) {
       console.error('Error uploading file:', error)
       throw error
@@ -92,6 +152,29 @@ export class FileUploadService extends MedusaService({}) {
       }
     } catch (error) {
       console.error('Error deleting file:', error)
+      // Don't throw to avoid breaking flow
+    }
+  }
+
+  // Delete both main file and thumbnail
+  async deleteFileWithThumbnail(fileKey: string, thumbnailKey?: string): Promise<void> {
+    const filesToDelete = [fileKey]
+    if (thumbnailKey) {
+      filesToDelete.push(thumbnailKey)
+    }
+
+    try {
+      const { error } = await this.supabase.storage
+        .from(this.bucketName)
+        .remove(filesToDelete)
+      
+      if (error) {
+        console.error('Delete error:', error)
+      } else {
+        console.log(`Files deleted: ${filesToDelete.join(', ')}`)
+      }
+    } catch (error) {
+      console.error('Error deleting files:', error)
       // Don't throw to avoid breaking flow
     }
   }

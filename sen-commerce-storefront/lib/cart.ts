@@ -1,4 +1,5 @@
 import { MEDUSA_API_CONFIG, getHeaders } from './config'
+import { digitalOwnershipService } from './digital-ownership'
 
 export interface CartItem {
   id: string
@@ -149,8 +150,16 @@ class CartService {
     }
   }
 
-  async addItem(productId: string, variantId: string, quantity: number = 1): Promise<Cart | null> {
+  async addItem(productId: string, variantId: string, quantity: number = 1, metadata?: any): Promise<Cart | null> {
     try {
+      // Check if this is a digital product and if user already owns it
+      if (digitalOwnershipService.isDigitalProduct(metadata)) {
+        const isOwned = await digitalOwnershipService.isProductOwned(productId)
+        if (isOwned) {
+          throw new Error('You already own this digital product. Check your account page for downloads.')
+        }
+      }
+
       // Always use localStorage for now since the API is simplified
       console.log('Adding item to cart via localStorage:', { productId, variantId, quantity })
       return this.addItemLocal(productId, variantId, quantity)
