@@ -110,7 +110,26 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     if (title !== undefined) updateData.title = title
     if (subtitle !== undefined) updateData.subtitle = subtitle
     if (description !== undefined) updateData.description = description
-    if (handle !== undefined) updateData.handle = handle
+    
+    // Handle empty handle - generate from title or skip update
+    if (handle !== undefined) {
+      if (handle && handle.trim() !== '') {
+        updateData.handle = handle.trim()
+      } else if (title && title.trim() !== '') {
+        // Generate handle from title if handle is empty but title exists
+        const generatedHandle = title.toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '')
+        
+        if (generatedHandle) {
+          updateData.handle = generatedHandle
+        }
+        // If we can't generate a handle, don't update it
+      }
+    }
+    
     if (status !== undefined) updateData.status = status
     if (thumbnail !== undefined) updateData.thumbnail = thumbnail
     if (images !== undefined) updateData.images = images

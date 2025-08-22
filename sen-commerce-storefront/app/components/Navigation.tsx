@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Menu, X, ShoppingBag, User, Search, Heart } from 'lucide-react'
+// All icons now use Material Icons
+import MaterialIcon, { MaterialIcons } from './MaterialIcon'
 import Link from 'next/link'
 
 export default function Navigation() {
@@ -39,16 +40,16 @@ export default function Navigation() {
           {/* Desktop Icons */}
           <div className="hidden md:flex items-center space-x-4">
             <button className="text-gray-600 hover:text-black transition-colors">
-              <Search className="w-5 h-5" />
+              <MaterialIcon icon={MaterialIcons.search} size="small" className="w-5 h-5" />
             </button>
             <button className="text-gray-600 hover:text-black transition-colors">
-              <Heart className="w-5 h-5" />
+              <MaterialIcon icon={MaterialIcons.favoriteBorder} size="small" className="w-5 h-5" />
             </button>
             <button className="text-gray-600 hover:text-black transition-colors">
-              <User className="w-5 h-5" />
+              <MaterialIcon icon={MaterialIcons.person} size="small" className="w-5 h-5" />
             </button>
             <Link href="/cart" className="text-gray-600 hover:text-black transition-colors relative">
-              <ShoppingBag className="w-5 h-5" />
+              <MaterialIcon icon={MaterialIcons.shoppingCart} size="small" className="w-5 h-5" />
               <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 0
               </span>
@@ -62,9 +63,9 @@ export default function Navigation() {
               className="text-gray-600 hover:text-black"
             >
               {isMenuOpen ? (
-                <X className="w-6 h-6" />
+                <MaterialIcon icon="close" size="medium" className="w-6 h-6" />
               ) : (
-                <Menu className="w-6 h-6" />
+                <MaterialIcon icon="menu" size="medium" className="w-6 h-6" />
               )}
             </button>
           </div>
@@ -89,16 +90,16 @@ export default function Navigation() {
             </Link>
             <div className="flex items-center space-x-4 px-3 py-2">
               <button className="text-gray-600 hover:text-black">
-                <Search className="w-5 h-5" />
+                <MaterialIcon icon={MaterialIcons.search} size="small" className="w-5 h-5" />
               </button>
               <button className="text-gray-600 hover:text-black">
-                <Heart className="w-5 h-5" />
+                <MaterialIcon icon={MaterialIcons.favoriteBorder} size="small" className="w-5 h-5" />
               </button>
               <button className="text-gray-600 hover:text-black">
-                <User className="w-5 h-5" />
+                <MaterialIcon icon={MaterialIcons.person} size="small" className="w-5 h-5" />
               </button>
               <Link href="/cart" className="text-gray-600 hover:text-black relative">
-                <ShoppingBag className="w-5 h-5" />
+                <MaterialIcon icon={MaterialIcons.shoppingCart} size="small" className="w-5 h-5" />
                 <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   0
                 </span>

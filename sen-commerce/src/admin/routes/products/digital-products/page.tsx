@@ -123,6 +123,13 @@ const DigitalProductsPage = () => {
         toast.success("Success", {
           description: `Created ${data.product ? '1 product' : '0 products'} successfully`
         })
+        
+        // Navigate to the created product if it exists
+        if (data.product && data.product.id) {
+          setTimeout(() => {
+            window.location.href = `/app/products/${data.product.id}`
+          }, 1000) // Small delay to let the user see the success message
+        }
       } else {
         throw new Error("Failed to create products")
       }

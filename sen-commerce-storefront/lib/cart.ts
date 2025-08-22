@@ -223,7 +223,7 @@ class CartService {
             const variant = product?.variants?.find((v: any) => v.id === variantId)
             // Use calculated_price for EUR pricing, fallback to price_set for other currencies
             let price = variant?.calculated_price?.amount ||
-                       variant?.price_set?.prices?.find(p => p.currency_code === 'eur')?.amount ||
+                       variant?.price_set?.prices?.find((p: any) => p.currency_code === 'eur')?.amount ||
                        variant?.price_set?.prices?.[0]?.amount ||
                        variant?.prices?.[0]?.amount ||
                        variant?.price?.amount ||
@@ -248,8 +248,7 @@ class CartService {
             id: product.id,
             title: product.title,
             handle: product.handle,
-            thumbnail: product.thumbnail,
-            metadata: product.metadata
+            thumbnail: product.thumbnail
           } : undefined
         }
         newItem.total = newItem.unit_price * quantity

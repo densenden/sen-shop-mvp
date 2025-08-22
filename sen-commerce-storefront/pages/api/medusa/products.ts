@@ -178,7 +178,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('API error:', error)
     res.status(500).json({ 
       error: 'Failed to fetch products',
-      message: error.message 
+      message: error instanceof Error ? error.message : 'Unknown error' 
     })
   }
 }

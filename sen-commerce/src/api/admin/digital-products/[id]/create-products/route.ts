@@ -18,18 +18,38 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.status(404).json({ error: "Digital product not found" })
     }
     
+    // Generate proper handle
+    const baseHandle = digitalProduct.name.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+      .replace(/\s+/g, '-') // Replace spaces with hyphens  
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    
+    const handle = baseHandle || `digital-product-${Date.now()}`
+    
     // Create product with thumbnail as main image
     const productData = {
       title: digitalProduct.name,
       description: digitalProduct.description || `Digital download: ${digitalProduct.name}`,
-      handle: digitalProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      handle: handle,
       status: "published" as const,
       thumbnail: digitalProduct.thumbnail_url || digitalProduct.file_url, // Use thumbnail if available, fallback to file URL
+      images: [
+        {
+          url: digitalProduct.thumbnail_url || digitalProduct.file_url
+        }
+      ],
       metadata: {
         fulfillment_type: "digital",
         digital_product_id: digitalProduct.id,
         digital_download_url: digitalProduct.file_url
       },
+      options: [
+        {
+          title: "Format",
+          values: ["Digital File"]
+        }
+      ],
       variants: [
         {
           title: "Digital Download",
@@ -39,6 +59,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
               currency_code: "eur"
             }
           ],
+          options: {
+            "Format": "Digital File"
+          },
           metadata: {
             fulfillment_type: "digital",
             digital_product_id: digitalProduct.id,
@@ -60,8 +83,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     console.log(`Created product from digital file: ${product.id}`)
     
     res.json({ 
+      success: true,
       product: product,
       digital_product: digitalProduct,
+      product_url: `/app/products/${product.id}`,
       message: "Product created successfully from digital file"
     })
   } catch (error) {

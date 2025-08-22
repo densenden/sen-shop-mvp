@@ -2,7 +2,59 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { DIGITAL_PRODUCT_MODULE } from "../../../../../modules/digital-product"
 import type { DigitalProductModuleService } from "../../../../../modules/digital-product/services/digital-product-module-service"
+import { ARTWORK_MODULE } from "../../../../../modules/artwork-module"
+import type { ArtworkModuleService } from "../../../../../modules/artwork-module/service"
 import jwt from "jsonwebtoken"
+
+// Helper function to get artwork and collection info
+async function getArtworkCollectionInfo(digitalProductId: string, artworkService: ArtworkModuleService) {
+  try {
+    // First get the digital product to find artwork_id
+    const digitalProducts = await artworkService.listDigitalProducts({
+      filters: { id: digitalProductId }
+    })
+    
+    if (!digitalProducts || digitalProducts.length === 0) {
+      return { artworkName: null, collectionName: null }
+    }
+    
+    const digitalProduct = digitalProducts[0]
+    if (!digitalProduct.artwork_id) {
+      return { artworkName: null, collectionName: null }
+    }
+    
+    // Get the artwork
+    const artworks = await artworkService.listArtworks({
+      filters: { id: digitalProduct.artwork_id }
+    })
+    
+    if (!artworks || artworks.length === 0) {
+      return { artworkName: null, collectionName: null }
+    }
+    
+    const artwork = artworks[0]
+    let collectionName = null
+    
+    // Get the collection if artwork has one
+    if (artwork.artwork_collection_id) {
+      const collections = await artworkService.listArtworkCollections({
+        filters: { id: artwork.artwork_collection_id }
+      })
+      
+      if (collections && collections.length > 0) {
+        collectionName = collections[0].name
+      }
+    }
+    
+    return {
+      artworkName: artwork.title,
+      collectionName: collectionName
+    }
+  } catch (error) {
+    console.error('Error fetching artwork/collection info:', error)
+    return { artworkName: null, collectionName: null }
+  }
+}
 
 // GET /store/customers/me/downloads - Get customer's digital downloads
 export const GET = async (
@@ -34,6 +86,8 @@ export const GET = async (
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     const digitalProductService: DigitalProductModuleService = 
       req.scope.resolve(DIGITAL_PRODUCT_MODULE)
+    const artworkService: ArtworkModuleService = 
+      req.scope.resolve(ARTWORK_MODULE)
     
     // Get customer's orders with digital items by email
     const { data: orders } = await query.graph({
@@ -84,6 +138,9 @@ export const GET = async (
                 })
               
               if (digitalProduct) {
+                // Get artwork and collection info
+                const { artworkName, collectionName } = await getArtworkCollectionInfo(digitalProductId, artworkService)
+                
                 if (downloadAccess.length > 0) {
                   for (const access of downloadAccess) {
                     digitalItems.push({
@@ -100,7 +157,9 @@ export const GET = async (
                       file_size: digitalProduct.file_size,
                       mime_type: digitalProduct.mime_type,
                       storage_url: digitalProduct.file_url || null,
-                      supabase_path: digitalProduct.storage_path || null
+                      supabase_path: digitalProduct.storage_path || null,
+                      artwork_name: artworkName,
+                      collection_name: collectionName
                     })
                   }
                 } else if (digitalProduct.file_url || digitalProduct.storage_path) {
@@ -125,7 +184,9 @@ export const GET = async (
                       file_size: digitalProduct.file_size,
                       mime_type: digitalProduct.mime_type,
                       storage_url: supabaseUrl,
-                      supabase_path: digitalProduct.storage_path || null
+                      supabase_path: digitalProduct.storage_path || null,
+                      artwork_name: artworkName,
+                      collection_name: collectionName
                     })
                   }
                 }
@@ -149,7 +210,9 @@ export const GET = async (
                 file_size: null,
                 mime_type: null,
                 storage_url: item.product.metadata.digital_download_url,
-                supabase_path: null
+                supabase_path: null,
+                artwork_name: item.product.title, // Use product title as artwork name fallback
+                collection_name: null // No collection info available in fallback
               })
             }
           }

@@ -223,6 +223,53 @@ const ProductDetailOverride = () => {
       }
 
       setError("")
+      
+      // Handle artwork assignment if artwork is selected
+      if (selectedArtwork) {
+        try {
+          // First, check if relation already exists and delete old ones for this product
+          const existingResponse = await fetch(`/admin/artwork-product-relations?product_id=${id}`, {
+            credentials: "include"
+          })
+          
+          if (existingResponse.ok) {
+            const existingData = await existingResponse.json()
+            // Delete existing relations
+            for (const relation of existingData.relations || []) {
+              await fetch(`/admin/artwork-product-relations?artwork_id=${relation.artwork_id}&product_id=${id}`, {
+                method: "DELETE",
+                credentials: "include"
+              })
+            }
+          }
+          
+          // Create new artwork-product relation
+          const artworkResponse = await fetch("/admin/artwork-product-relations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              artwork_id: selectedArtwork,
+              product_id: id,
+              product_type: metadata?.fulfillment_type || "digital",
+              is_primary: true,
+              position: 0
+            })
+          })
+          
+          if (!artworkResponse.ok) {
+            const artworkError = await artworkResponse.json()
+            console.warn("Failed to save artwork relation:", artworkError)
+            // Don't fail the whole operation for artwork save issues
+          }
+        } catch (artworkError) {
+          console.warn("Error saving artwork relation:", artworkError)
+          // Don't fail the whole operation for artwork save issues
+        }
+      }
+      
       alert("Product updated successfully!")
       await fetchData()
     } catch (error: any) {

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CreditCard, Lock, Check, AlertCircle, Truck, Download } from 'lucide-react'
+import { CreditCard, Lock, Check, AlertCircle, Truck } from 'lucide-react'
+import MaterialIcon, { MaterialIcons } from '../components/MaterialIcon'
 import Layout from '../components/Layout'
 import { cartService } from '../../lib/cart'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../lib/config'
@@ -247,11 +248,10 @@ export default function CheckoutPage() {
             unit_price: item.unit_price,
             total: item.total,
             quantity: item.quantity,
-            product_title: item.product?.title || item.title,
-            thumbnail: item.product?.thumbnail || item.thumbnail,
+            product_title: item.title,
+            thumbnail: item.thumbnail,
             metadata: {
-              fulfillment_type: item.metadata?.fulfillment_type || 'standard',
-              artwork_id: item.metadata?.artwork_id
+              fulfillment_type: 'standard'
             }
           })),
           cart_total: cart.total,

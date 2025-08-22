@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Layout from './components/Layout'
-import { Filter, Download, CheckCircle } from 'lucide-react'
+import { Filter, CheckCircle } from 'lucide-react'
+import MaterialIcon, { MaterialIcons } from './components/MaterialIcon'
 import { MEDUSA_API_CONFIG, getHeaders } from '../lib/config'
 import { digitalOwnershipService } from '../lib/digital-ownership'
 

@@ -29,8 +29,7 @@ export default async function handler(
     try {
       const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000'
       const response = await fetch(`${backendUrl}/health`, {
-        method: 'GET',
-        timeout: 5000
+        method: 'GET'
       })
       if (response.ok) {
         backendStatus = 'connected'

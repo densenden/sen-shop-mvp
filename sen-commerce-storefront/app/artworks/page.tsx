@@ -144,7 +144,7 @@ export default function ArtworksPage() {
                 {topics.map((topic) => (
                   <button
                     key={topic}
-                    onClick={() => setFilterTopic(topic)}
+                    onClick={() => setFilterTopic(topic || '')}
                     className={`px-4 py-2 text-sm transition-colors capitalize ${
                       filterTopic === topic
                         ? 'text-gray-900 border-b border-gray-900'

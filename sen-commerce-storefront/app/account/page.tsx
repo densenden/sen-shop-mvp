@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
-  User, Package, Heart, Settings, LogOut, Download, Eye, Calendar, 
+  User, Package, Heart, Settings, LogOut, Eye, Calendar, 
   CreditCard, Truck, MapPin, Phone, Mail, Edit3, Save, X, 
   CheckCircle, Clock, AlertCircle, RefreshCw 
 } from 'lucide-react'
+import MaterialIcon, { MaterialIcons } from '../components/MaterialIcon'
 import Layout from '../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../lib/config'
+import { secureDownloadService, SecureDownloadToken } from '../../lib/secure-download'
 
 interface UserData {
   id: string
@@ -91,6 +93,8 @@ export default function AccountPage() {
   const [downloads, setDownloads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'downloads' | 'addresses' | 'favorites' | 'settings'>('overview')
+  const [secureTokens, setSecureTokens] = useState<{ [key: string]: SecureDownloadToken }>({})
+  const [generatingToken, setGeneratingToken] = useState<{ [key: string]: boolean }>({})
   const [editingProfile, setEditingProfile] = useState(false)
   const [updatingProfile, setUpdatingProfile] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -307,6 +311,11 @@ export default function AccountPage() {
       if (response.ok) {
         const data = await response.json()
         console.log('[Account] Downloads fetched:', data.downloads)
+        // Log the first download object to see its structure
+        if (data.downloads && data.downloads.length > 0) {
+          console.log('[Account] First download object structure:', data.downloads[0])
+          console.log('[Account] First download object keys:', Object.keys(data.downloads[0]))
+        }
         setDownloads(data.downloads || [])
       } else {
         console.error('Failed to fetch downloads:', response.status)
@@ -526,13 +535,51 @@ export default function AccountPage() {
     }
   }
 
-  // Function to handle downloads and track count
-  const handleDownload = (downloadUrl: string, downloadId: string, filename: string) => {
-    // Increment download count
-    updateDownloadCount(downloadId)
-    
-    // Trigger the download
-    window.open(downloadUrl, '_blank')
+  // Function to generate secure token and handle download
+  const handleSecureDownload = async (downloadUrl: string, downloadId: string, filename: string, productName: string, orderId: string, collectionName?: string, artworkName?: string) => {
+    try {
+      console.log('handleSecureDownload called with:', { downloadUrl, downloadId, filename, productName, orderId, collectionName, artworkName })
+      
+      // Check if we already have a valid token
+      const existingToken = secureTokens[downloadId]
+      if (existingToken && secureDownloadService.isTokenValid(existingToken)) {
+        await secureDownloadService.initiateSecureDownload(existingToken.token, filename)
+        updateDownloadCount(downloadId)
+        return
+      }
+
+      // Generate new secure token
+      setGeneratingToken(prev => ({ ...prev, [downloadId]: true }))
+      
+      if (!user?.email) {
+        throw new Error('User email not found')
+      }
+
+      const token = await secureDownloadService.generateSecureToken(
+        downloadUrl,
+        downloadId,
+        orderId,
+        user.email,
+        collectionName,
+        artworkName
+      )
+
+      // Store the token
+      setSecureTokens(prev => ({
+        ...prev,
+        [downloadId]: token
+      }))
+
+      // Initiate download
+      await secureDownloadService.initiateSecureDownload(token.token, filename)
+      updateDownloadCount(downloadId)
+
+    } catch (error) {
+      console.error('Secure download failed:', error)
+      alert('Download failed. Please try again.')
+    } finally {
+      setGeneratingToken(prev => ({ ...prev, [downloadId]: false }))
+    }
   }
 
   const formatPrice = (price: number, currency: string) => {
@@ -688,7 +735,7 @@ export default function AccountPage() {
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <Download className="h-4 w-4" />
+                  <MaterialIcon icon={MaterialIcons.download} size="small" className="w-4 h-4" />
                   <span>Downloads ({downloads.length})</span>
                 </button>
                 
@@ -954,14 +1001,46 @@ export default function AccountPage() {
                                   {(item.metadata?.fulfillment_type === 'digital_download' || item.metadata?.fulfillment_type === 'digital') && 
                                    item.metadata?.digital_download_url && (
                                     <button
-                                      onClick={() => downloadDigitalProduct(
-                                        item.metadata!.digital_download_url!,
-                                        `${item.title}.zip`
-                                      )}
-                                      className="flex items-center space-x-1 bg-black text-white px-3 py-2 text-xs font-medium hover:bg-gray-800 mt-1 transition-colors"
+                                      onClick={() => {
+                                        console.log('Item metadata:', item.metadata)
+                                        console.log('Item object keys:', Object.keys(item))
+                                        console.log('Full item object:', item)
+                                        
+                                        // Try different possible paths for collection name
+                                        const collectionName = 
+                                          item.product?.collection?.name ||
+                                          item.variant?.product?.collection?.name ||
+                                          item.metadata?.collection_name ||
+                                          item.metadata?.collection ||
+                                          (item as any).collection?.name ||
+                                          'Collection'
+                                          
+                                        console.log('Resolved collection name:', collectionName)
+                                        
+                                        handleSecureDownload(
+                                          item.metadata!.digital_download_url!,
+                                          `${order.id}_${item.id}`,
+                                          '', // filename will be generated by server
+                                          item.title,
+                                          order.id,
+                                          collectionName,
+                                          item.title || 'Artwork'
+                                        )
+                                      }}
+                                      disabled={generatingToken[`${order.id}_${item.id}`]}
+                                      className="flex items-center space-x-1 bg-black text-white px-3 py-2 text-xs font-medium hover:bg-gray-800 mt-1 transition-colors disabled:opacity-50"
                                     >
-                                      <Download className="h-3 w-3" />
-                                      <span>Download</span>
+                                      {generatingToken[`${order.id}_${item.id}`] ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                          <span>Generating...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <MaterialIcon icon={MaterialIcons.download} size="small" className="h-3 w-3" />
+                                          <span>Download</span>
+                                        </>
+                                      )}
                                     </button>
                                   )}
                                 </div>
@@ -1056,7 +1135,7 @@ export default function AccountPage() {
                 <div className="p-6">
                   {downloads.length === 0 ? (
                     <div className="text-center py-12">
-                      <Download className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <MaterialIcon icon={MaterialIcons.download} size="xlarge" className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No digital downloads yet</h3>
                       <p className="text-gray-600 mb-6">Purchase digital artworks to see your download links here.</p>
                       <Link
@@ -1127,15 +1206,29 @@ export default function AccountPage() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => handleDownload(
+                                  onClick={() => handleSecureDownload(
                                     download.download_url,
-                                    download.download_id,
-                                    `${download.product_name}.${download.download_url.includes('.zip') ? 'zip' : 'jpg'}`
+                                    download.download_id || `${download.order_id}_${download.product_id || download.product_name}`,
+                                    '', // filename will be generated by server
+                                    download.product_name,
+                                    download.order_id,
+                                    download.collection_name || 'Collection',
+                                    download.artwork_name || download.product_name || 'Artwork'
                                   )}
-                                  className="flex flex-col items-center space-y-2 bg-gray-900 text-white px-4 py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+                                  disabled={generatingToken[download.download_id || `${download.order_id}_${download.product_id || download.product_name}`]}
+                                  className="flex flex-col items-center space-y-2 bg-gray-900 text-white px-4 py-3 text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <Download className="h-5 w-5" />
-                                  <span>Download</span>
+                                  {generatingToken[download.download_id || `${download.order_id}_${download.product_id || download.product_name}`] ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                                      <span>Generating...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MaterialIcon icon={MaterialIcons.download} size="small" className="h-5 w-5" />
+                                      <span>Download</span>
+                                    </>
+                                  )}
                                 </button>
                               )}
                             </div>

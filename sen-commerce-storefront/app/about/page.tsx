@@ -1,7 +1,7 @@
 'use client'
 
 import Layout from '../components/Layout'
-import { Flower } from 'lucide-react'
+import MaterialIcon, { MaterialIcons } from '../components/MaterialIcon'
 
 export default function AboutPage() {
   return (
@@ -53,7 +53,7 @@ export default function AboutPage() {
             
             <div className="text-center">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Flower className="w-6 h-6 text-gray-600" />
+                <MaterialIcon icon="local_florist" size="medium" className="w-6 h-6 text-gray-600" />
               </div>
               <h3 className="text-sm font-medium mb-2">Sustainable</h3>
               <p className="text-sm text-gray-600">Our print-on-demand model reduces waste while our digital offerings provide instant, eco-friendly access to art.</p>

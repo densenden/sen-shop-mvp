@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle, Download, Package, Mail, Home } from 'lucide-react'
+import { CheckCircle, Package, Mail, Home } from 'lucide-react'
+import MaterialIcon, { MaterialIcons } from '../components/MaterialIcon'
 import Layout from '../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../lib/config'
 
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams()
-  const orderId = searchParams.get('order')
-  const total = searchParams.get('total')
-  const currency = searchParams.get('currency')
+  const orderId = searchParams?.get('order')
+  const total = searchParams?.get('total')
+  const currency = searchParams?.get('currency')
   const [orderDetails, setOrderDetails] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -140,7 +141,7 @@ export default function OrderSuccessPage() {
                         )
                       ) : item.fulfillment_type === 'digital' ? (
                         <div className="p-2 bg-blue-100 rounded-lg">
-                          <Download className="h-6 w-6 text-blue-600" />
+                          <MaterialIcon icon={MaterialIcons.download} className="h-6 w-6 text-blue-600" />
                         </div>
                       ) : (
                         <div className="p-2 bg-green-100 rounded-lg">
@@ -175,7 +176,7 @@ export default function OrderSuccessPage() {
               {orderDetails.download_links && orderDetails.download_links.length > 0 && (
                 <div className="bg-blue-50 rounded-lg p-6 mb-6">
                   <div className="flex items-center mb-4">
-                    <Download className="h-6 w-6 text-blue-600 mr-2" />
+                    <MaterialIcon icon={MaterialIcons.download} className="h-6 w-6 text-blue-600 mr-2" />
                     <h3 className="text-lg font-semibold text-gray-900">Digital Downloads</h3>
                   </div>
                   <div className="space-y-3">

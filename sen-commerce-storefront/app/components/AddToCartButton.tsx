@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ShoppingBag, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
+import MaterialIcon, { MaterialIcons } from './MaterialIcon'
 import { cartService } from '../../lib/cart'
 
 interface AddToCartButtonProps {
@@ -101,7 +102,7 @@ export default function AddToCartButton({
         </>
       ) : (
         <>
-          <ShoppingBag className="h-4 w-4" />
+          <MaterialIcon icon={MaterialIcons.addShoppingCart} size="small" className="h-4 w-4" />
           <span>{title}</span>
         </>
       )}

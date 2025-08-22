@@ -547,25 +547,28 @@ export default function ProductPage() {
 
             {/* Quantity and Add to Cart */}
             <div className="mt-8">
-              <div className="flex items-center space-x-4">
-                <div>
-                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
-                    Quantity
-                  </label>
-                  <select
-                    id="quantity"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="mt-1 block w-full border-gray-300 text-sm"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <option key={num} value={num}>
-                        {num}
-                      </option>
-                    ))}
-                  </select>
+              {/* Quantity selector - only for non-digital products */}
+              {!digitalOwnershipService.isDigitalProduct(product?.metadata) && (
+                <div className="flex items-center space-x-4">
+                  <div>
+                    <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
+                      Quantity
+                    </label>
+                    <select
+                      id="quantity"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Number(e.target.value))}
+                      className="mt-1 block w-full border-gray-300 text-sm"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <option key={num} value={num}>
+                          {num}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="mt-8">
                 {/* Show info box for unowned digital products only */}
@@ -645,6 +648,7 @@ export default function ProductPage() {
                   </p>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
@@ -731,7 +735,6 @@ export default function ProductPage() {
 
             {activeTab === 'collection' && (
               <div className="max-w-4xl">
-                {console.log('[Collection Tab Debug] Artwork:', artwork) || console.log('[Collection Tab Debug] Collection:', artwork?.collection)}
                 {artwork?.collection ? (
                   <div className="space-y-6">
                     <div>
