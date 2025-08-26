@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, Package, Mail, Home } from 'lucide-react'
@@ -8,7 +8,7 @@ import MaterialIcon, { MaterialIcons } from '../../components/MaterialIcon'
 import Layout from '../../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams?.get('order')
   const total = searchParams?.get('total')
@@ -275,5 +275,13 @@ export default function OrderSuccessPage() {
         </div>
       </div>
     </Layout>
+  )
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-lg">Loading...</div></div>}>
+      <OrderSuccessContent />
+    </Suspense>
   )
 }

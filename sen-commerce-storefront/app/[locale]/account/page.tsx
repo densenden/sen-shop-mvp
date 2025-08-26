@@ -55,6 +55,8 @@ interface OrderItem {
     fulfillment_type?: string
     digital_download_url?: string
     artwork_id?: string
+    collection_name?: string
+    collection?: string
   }
 }
 
@@ -1008,8 +1010,8 @@ export default function AccountPage() {
                                         
                                         // Try different possible paths for collection name
                                         const collectionName = 
-                                          item.product?.collection?.name ||
-                                          item.variant?.product?.collection?.name ||
+                                          (item as any).product?.collection?.name ||
+                                          (item as any).variant?.product?.collection?.name ||
                                           item.metadata?.collection_name ||
                                           item.metadata?.collection ||
                                           (item as any).collection?.name ||
