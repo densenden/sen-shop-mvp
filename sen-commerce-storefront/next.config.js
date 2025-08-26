@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 const nextConfig = {
   output: 'standalone',
   
+  // Skip prerendering for client-side pages
+  trailingSlash: false,
+  
   // Image optimization
   images: {
     domains: ['localhost', 'medusa-public-images.s3.eu-west-1.amazonaws.com'],
