@@ -1,0 +1,239 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "currency": "USD"
+  },
+  "navigation": {
+    "home": "Home",
+    "products": "Products",
+    "artworks": "Artworks",
+    "collections": "Collections",
+    "about": "About",
+    "cart": "Cart",
+    "account": "Account",
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register"
+  },
+  "footer": {
+    "company": "Company",
+    "aboutUs": "About Us",
+    "contact": "Contact",
+    "support": "Support",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "followUs": "Follow Us",
+    "newsletter": "Newsletter",
+    "subscribe": "Subscribe",
+    "emailPlaceholder": "Enter your email",
+    "allRightsReserved": "All rights reserved",
+    "language": "Language"
+  },
+  "home": {
+    "hero": {
+      "title": "Digital Art & Prints",
+      "subtitle": "Curated collection of digital artworks and premium print-on-demand products",
+      "cta": "View Artworks"
+    },
+    "filters": {
+      "all": "All",
+      "digital": "Digital",
+      "prints": "Prints",
+      "physical": "Physical"
+    },
+    "productsCount": "{count} products",
+    "noProducts": "No products found",
+    "owned": "Owned"
+  },
+  "product": {
+    "addToCart": "Add to Cart",
+    "alreadyOwned": "You already own this digital product",
+    "viewInAccount": "View in Account",
+    "buyNow": "Buy Now",
+    "outOfStock": "Out of Stock",
+    "inStock": "In Stock",
+    "quantity": "Quantity",
+    "price": "Price",
+    "description": "Description",
+    "details": "Details",
+    "reviews": "Reviews",
+    "relatedProducts": "Related Products",
+    "digital": "Digital",
+    "print": "Print",
+    "physical": "Physical",
+    "instantDownload": "Instant Download",
+    "printOnDemand": "Print on Demand"
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": "Your cart is empty",
+    "continueShopping": "Continue Shopping",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "tax": "Tax",
+    "total": "Total",
+    "checkout": "Checkout",
+    "remove": "Remove",
+    "updateQuantity": "Update Quantity",
+    "items": "{count, plural, =0 {No items} =1 {1 item} other {# items}}"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "shippingAddress": "Shipping Address",
+    "billingAddress": "Billing Address",
+    "paymentMethod": "Payment Method",
+    "orderSummary": "Order Summary",
+    "placeOrder": "Place Order",
+    "processing": "Processing...",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "city": "City",
+    "state": "State/Province",
+    "postalCode": "Postal Code",
+    "country": "Country"
+  },
+  "account": {
+    "title": "My Account",
+    "profile": "Profile",
+    "orders": "Orders",
+    "downloads": "Downloads",
+    "settings": "Settings",
+    "addresses": "Addresses",
+    "paymentMethods": "Payment Methods",
+    "orderHistory": "Order History",
+    "downloadHistory": "Download History",
+    "noOrders": "You haven't placed any orders yet",
+    "noDownloads": "You don't have any downloads yet",
+    "orderNumber": "Order #{id}",
+    "orderDate": "Date",
+    "orderStatus": "Status",
+    "orderTotal": "Total",
+    "viewOrder": "View Order",
+    "downloadFile": "Download File",
+    "downloadAgain": "Download Again",
+    "expiresOn": "Expires on {date}"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember Me",
+    "loginButton": "Sign In",
+    "registerButton": "Create Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "orContinueWith": "Or continue with",
+    "loginWithGoogle": "Login with Google",
+    "loginWithFacebook": "Login with Facebook",
+    "invalidCredentials": "Invalid email or password",
+    "accountCreated": "Account created successfully",
+    "resetPassword": "Reset Password",
+    "resetPasswordInstructions": "Enter your email to receive reset instructions"
+  },
+  "about": {
+    "title": "About SenCommerce",
+    "hero": {
+      "title": "Empowering Artists in the Digital Age",
+      "subtitle": "We connect creative minds with art enthusiasts worldwide through digital downloads and premium prints"
+    },
+    "mission": {
+      "title": "Our Mission",
+      "content": "To democratize art ownership and support independent artists by providing a seamless platform for digital art distribution and print-on-demand services."
+    },
+    "values": {
+      "title": "Our Values",
+      "quality": {
+        "title": "Quality",
+        "description": "We curate only the finest digital artworks and use premium materials for our prints"
+      },
+      "accessibility": {
+        "title": "Accessibility",
+        "description": "Making art accessible to everyone, anywhere in the world"
+      },
+      "sustainability": {
+        "title": "Sustainability",
+        "description": "Print-on-demand reduces waste and our digital downloads have zero carbon footprint"
+      },
+      "fairness": {
+        "title": "Fair Trade",
+        "description": "Artists receive fair compensation for their creative work"
+      }
+    },
+    "story": {
+      "title": "Our Story",
+      "content": "Founded in 2024, SenCommerce emerged from a simple belief: exceptional art should be accessible to everyone. We partner with talented artists worldwide to bring you unique digital artworks and high-quality prints, delivered right to your door or inbox."
+    },
+    "team": {
+      "title": "Meet the Team",
+      "description": "A passionate group of art lovers and tech enthusiasts"
+    },
+    "contact": {
+      "title": "Get in Touch",
+      "description": "Have questions? We'd love to hear from you",
+      "email": "Email us at",
+      "phone": "Call us at",
+      "hours": "Business Hours",
+      "hoursValue": "Monday - Friday, 9 AM - 6 PM EST"
+    }
+  },
+  "artworks": {
+    "title": "Artworks",
+    "allCollections": "All Collections",
+    "viewCollection": "View Collection",
+    "artworkBy": "by {artist}",
+    "medium": "Medium",
+    "size": "Size",
+    "year": "Year",
+    "availability": "Availability",
+    "original": "Original",
+    "prints": "Prints Available",
+    "digitalDownload": "Digital Download",
+    "limitedEdition": "Limited Edition",
+    "soldOut": "Sold Out"
+  },
+  "errors": {
+    "pageNotFound": "Page Not Found",
+    "somethingWentWrong": "Something went wrong",
+    "tryAgainLater": "Please try again later",
+    "networkError": "Network error. Please check your connection",
+    "validationError": "Please check your input",
+    "unauthorized": "You need to login to access this page",
+    "forbidden": "You don't have permission to access this resource",
+    "serverError": "Server error. Please try again later"
+  },
+  "success": {
+    "orderPlaced": "Order placed successfully!",
+    "itemAdded": "Item added to cart",
+    "itemRemoved": "Item removed from cart",
+    "profileUpdated": "Profile updated successfully",
+    "passwordChanged": "Password changed successfully",
+    "emailSent": "Email sent successfully",
+    "subscribed": "Successfully subscribed to newsletter"
+  },
+  "orderSuccess": {
+    "title": "Order Successful!",
+    "message": "Thank you for your purchase. Your order has been received.",
+    "orderNumber": "Order Number",
+    "email": "A confirmation email has been sent to",
+    "digitalProducts": "Your digital products are ready for download",
+    "goToDownloads": "Go to Downloads",
+    "continueShopping": "Continue Shopping"
+  }
+}

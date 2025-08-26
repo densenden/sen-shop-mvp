@@ -1,0 +1,239 @@
+{
+  "common": {
+    "loading": "Laden...",
+    "error": "Er is een fout opgetreden",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "view": "Bekijken",
+    "close": "Sluiten",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "sort": "Sorteren",
+    "currency": "EUR"
+  },
+  "navigation": {
+    "home": "Home",
+    "products": "Producten",
+    "artworks": "Kunstwerken",
+    "collections": "Collecties",
+    "about": "Over ons",
+    "cart": "Winkelwagen",
+    "account": "Account",
+    "login": "Inloggen",
+    "logout": "Uitloggen",
+    "register": "Registreren"
+  },
+  "footer": {
+    "company": "Bedrijf",
+    "aboutUs": "Over ons",
+    "contact": "Contact",
+    "support": "Ondersteuning",
+    "privacyPolicy": "Privacybeleid",
+    "termsOfService": "Servicevoorwaarden",
+    "followUs": "Volg ons",
+    "newsletter": "Nieuwsbrief",
+    "subscribe": "Abonneren",
+    "emailPlaceholder": "Voer je e-mail in",
+    "allRightsReserved": "Alle rechten voorbehouden",
+    "language": "Taal"
+  },
+  "home": {
+    "hero": {
+      "title": "Digitale kunst en prints",
+      "subtitle": "Gecureerde collectie van digitale kunstwerken en premium print-on-demand producten",
+      "cta": "Bekijk kunstwerken"
+    },
+    "filters": {
+      "all": "Alles",
+      "digital": "Digitaal",
+      "prints": "Prints",
+      "physical": "Fysiek"
+    },
+    "productsCount": "{count} producten",
+    "noProducts": "Geen producten gevonden",
+    "owned": "Eigendom"
+  },
+  "product": {
+    "addToCart": "Toevoegen aan winkelwagen",
+    "alreadyOwned": "Je bezit dit digitale product al",
+    "viewInAccount": "Bekijken in account",
+    "buyNow": "Nu kopen",
+    "outOfStock": "Uitverkocht",
+    "inStock": "Op voorraad",
+    "quantity": "Aantal",
+    "price": "Prijs",
+    "description": "Beschrijving",
+    "details": "Details",
+    "reviews": "Reviews",
+    "relatedProducts": "Gerelateerde producten",
+    "digital": "Digitaal",
+    "print": "Print",
+    "physical": "Fysiek",
+    "instantDownload": "Direct downloaden",
+    "printOnDemand": "Print op aanvraag"
+  },
+  "cart": {
+    "title": "Winkelwagen",
+    "empty": "Je winkelwagen is leeg",
+    "continueShopping": "Verder winkelen",
+    "subtotal": "Subtotaal",
+    "shipping": "Verzending",
+    "tax": "BTW",
+    "total": "Totaal",
+    "checkout": "Afrekenen",
+    "remove": "Verwijderen",
+    "updateQuantity": "Aantal bijwerken",
+    "items": "{count, plural, =0 {Geen artikelen} =1 {1 artikel} other {# artikelen}}"
+  },
+  "checkout": {
+    "title": "Afrekenen",
+    "shippingAddress": "Verzendadres",
+    "billingAddress": "Factuuradres",
+    "paymentMethod": "Betaalmethode",
+    "orderSummary": "Besteloverzicht",
+    "placeOrder": "Bestelling plaatsen",
+    "processing": "Verwerken...",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "email": "E-mail",
+    "phone": "Telefoon",
+    "address": "Adres",
+    "city": "Stad",
+    "state": "Provincie",
+    "postalCode": "Postcode",
+    "country": "Land"
+  },
+  "account": {
+    "title": "Mijn account",
+    "profile": "Profiel",
+    "orders": "Bestellingen",
+    "downloads": "Downloads",
+    "settings": "Instellingen",
+    "addresses": "Adressen",
+    "paymentMethods": "Betaalmethoden",
+    "orderHistory": "Bestelgeschiedenis",
+    "downloadHistory": "Downloadgeschiedenis",
+    "noOrders": "Je hebt nog geen bestellingen geplaatst",
+    "noDownloads": "Je hebt nog geen downloads",
+    "orderNumber": "Bestelling #{id}",
+    "orderDate": "Datum",
+    "orderStatus": "Status",
+    "orderTotal": "Totaal",
+    "viewOrder": "Bestelling bekijken",
+    "downloadFile": "Bestand downloaden",
+    "downloadAgain": "Opnieuw downloaden",
+    "expiresOn": "Verloopt op {date}"
+  },
+  "auth": {
+    "login": "Inloggen",
+    "register": "Registreren",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "confirmPassword": "Wachtwoord bevestigen",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "rememberMe": "Onthoud mij",
+    "loginButton": "Inloggen",
+    "registerButton": "Account aanmaken",
+    "alreadyHaveAccount": "Heb je al een account?",
+    "dontHaveAccount": "Heb je geen account?",
+    "orContinueWith": "Of ga verder met",
+    "loginWithGoogle": "Inloggen met Google",
+    "loginWithFacebook": "Inloggen met Facebook",
+    "invalidCredentials": "Ongeldig e-mailadres of wachtwoord",
+    "accountCreated": "Account succesvol aangemaakt",
+    "resetPassword": "Wachtwoord resetten",
+    "resetPasswordInstructions": "Voer je e-mail in om instructies te ontvangen"
+  },
+  "about": {
+    "title": "Over SenCommerce",
+    "hero": {
+      "title": "Kunstenaars versterken in het digitale tijdperk",
+      "subtitle": "We verbinden creatieve geesten met kunstliefhebbers wereldwijd via digitale downloads en premium prints"
+    },
+    "mission": {
+      "title": "Onze missie",
+      "content": "Het democratiseren van kunstbezit en het ondersteunen van onafhankelijke kunstenaars door het bieden van een naadloos platform voor digitale kunstdistributie en print-on-demand services."
+    },
+    "values": {
+      "title": "Onze waarden",
+      "quality": {
+        "title": "Kwaliteit",
+        "description": "We cureren alleen de beste digitale kunstwerken en gebruiken premium materialen voor onze prints"
+      },
+      "accessibility": {
+        "title": "Toegankelijkheid",
+        "description": "Kunst toegankelijk maken voor iedereen, overal ter wereld"
+      },
+      "sustainability": {
+        "title": "Duurzaamheid",
+        "description": "Print-on-demand vermindert afval en onze digitale downloads hebben een nul CO2-voetafdruk"
+      },
+      "fairness": {
+        "title": "Eerlijke handel",
+        "description": "Kunstenaars ontvangen eerlijke compensatie voor hun creatieve werk"
+      }
+    },
+    "story": {
+      "title": "Ons verhaal",
+      "content": "Opgericht in 2024, ontstond SenCommerce uit een eenvoudige overtuiging: uitzonderlijke kunst zou toegankelijk moeten zijn voor iedereen. We werken samen met getalenteerde kunstenaars wereldwijd om je unieke digitale kunstwerken en hoogwaardige prints te brengen, direct bezorgd bij je deur of inbox."
+    },
+    "team": {
+      "title": "Ontmoet het team",
+      "description": "Een gepassioneerde groep kunstliefhebbers en tech-enthousiastelingen"
+    },
+    "contact": {
+      "title": "Neem contact op",
+      "description": "Heb je vragen? We horen graag van je",
+      "email": "E-mail ons op",
+      "phone": "Bel ons op",
+      "hours": "Openingstijden",
+      "hoursValue": "Maandag - Vrijdag, 9:00 - 18:00 CET"
+    }
+  },
+  "artworks": {
+    "title": "Kunstwerken",
+    "allCollections": "Alle collecties",
+    "viewCollection": "Collectie bekijken",
+    "artworkBy": "door {artist}",
+    "medium": "Medium",
+    "size": "Maat",
+    "year": "Jaar",
+    "availability": "Beschikbaarheid",
+    "original": "Origineel",
+    "prints": "Prints beschikbaar",
+    "digitalDownload": "Digitale download",
+    "limitedEdition": "Beperkte oplage",
+    "soldOut": "Uitverkocht"
+  },
+  "errors": {
+    "pageNotFound": "Pagina niet gevonden",
+    "somethingWentWrong": "Er ging iets mis",
+    "tryAgainLater": "Probeer het later opnieuw",
+    "networkError": "Netwerkfout. Controleer je verbinding",
+    "validationError": "Controleer je invoer",
+    "unauthorized": "Je moet inloggen om toegang te krijgen tot deze pagina",
+    "forbidden": "Je hebt geen toestemming om toegang te krijgen tot deze resource",
+    "serverError": "Serverfout. Probeer het later opnieuw"
+  },
+  "success": {
+    "orderPlaced": "Bestelling succesvol geplaatst!",
+    "itemAdded": "Artikel toegevoegd aan winkelwagen",
+    "itemRemoved": "Artikel verwijderd uit winkelwagen",
+    "profileUpdated": "Profiel succesvol bijgewerkt",
+    "passwordChanged": "Wachtwoord succesvol gewijzigd",
+    "emailSent": "E-mail succesvol verzonden",
+    "subscribed": "Succesvol geabonneerd op nieuwsbrief"
+  },
+  "orderSuccess": {
+    "title": "Bestelling gelukt!",
+    "message": "Bedankt voor je aankoop. Je bestelling is ontvangen.",
+    "orderNumber": "Bestelnummer",
+    "email": "Een bevestigingsmail is verzonden naar",
+    "digitalProducts": "Je digitale producten zijn klaar voor download",
+    "goToDownloads": "Ga naar downloads",
+    "continueShopping": "Verder winkelen"
+  }
+}

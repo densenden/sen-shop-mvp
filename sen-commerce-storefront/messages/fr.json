@@ -1,0 +1,239 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "view": "Voir",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "currency": "EUR"
+  },
+  "navigation": {
+    "home": "Accueil",
+    "products": "Produits",
+    "artworks": "Œuvres d'art",
+    "collections": "Collections",
+    "about": "À propos",
+    "cart": "Panier",
+    "account": "Compte",
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "register": "S'inscrire"
+  },
+  "footer": {
+    "company": "Entreprise",
+    "aboutUs": "À propos",
+    "contact": "Contact",
+    "support": "Support",
+    "privacyPolicy": "Politique de confidentialité",
+    "termsOfService": "Conditions d'utilisation",
+    "followUs": "Suivez-nous",
+    "newsletter": "Newsletter",
+    "subscribe": "S'abonner",
+    "emailPlaceholder": "Entrez votre email",
+    "allRightsReserved": "Tous droits réservés",
+    "language": "Langue"
+  },
+  "home": {
+    "hero": {
+      "title": "Art numérique et impressions",
+      "subtitle": "Collection organisée d'œuvres d'art numériques et de produits d'impression à la demande premium",
+      "cta": "Voir les œuvres"
+    },
+    "filters": {
+      "all": "Tout",
+      "digital": "Numérique",
+      "prints": "Impressions",
+      "physical": "Physique"
+    },
+    "productsCount": "{count} produits",
+    "noProducts": "Aucun produit trouvé",
+    "owned": "Possédé"
+  },
+  "product": {
+    "addToCart": "Ajouter au panier",
+    "alreadyOwned": "Vous possédez déjà ce produit numérique",
+    "viewInAccount": "Voir dans le compte",
+    "buyNow": "Acheter maintenant",
+    "outOfStock": "Rupture de stock",
+    "inStock": "En stock",
+    "quantity": "Quantité",
+    "price": "Prix",
+    "description": "Description",
+    "details": "Détails",
+    "reviews": "Avis",
+    "relatedProducts": "Produits similaires",
+    "digital": "Numérique",
+    "print": "Impression",
+    "physical": "Physique",
+    "instantDownload": "Téléchargement instantané",
+    "printOnDemand": "Impression à la demande"
+  },
+  "cart": {
+    "title": "Panier",
+    "empty": "Votre panier est vide",
+    "continueShopping": "Continuer les achats",
+    "subtotal": "Sous-total",
+    "shipping": "Livraison",
+    "tax": "Taxe",
+    "total": "Total",
+    "checkout": "Commander",
+    "remove": "Retirer",
+    "updateQuantity": "Mettre à jour la quantité",
+    "items": "{count, plural, =0 {Aucun article} =1 {1 article} other {# articles}}"
+  },
+  "checkout": {
+    "title": "Commande",
+    "shippingAddress": "Adresse de livraison",
+    "billingAddress": "Adresse de facturation",
+    "paymentMethod": "Méthode de paiement",
+    "orderSummary": "Résumé de la commande",
+    "placeOrder": "Passer la commande",
+    "processing": "Traitement...",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "city": "Ville",
+    "state": "Région",
+    "postalCode": "Code postal",
+    "country": "Pays"
+  },
+  "account": {
+    "title": "Mon compte",
+    "profile": "Profil",
+    "orders": "Commandes",
+    "downloads": "Téléchargements",
+    "settings": "Paramètres",
+    "addresses": "Adresses",
+    "paymentMethods": "Méthodes de paiement",
+    "orderHistory": "Historique des commandes",
+    "downloadHistory": "Historique des téléchargements",
+    "noOrders": "Vous n'avez pas encore passé de commandes",
+    "noDownloads": "Vous n'avez pas encore de téléchargements",
+    "orderNumber": "Commande #{id}",
+    "orderDate": "Date",
+    "orderStatus": "Statut",
+    "orderTotal": "Total",
+    "viewOrder": "Voir la commande",
+    "downloadFile": "Télécharger le fichier",
+    "downloadAgain": "Télécharger à nouveau",
+    "expiresOn": "Expire le {date}"
+  },
+  "auth": {
+    "login": "Connexion",
+    "register": "Inscription",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié?",
+    "rememberMe": "Se souvenir de moi",
+    "loginButton": "Se connecter",
+    "registerButton": "Créer un compte",
+    "alreadyHaveAccount": "Déjà un compte?",
+    "dontHaveAccount": "Pas encore de compte?",
+    "orContinueWith": "Ou continuer avec",
+    "loginWithGoogle": "Se connecter avec Google",
+    "loginWithFacebook": "Se connecter avec Facebook",
+    "invalidCredentials": "Email ou mot de passe invalide",
+    "accountCreated": "Compte créé avec succès",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "resetPasswordInstructions": "Entrez votre email pour recevoir les instructions"
+  },
+  "about": {
+    "title": "À propos de SenCommerce",
+    "hero": {
+      "title": "Donner du pouvoir aux artistes à l'ère numérique",
+      "subtitle": "Nous connectons les esprits créatifs avec les amateurs d'art du monde entier grâce aux téléchargements numériques et aux impressions premium"
+    },
+    "mission": {
+      "title": "Notre mission",
+      "content": "Démocratiser la propriété artistique et soutenir les artistes indépendants en fournissant une plateforme transparente pour la distribution d'art numérique et les services d'impression à la demande."
+    },
+    "values": {
+      "title": "Nos valeurs",
+      "quality": {
+        "title": "Qualité",
+        "description": "Nous sélectionnons uniquement les meilleures œuvres d'art numériques et utilisons des matériaux premium pour nos impressions"
+      },
+      "accessibility": {
+        "title": "Accessibilité",
+        "description": "Rendre l'art accessible à tous, partout dans le monde"
+      },
+      "sustainability": {
+        "title": "Durabilité",
+        "description": "L'impression à la demande réduit les déchets et nos téléchargements numériques ont une empreinte carbone nulle"
+      },
+      "fairness": {
+        "title": "Commerce équitable",
+        "description": "Les artistes reçoivent une rémunération équitable pour leur travail créatif"
+      }
+    },
+    "story": {
+      "title": "Notre histoire",
+      "content": "Fondé en 2024, SenCommerce est né d'une conviction simple : l'art exceptionnel devrait être accessible à tous. Nous nous associons à des artistes talentueux du monde entier pour vous apporter des œuvres d'art numériques uniques et des impressions de haute qualité, livrées directement à votre porte ou dans votre boîte de réception."
+    },
+    "team": {
+      "title": "Rencontrez l'équipe",
+      "description": "Un groupe passionné d'amateurs d'art et d'enthousiastes de la technologie"
+    },
+    "contact": {
+      "title": "Contactez-nous",
+      "description": "Vous avez des questions? Nous serions ravis de vous entendre",
+      "email": "Envoyez-nous un email à",
+      "phone": "Appelez-nous au",
+      "hours": "Heures d'ouverture",
+      "hoursValue": "Lundi - Vendredi, 9h - 18h CET"
+    }
+  },
+  "artworks": {
+    "title": "Œuvres d'art",
+    "allCollections": "Toutes les collections",
+    "viewCollection": "Voir la collection",
+    "artworkBy": "par {artist}",
+    "medium": "Médium",
+    "size": "Taille",
+    "year": "Année",
+    "availability": "Disponibilité",
+    "original": "Original",
+    "prints": "Impressions disponibles",
+    "digitalDownload": "Téléchargement numérique",
+    "limitedEdition": "Édition limitée",
+    "soldOut": "Épuisé"
+  },
+  "errors": {
+    "pageNotFound": "Page non trouvée",
+    "somethingWentWrong": "Quelque chose s'est mal passé",
+    "tryAgainLater": "Veuillez réessayer plus tard",
+    "networkError": "Erreur réseau. Veuillez vérifier votre connexion",
+    "validationError": "Veuillez vérifier votre saisie",
+    "unauthorized": "Vous devez vous connecter pour accéder à cette page",
+    "forbidden": "Vous n'avez pas l'autorisation d'accéder à cette ressource",
+    "serverError": "Erreur serveur. Veuillez réessayer plus tard"
+  },
+  "success": {
+    "orderPlaced": "Commande passée avec succès!",
+    "itemAdded": "Article ajouté au panier",
+    "itemRemoved": "Article retiré du panier",
+    "profileUpdated": "Profil mis à jour avec succès",
+    "passwordChanged": "Mot de passe modifié avec succès",
+    "emailSent": "Email envoyé avec succès",
+    "subscribed": "Abonné avec succès à la newsletter"
+  },
+  "orderSuccess": {
+    "title": "Commande réussie!",
+    "message": "Merci pour votre achat. Votre commande a été reçue.",
+    "orderNumber": "Numéro de commande",
+    "email": "Un email de confirmation a été envoyé à",
+    "digitalProducts": "Vos produits numériques sont prêts au téléchargement",
+    "goToDownloads": "Aller aux téléchargements",
+    "continueShopping": "Continuer les achats"
+  }
+}

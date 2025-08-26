@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import Layout from '../../../components/Layout'
+import Layout from '../../../../components/Layout'
 import { ArrowLeft, Image, ShoppingBag } from 'lucide-react'
-import { MEDUSA_API_CONFIG, getHeaders } from '../../../../lib/config'
+import { MEDUSA_API_CONFIG, getHeaders } from '../../../../../lib/config'
 
 interface Artwork {
   id: string

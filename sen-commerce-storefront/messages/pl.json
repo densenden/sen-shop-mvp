@@ -1,0 +1,239 @@
+{
+  "common": {
+    "loading": "Ładowanie...",
+    "error": "Wystąpił błąd",
+    "retry": "Spróbuj ponownie",
+    "cancel": "Anuluj",
+    "save": "Zapisz",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "view": "Zobacz",
+    "close": "Zamknij",
+    "search": "Szukaj",
+    "filter": "Filtruj",
+    "sort": "Sortuj",
+    "currency": "PLN"
+  },
+  "navigation": {
+    "home": "Strona główna",
+    "products": "Produkty",
+    "artworks": "Dzieła sztuki",
+    "collections": "Kolekcje",
+    "about": "O nas",
+    "cart": "Koszyk",
+    "account": "Konto",
+    "login": "Zaloguj",
+    "logout": "Wyloguj",
+    "register": "Zarejestruj"
+  },
+  "footer": {
+    "company": "Firma",
+    "aboutUs": "O nas",
+    "contact": "Kontakt",
+    "support": "Wsparcie",
+    "privacyPolicy": "Polityka prywatności",
+    "termsOfService": "Warunki korzystania",
+    "followUs": "Obserwuj nas",
+    "newsletter": "Newsletter",
+    "subscribe": "Subskrybuj",
+    "emailPlaceholder": "Wprowadź swój email",
+    "allRightsReserved": "Wszystkie prawa zastrzeżone",
+    "language": "Język"
+  },
+  "home": {
+    "hero": {
+      "title": "Sztuka cyfrowa i druki",
+      "subtitle": "Wyselekcjonowana kolekcja cyfrowych dzieł sztuki i produktów print-on-demand premium",
+      "cta": "Zobacz dzieła sztuki"
+    },
+    "filters": {
+      "all": "Wszystkie",
+      "digital": "Cyfrowe",
+      "prints": "Druki",
+      "physical": "Fizyczne"
+    },
+    "productsCount": "{count} produktów",
+    "noProducts": "Nie znaleziono produktów",
+    "owned": "Posiadane"
+  },
+  "product": {
+    "addToCart": "Dodaj do koszyka",
+    "alreadyOwned": "Już posiadasz ten produkt cyfrowy",
+    "viewInAccount": "Zobacz w koncie",
+    "buyNow": "Kup teraz",
+    "outOfStock": "Brak w magazynie",
+    "inStock": "Dostępny",
+    "quantity": "Ilość",
+    "price": "Cena",
+    "description": "Opis",
+    "details": "Szczegóły",
+    "reviews": "Recenzje",
+    "relatedProducts": "Powiązane produkty",
+    "digital": "Cyfrowy",
+    "print": "Druk",
+    "physical": "Fizyczny",
+    "instantDownload": "Natychmiastowe pobieranie",
+    "printOnDemand": "Druk na żądanie"
+  },
+  "cart": {
+    "title": "Koszyk",
+    "empty": "Twój koszyk jest pusty",
+    "continueShopping": "Kontynuuj zakupy",
+    "subtotal": "Suma częściowa",
+    "shipping": "Wysyłka",
+    "tax": "Podatek",
+    "total": "Razem",
+    "checkout": "Finalizuj zakup",
+    "remove": "Usuń",
+    "updateQuantity": "Zaktualizuj ilość",
+    "items": "{count, plural, =0 {Brak przedmiotów} =1 {1 przedmiot} other {# przedmiotów}}"
+  },
+  "checkout": {
+    "title": "Finalizacja zakupu",
+    "shippingAddress": "Adres wysyłki",
+    "billingAddress": "Adres rozliczeniowy",
+    "paymentMethod": "Metoda płatności",
+    "orderSummary": "Podsumowanie zamówienia",
+    "placeOrder": "Złóż zamówienie",
+    "processing": "Przetwarzanie...",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "email": "Email",
+    "phone": "Telefon",
+    "address": "Adres",
+    "city": "Miasto",
+    "state": "Województwo",
+    "postalCode": "Kod pocztowy",
+    "country": "Kraj"
+  },
+  "account": {
+    "title": "Moje konto",
+    "profile": "Profil",
+    "orders": "Zamówienia",
+    "downloads": "Pobrane",
+    "settings": "Ustawienia",
+    "addresses": "Adresy",
+    "paymentMethods": "Metody płatności",
+    "orderHistory": "Historia zamówień",
+    "downloadHistory": "Historia pobierania",
+    "noOrders": "Nie złożyłeś jeszcze żadnych zamówień",
+    "noDownloads": "Nie masz jeszcze żadnych pobrań",
+    "orderNumber": "Zamówienie #{id}",
+    "orderDate": "Data",
+    "orderStatus": "Status",
+    "orderTotal": "Razem",
+    "viewOrder": "Zobacz zamówienie",
+    "downloadFile": "Pobierz plik",
+    "downloadAgain": "Pobierz ponownie",
+    "expiresOn": "Wygasa {date}"
+  },
+  "auth": {
+    "login": "Zaloguj",
+    "register": "Zarejestruj",
+    "email": "Email",
+    "password": "Hasło",
+    "confirmPassword": "Potwierdź hasło",
+    "forgotPassword": "Zapomniałeś hasła?",
+    "rememberMe": "Zapamiętaj mnie",
+    "loginButton": "Zaloguj się",
+    "registerButton": "Utwórz konto",
+    "alreadyHaveAccount": "Masz już konto?",
+    "dontHaveAccount": "Nie masz konta?",
+    "orContinueWith": "Lub kontynuuj z",
+    "loginWithGoogle": "Zaloguj przez Google",
+    "loginWithFacebook": "Zaloguj przez Facebook",
+    "invalidCredentials": "Nieprawidłowy email lub hasło",
+    "accountCreated": "Konto utworzone pomyślnie",
+    "resetPassword": "Resetuj hasło",
+    "resetPasswordInstructions": "Wprowadź swój email, aby otrzymać instrukcje"
+  },
+  "about": {
+    "title": "O SenCommerce",
+    "hero": {
+      "title": "Wspieramy artystów w erze cyfrowej",
+      "subtitle": "Łączymy kreatywne umysły z miłośnikami sztuki na całym świecie poprzez cyfrowe pobieranie i druki premium"
+    },
+    "mission": {
+      "title": "Nasza misja",
+      "content": "Demokratyzacja własności sztuki i wspieranie niezależnych artystów poprzez zapewnienie bezproblemowej platformy do dystrybucji sztuki cyfrowej i usług druku na żądanie."
+    },
+    "values": {
+      "title": "Nasze wartości",
+      "quality": {
+        "title": "Jakość",
+        "description": "Wybieramy tylko najlepsze cyfrowe dzieła sztuki i używamy materiałów premium do naszych druków"
+      },
+      "accessibility": {
+        "title": "Dostępność",
+        "description": "Czynienie sztuki dostępną dla wszystkich, wszędzie na świecie"
+      },
+      "sustainability": {
+        "title": "Zrównoważony rozwój",
+        "description": "Druk na żądanie redukuje odpady, a nasze cyfrowe pobierania mają zerowy ślad węglowy"
+      },
+      "fairness": {
+        "title": "Uczciwy handel",
+        "description": "Artyści otrzymują uczciwą kompensację za swoją kreatywną pracę"
+      }
+    },
+    "story": {
+      "title": "Nasza historia",
+      "content": "Założona w 2024 roku, SenCommerce narodziła się z prostego przekonania: wyjątkowa sztuka powinna być dostępna dla wszystkich. Współpracujemy z utalentowanymi artystami z całego świata, aby dostarczyć unikalne cyfrowe dzieła sztuki i wysokiej jakości druki, dostarczone bezpośrednio pod Twoje drzwi lub do skrzynki odbiorczej."
+    },
+    "team": {
+      "title": "Poznaj zespół",
+      "description": "Pasjonująca grupa miłośników sztuki i entuzjastów technologii"
+    },
+    "contact": {
+      "title": "Skontaktuj się z nami",
+      "description": "Masz pytania? Chętnie Cię wysłuchamy",
+      "email": "Napisz do nas na",
+      "phone": "Zadzwoń do nas",
+      "hours": "Godziny pracy",
+      "hoursValue": "Poniedziałek - Piątek, 9:00 - 18:00 CET"
+    }
+  },
+  "artworks": {
+    "title": "Dzieła sztuki",
+    "allCollections": "Wszystkie kolekcje",
+    "viewCollection": "Zobacz kolekcję",
+    "artworkBy": "autorstwa {artist}",
+    "medium": "Medium",
+    "size": "Rozmiar",
+    "year": "Rok",
+    "availability": "Dostępność",
+    "original": "Oryginał",
+    "prints": "Druki dostępne",
+    "digitalDownload": "Pobieranie cyfrowe",
+    "limitedEdition": "Edycja limitowana",
+    "soldOut": "Wyprzedane"
+  },
+  "errors": {
+    "pageNotFound": "Strona nie znaleziona",
+    "somethingWentWrong": "Coś poszło nie tak",
+    "tryAgainLater": "Spróbuj ponownie później",
+    "networkError": "Błąd sieci. Sprawdź połączenie",
+    "validationError": "Sprawdź swoje dane wejściowe",
+    "unauthorized": "Musisz się zalogować, aby uzyskać dostęp do tej strony",
+    "forbidden": "Nie masz uprawnień do dostępu do tego zasobu",
+    "serverError": "Błąd serwera. Spróbuj ponownie później"
+  },
+  "success": {
+    "orderPlaced": "Zamówienie złożone pomyślnie!",
+    "itemAdded": "Przedmiot dodany do koszyka",
+    "itemRemoved": "Przedmiot usunięty z koszyka",
+    "profileUpdated": "Profil zaktualizowany pomyślnie",
+    "passwordChanged": "Hasło zmienione pomyślnie",
+    "emailSent": "Email wysłany pomyślnie",
+    "subscribed": "Pomyślnie zapisano do newslettera"
+  },
+  "orderSuccess": {
+    "title": "Zamówienie pomyślne!",
+    "message": "Dziękujemy za zakup. Twoje zamówienie zostało otrzymane.",
+    "orderNumber": "Numer zamówienia",
+    "email": "Email potwierdzający został wysłany na",
+    "digitalProducts": "Twoje produkty cyfrowe są gotowe do pobrania",
+    "goToDownloads": "Przejdź do pobrań",
+    "continueShopping": "Kontynuuj zakupy"
+  }
+}

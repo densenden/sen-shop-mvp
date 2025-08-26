@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Layout from '../../components/Layout'
-import AddToCartButton from '../../components/AddToCartButton'
+import Layout from '../../../components/Layout'
+import AddToCartButton from '../../../components/AddToCartButton'
 import { ArrowLeft, ExternalLink, ShoppingBag, Eye, Heart } from 'lucide-react'
-import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
+import { MEDUSA_API_CONFIG, getHeaders } from '../../../../lib/config'
 
 interface Product {
   id: string

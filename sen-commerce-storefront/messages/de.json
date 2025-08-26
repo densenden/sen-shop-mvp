@@ -1,0 +1,17 @@
+{
+  "common": {
+    "loading": "Laden...",
+    "currency": "EUR"
+  },
+  "navigation": {
+    "home": "Startseite",
+    "products": "Produkte", 
+    "about": "Über uns"
+  },
+  "home": {
+    "hero": {
+      "title": "Digitale Kunst & Drucke",
+      "subtitle": "Kuratierte Sammlung digitaler Kunstwerke"
+    }
+  }
+}

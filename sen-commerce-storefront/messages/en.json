@@ -1,0 +1,17 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "currency": "USD"
+  },
+  "navigation": {
+    "home": "Home",
+    "products": "Products", 
+    "about": "About"
+  },
+  "home": {
+    "hero": {
+      "title": "Digital Art & Prints",
+      "subtitle": "Curated collection of digital artworks"
+    }
+  }
+}

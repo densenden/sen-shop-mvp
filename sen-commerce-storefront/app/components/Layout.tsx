@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cartService } from '../../lib/cart'
+import { useTranslations } from 'next-intl'
+import LanguageSwitcher from './LanguageSwitcher'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -12,6 +14,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname()
+  const t = useTranslations()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [cartItemCount, setCartItemCount] = useState(0)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -35,9 +38,9 @@ export default function Layout({ children }: LayoutProps) {
   }, [])
 
   const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Artworks', href: '/artworks' },
-    { name: 'About', href: '/about' },
+    { name: t('navigation.home'), href: '/' },
+    { name: t('navigation.artworks'), href: '/artworks' },
+    { name: t('navigation.about'), href: '/about' },
   ]
 
   return (
@@ -58,19 +61,28 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`text-sm transition-colors ${
-                    pathname === item.href
-                      ? 'text-gray-900 font-medium'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                // Extract locale from pathname
+                if (!pathname) return null
+                const segments = pathname.split('/')
+                const locale = segments[1]
+                const currentPath = '/' + segments.slice(2).join('/')
+                const itemPath = item.href === '/' ? '' : item.href
+                
+                return (
+                  <Link
+                    key={item.href}
+                    href={`/${locale}${item.href}`}
+                    className={`text-sm transition-colors ${
+                      currentPath === itemPath || (currentPath === '/' && item.href === '/')
+                        ? 'text-gray-900 font-medium'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                )
+              })}
             </div>
 
             {/* Right Actions */}
@@ -114,20 +126,28 @@ export default function Layout({ children }: LayoutProps) {
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-gray-100">
               <div className="space-y-2">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`block py-2 text-sm transition-colors ${
-                      pathname === item.href
-                        ? 'text-gray-900 font-medium'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
+                {navigation.map((item) => {
+                  if (!pathname) return null
+                  const segments = pathname.split('/')
+                  const locale = segments[1]
+                  const currentPath = '/' + segments.slice(2).join('/')
+                  const itemPath = item.href === '/' ? '' : item.href
+                  
+                  return (
+                    <Link
+                      key={item.href}
+                      href={`/${locale}${item.href}`}
+                      className={`block py-2 text-sm transition-colors ${
+                        currentPath === itemPath || (currentPath === '/' && item.href === '/')
+                          ? 'text-gray-900 font-medium'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -151,41 +171,44 @@ export default function Layout({ children }: LayoutProps) {
                 <h3 className="text-lg font-medium">SenCommerce</h3>
               </div>
               <p className="text-sm text-gray-300">
-                Digital art and print-on-demand platform for modern creators.
+                {t('about.hero.subtitle')}
               </p>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-white mb-4">Shop</h3>
+              <h3 className="text-sm font-medium text-white mb-4">{t('navigation.products')}</h3>
               <ul className="space-y-2">
                 <li>
                   <Link href="/artworks" className="text-sm text-gray-300 hover:text-white">
-                    Artworks
+                    {t('navigation.artworks')}
                   </Link>
                 </li>
                 <li>
                   <Link href="/?filter=digital" className="text-sm text-gray-300 hover:text-white">
-                    Digital Downloads
+                    {t('artworks.digitalDownload')}
                   </Link>
                 </li>
                 <li>
                   <Link href="/?filter=pod" className="text-sm text-gray-300 hover:text-white">
-                    Prints
+                    {t('home.filters.prints')}
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-white mb-4">Support</h3>
+              <h3 className="text-sm font-medium text-white mb-4">{t('footer.support')}</h3>
               <ul className="space-y-2">
                 <li>
                   <Link href="/about" className="text-sm text-gray-300 hover:text-white">
-                    About
+                    {t('footer.aboutUs')}
                   </Link>
                 </li>
                 <li>
                   <a href="mailto:shop@sen.studio" className="text-sm text-gray-300 hover:text-white">
-                    Contact
+                    {t('footer.contact')}
                   </a>
+                </li>
+                <li>
+                  <LanguageSwitcher />
                 </li>
               </ul>
             </div>
@@ -209,7 +232,7 @@ export default function Layout({ children }: LayoutProps) {
                     rel="noopener noreferrer"
                     className="text-sm text-gray-300 hover:text-white"
                   >
-                    Privacy Policy
+                    {t('footer.privacyPolicy')}
                   </a>
                 </li>
                 <li>
@@ -219,7 +242,7 @@ export default function Layout({ children }: LayoutProps) {
                     rel="noopener noreferrer"
                     className="text-sm text-gray-300 hover:text-white"
                   >
-                    Terms of Service
+                    {t('footer.termsOfService')}
                   </a>
                 </li>
               </ul>
@@ -227,7 +250,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <div className="mt-8 pt-8 border-t border-gray-700">
             <p className="text-sm text-gray-300 text-center">
-              &copy; 2025 SenCommerce. All rights reserved.
+              &copy; 2025 SenCommerce. {t('footer.allRightsReserved')}.
             </p>
           </div>
         </div>

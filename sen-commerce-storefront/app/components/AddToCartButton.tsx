@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import MaterialIcon, { MaterialIcons } from './MaterialIcon'
 import { cartService } from '../../lib/cart'
+import { useTranslations } from 'next-intl'
 
 interface AddToCartButtonProps {
   productId: string
@@ -21,7 +22,7 @@ interface AddToCartButtonProps {
 export default function AddToCartButton({
   productId,
   variantId,
-  title = 'Add to Cart',
+  title,
   quantity = 1,
   className = '',
   size = 'md',
@@ -32,6 +33,9 @@ export default function AddToCartButton({
 }: AddToCartButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isAdded, setIsAdded] = useState(false)
+  const t = useTranslations('product')
+  
+  const buttonTitle = title || t('addToCart')
 
   const handleAddToCart = async () => {
     if (isLoading || disabled) return
@@ -93,17 +97,17 @@ export default function AddToCartButton({
       {isLoading ? (
         <>
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-          <span>Adding...</span>
+          <span>{t('addToCart')}...</span>
         </>
       ) : isAdded ? (
         <>
           <Check className="h-4 w-4" />
-          <span>Added!</span>
+          <span>{t('addToCart')} ✓</span>
         </>
       ) : (
         <>
           <MaterialIcon icon={MaterialIcons.addShoppingCart} size="small" className="h-4 w-4" />
-          <span>{title}</span>
+          <span>{buttonTitle}</span>
         </>
       )}
     </button>

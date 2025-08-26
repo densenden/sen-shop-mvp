@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Heart, ShoppingBag, Download, Truck, Star, Share2, Palette, Grid3x3, Info, Package } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import Layout from '../../components/Layout'
-import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
-import { cartService } from '../../../lib/cart'
-import { digitalOwnershipService, OwnedDigitalProduct } from '../../../lib/digital-ownership'
+import Layout from '../../../components/Layout'
+import { MEDUSA_API_CONFIG, getHeaders } from '../../../../lib/config'
+import { cartService } from '../../../../lib/cart'
+import { digitalOwnershipService, OwnedDigitalProduct } from '../../../../lib/digital-ownership'
 
 interface Product {
   id: string
