@@ -28,6 +28,9 @@ export default function LanguageSwitcher() {
   const handleLocaleChange = (newLocale: Locale) => {
     if (!pathname) return
     
+    // Set the preferred_language cookie
+    document.cookie = `preferred_language=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}` // 1 year
+    
     const segments = pathname.split('/')
     // Replace the locale segment (always at index 1 for our routing structure)
     if (segments.length > 1) {
@@ -47,9 +50,12 @@ export default function LanguageSwitcher() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        className="flex items-center space-x-2 text-sm text-gray-300 hover:text-white transition-colors"
         aria-label="Select language"
       >
+        <span className="material-symbols-outlined" style={{ fontSize: '20px', fontWeight: 100 }}>
+          language
+        </span>
         <span>{localeNames[currentLocale]}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}

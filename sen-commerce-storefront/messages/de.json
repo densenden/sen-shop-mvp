@@ -1,17 +1,120 @@
 {
   "common": {
     "loading": "Laden...",
+    "error": "Ein Fehler ist aufgetreten",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "view": "Ansehen",
+    "close": "Schließen",
+    "search": "Suchen",
+    "filter": "Filter",
+    "sort": "Sortieren",
     "currency": "EUR"
   },
   "navigation": {
     "home": "Startseite",
-    "products": "Produkte", 
-    "about": "Über uns"
+    "products": "Produkte",
+    "artworks": "Kunstwerke",
+    "collections": "Sammlungen",
+    "about": "Über uns",
+    "cart": "Warenkorb",
+    "account": "Konto",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "register": "Registrieren"
+  },
+  "footer": {
+    "company": "Unternehmen",
+    "aboutUs": "Über uns",
+    "contact": "Kontakt",
+    "support": "Support",
+    "privacyPolicy": "Datenschutzerklärung",
+    "termsOfService": "Nutzungsbedingungen",
+    "followUs": "Folgen Sie uns",
+    "newsletter": "Newsletter",
+    "subscribe": "Abonnieren",
+    "emailPlaceholder": "E-Mail eingeben",
+    "allRightsReserved": "Alle Rechte vorbehalten",
+    "language": "Sprache"
   },
   "home": {
     "hero": {
       "title": "Digitale Kunst & Drucke",
-      "subtitle": "Kuratierte Sammlung digitaler Kunstwerke"
+      "subtitle": "Kuratierte Sammlung digitaler Kunstwerke und Premium-Print-on-Demand-Produkte",
+      "cta": "Kunstwerke ansehen"
+    },
+    "filters": {
+      "all": "Alle",
+      "digital": "Digital",
+      "prints": "Drucke",
+      "physical": "Physisch"
+    },
+    "productsCount": "{count} Produkte",
+    "noProducts": "Keine Produkte gefunden",
+    "owned": "Gekauft"
+  },
+  "about": {
+    "title": "Über SenCommerce",
+    "hero": {
+      "title": "Künstler im digitalen Zeitalter stärken",
+      "subtitle": "Wir verbinden kreative Köpfe mit Kunstliebhabern weltweit durch digitale Downloads und Premium-Drucke"
+    },
+    "mission": {
+      "title": "Unsere Mission",
+      "content": "Kunstbesitz zu demokratisieren und unabhängige Künstler zu unterstützen, indem wir eine nahtlose Plattform für die Verbreitung digitaler Kunst und Print-on-Demand-Services bieten."
+    },
+    "values": {
+      "title": "Unsere Werte",
+      "quality": {
+        "title": "Qualität",
+        "description": "Wir kuratieren nur die besten digitalen Kunstwerke und verwenden Premium-Materialien für unsere Drucke"
+      },
+      "accessibility": {
+        "title": "Zugänglichkeit",
+        "description": "Kunst für jeden, überall auf der Welt zugänglich machen"
+      },
+      "sustainability": {
+        "title": "Nachhaltigkeit",
+        "description": "Print-on-Demand reduziert Abfall und unsere digitalen Downloads haben null CO2-Fußabdruck"
+      },
+      "fairness": {
+        "title": "Fairer Handel",
+        "description": "Künstler erhalten faire Vergütung für ihre kreative Arbeit"
+      }
+    },
+    "story": {
+      "title": "Unsere Geschichte",
+      "content": "2022 gegründet, entstand SenCommerce aus einer einfachen Überzeugung: außergewöhnliche Kunst sollte für jeden zugänglich sein. Wir arbeiten mit talentierten Künstlern weltweit zusammen, um Ihnen einzigartige digitale Kunstwerke und hochwertige Drucke zu bringen, direkt vor Ihre Haustür oder in Ihren Posteingang."
+    },
+    "team": {
+      "title": "Das Team kennenlernen",
+      "description": "Eine leidenschaftliche Gruppe von Kunstliebhabern und Technologie-Enthusiasten"
+    },
+    "contact": {
+      "title": "Kontakt aufnehmen",
+      "description": "Haben Sie Fragen? Wir würden gerne von Ihnen hören",
+      "email": "Schreiben Sie uns an",
+      "phone": "Rufen Sie uns an unter",
+      "hours": "Geschäftszeiten",
+      "hoursValue": "Montag - Freitag, 9:00 - 18:00 CET"
     }
+  },
+  "artworks": {
+    "title": "Kunstwerke",
+    "allCollections": "Alle Sammlungen",
+    "viewCollection": "Sammlung ansehen",
+    "artworkBy": "von {artist}",
+    "medium": "Medium",
+    "size": "Größe",
+    "year": "Jahr",
+    "availability": "Verfügbarkeit",
+    "original": "Original",
+    "prints": "Drucke verfügbar",
+    "digitalDownload": "Digitaler Download",
+    "limitedEdition": "Limitierte Auflage",
+    "soldOut": "Ausverkauft"
   }
 }
