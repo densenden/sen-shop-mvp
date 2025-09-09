@@ -729,9 +729,6 @@ const PODEditPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "POD Edit",
-  icon: Package,
-})
+// No config export for detail pages with parameters
 
 export default PODEditPage

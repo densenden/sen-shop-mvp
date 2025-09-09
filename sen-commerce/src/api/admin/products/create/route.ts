@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
-import { IProductModuleService, ISalesChannelModuleService } from "@medusajs/types"
+import { IProductModuleService, ISalesChannelModuleService, IStoreModuleService, IRegionModuleService } from "@medusajs/types"
 
 interface CreateProductRequest {
   artwork_id?: string
@@ -8,6 +8,9 @@ interface CreateProductRequest {
   title: string
   description?: string
   price: number // in cents
+  images?: string[] // Array of image URLs
+  videos?: string[] // Array of video URLs
+  thumbnail?: string // Primary thumbnail image
   
   // For POD products
   printful_product_id?: string
@@ -27,6 +30,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       title,
       description,
       price,
+      images,
+      videos,
+      thumbnail,
       printful_product_id,
       printful_variant_id,
       digital_product_id
@@ -81,6 +87,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
     }
 
+    // Get store configuration to determine default currency
+    const storeService: IStoreModuleService = req.scope.resolve(Modules.STORE)
+    const regionService: IRegionModuleService = req.scope.resolve(Modules.REGION)
+    
+    const [store] = await storeService.listStores()
+    let currencyCode = "eur" // Default to EUR
+    
+    if (store?.default_region_id) {
+      const region = await regionService.retrieveRegion(store.default_region_id)
+      currencyCode = region.currency_code || "eur"
+    }
+    
+    console.log("Using currency:", currencyCode)
+
     // Get default sales channel
     const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL)
     let [defaultSalesChannel] = await salesChannelService.listSalesChannels({
@@ -97,11 +117,39 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // Create product using workflow
     const { createProductsWorkflow } = await import("@medusajs/core-flows")
     
+    // Prepare product images - first image is thumbnail, rest are additional images
+    const productImages = []
+    const primaryThumbnail = thumbnail || images?.[0] || artwork?.image_url || undefined
+    
+    if (primaryThumbnail) {
+      productImages.push({ url: primaryThumbnail })
+    }
+    
+    // Add remaining images
+    if (images && images.length > 0) {
+      images.forEach((url, index) => {
+        // Skip first image if it's already used as thumbnail
+        if (index === 0 && url === primaryThumbnail) return
+        productImages.push({ url })
+      })
+    }
+
+    // Generate a unique handle to avoid conflicts
+    const baseHandle = title.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim()
+    
+    const uniqueHandle = `${baseHandle}-${Date.now()}`
+
     const productInput = {
       title,
+      handle: uniqueHandle,
       status: "published",
       description: description || (artwork ? `${title} featuring artwork: ${artwork.title}` : title),
-      thumbnail: artwork?.image_url || undefined,
+      thumbnail: primaryThumbnail,
+      images: productImages,
       options: [
         {
           title: product_type === 'digital' ? "Format" : "Default",
@@ -120,7 +168,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           prices: [
             {
               amount: price,
-              currency_code: "usd",
+              currency_code: currencyCode,
             }
           ]
         },
@@ -129,6 +177,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       metadata: {
         fulfillment_type: product_type,
         ...(artwork_id ? { artwork_id } : {}),
+        ...(images && images.length > 0 ? { product_images: images } : {}),
+        ...(videos && videos.length > 0 ? { product_videos: videos } : {}),
         ...(product_type === 'printful_pod' ? {
           printful_product_id,
           printful_variant_id
@@ -139,11 +189,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       },
     }
 
-    const { result } = await createProductsWorkflow(req.scope).run({
-      input: { products: [productInput] }
-    })
+    console.log("Product input being sent to workflow:", JSON.stringify(productInput, null, 2))
     
-    const medusaProduct = result.products[0]
+    let result
+    try {
+      const workflowResult = await createProductsWorkflow(req.scope).run({
+        input: { products: [productInput] }
+      })
+      
+      result = workflowResult.result
+      console.log("Workflow result:", JSON.stringify(result, null, 2))
+      
+      if (!result || result.length === 0) {
+        console.error("Workflow returned empty result:", result)
+        throw new Error("Failed to create product - workflow returned no products")
+      }
+      
+      console.log("Product created successfully:", result[0].id)
+    } catch (workflowError) {
+      console.error("Workflow execution failed:", workflowError)
+      throw new Error(`Product creation workflow failed: ${workflowError.message}`)
+    }
+    
+    const medusaProduct = result[0]
 
     // Update artwork to include this product ID (only if artwork exists)
     if (artwork && artwork_id) {

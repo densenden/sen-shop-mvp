@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button, Input, Textarea, Select, Badge, Container, Heading, Label } from "@medusajs/ui"
 import { 
@@ -10,7 +10,11 @@ import {
   Image as ImageIcon,
   ChevronRight,
   Briefcase,
-  Check
+  Check,
+  Upload,
+  X,
+  Video,
+  Film
 } from "lucide-react"
 
 interface Artwork {
@@ -37,6 +41,16 @@ interface PrintfulProduct {
   already_imported: boolean
 }
 
+interface MediaFile {
+  id: string
+  file: File
+  url: string
+  type: 'image' | 'video'
+  uploading?: boolean
+  uploaded?: boolean
+  s3Url?: string
+}
+
 const CreateProductPage = () => {
   const navigate = useNavigate()
   const [artworks, setArtworks] = useState<Artwork[]>([])
@@ -59,6 +73,11 @@ const CreateProductPage = () => {
   const [selectedDigitalProduct, setSelectedDigitalProduct] = useState("")
   const [showArtworkSelector, setShowArtworkSelector] = useState(false)
   const [artworkSearchTerm, setArtworkSearchTerm] = useState("")
+  
+  // Media files state
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (currentStep === 2) {
@@ -96,6 +115,70 @@ const CreateProductPage = () => {
     }
   }
 
+  const handleMediaUpload = async (files: FileList, type: 'image' | 'video') => {
+    const newFiles: MediaFile[] = []
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const id = `${Date.now()}-${i}`
+      const url = URL.createObjectURL(file)
+      
+      newFiles.push({
+        id,
+        file,
+        url,
+        type,
+        uploading: false,
+        uploaded: false
+      })
+    }
+    
+    setMediaFiles(prev => [...prev, ...newFiles])
+  }
+
+  const uploadMediaToS3 = async (mediaFile: MediaFile): Promise<string | null> => {
+    try {
+      // Update status to uploading
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id ? { ...f, uploading: true } : f
+      ))
+
+      // Create form data for upload
+      const formData = new FormData()
+      formData.append('file', mediaFile.file) // Use 'file' field name for single upload
+
+      const response = await fetch('/admin/uploads', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file')
+      }
+
+      const result = await response.json()
+      const uploadedUrl = result.files?.[0]?.url
+
+      // Update status to uploaded
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id ? { ...f, uploading: false, uploaded: true, s3Url: uploadedUrl } : f
+      ))
+
+      return uploadedUrl
+    } catch (error) {
+      console.error('Failed to upload media:', error)
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id ? { ...f, uploading: false } : f
+      ))
+      return null
+    }
+  }
+
+  const removeMedia = (id: string) => {
+    setMediaFiles(prev => prev.filter(f => f.id !== id))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -118,12 +201,41 @@ const CreateProductPage = () => {
     try {
       setCreating(true)
       
+      // For now, skip file uploads to test basic product creation
+      const uploadedMedia: { images: string[], videos: string[] } = {
+        images: [],
+        videos: []
+      }
+      
+      // TODO: Re-enable file uploads once upload endpoint is fixed
+      // for (const mediaFile of mediaFiles) {
+      //   if (!mediaFile.uploaded) {
+      //     const url = await uploadMediaToS3(mediaFile)
+      //     if (url) {
+      //       if (mediaFile.type === 'image') {
+      //         uploadedMedia.images.push(url)
+      //       } else {
+      //         uploadedMedia.videos.push(url)
+      //       }
+      //     }
+      //   } else if (mediaFile.s3Url) {
+      //     if (mediaFile.type === 'image') {
+      //       uploadedMedia.images.push(mediaFile.s3Url)
+      //     } else {
+      //       uploadedMedia.videos.push(mediaFile.s3Url)
+      //     }
+      //   }
+      // }
+      
       const requestBody = {
         ...(selectedArtwork ? { artwork_id: selectedArtwork } : {}),
         product_type: productType,
         title,
         description,
         price: Math.round(parseFloat(price) * 100),
+        images: uploadedMedia.images,
+        videos: uploadedMedia.videos,
+        thumbnail: uploadedMedia.images[0] || undefined,
         ...(productType === 'printful_pod' ? {
           printful_product_id: selectedPrintfulProduct
         } : {}),
@@ -356,7 +468,7 @@ const CreateProductPage = () => {
 
                 <div>
                   <Label htmlFor="price" className="mb-1">
-                    Price (USD) *
+                    Price (EUR) *
                   </Label>
                   <Input
                     id="price"
@@ -370,6 +482,116 @@ const CreateProductPage = () => {
                   />
                 </div>
               </div>
+            </Container>
+
+            {/* Media Upload Section */}
+            <Container className="p-6">
+              <h2 className="text-lg font-medium mb-4">Product Media</h2>
+              
+              {/* Upload Buttons */}
+              <div className="flex gap-3 mb-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  Add Images
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <Film className="w-4 h-4" />
+                  Add Videos
+                </Button>
+              </div>
+              
+              {/* Hidden file inputs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => e.target.files && handleMediaUpload(e.target.files, 'image')}
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                multiple
+                className="hidden"
+                onChange={(e) => e.target.files && handleMediaUpload(e.target.files, 'video')}
+              />
+              
+              {/* Media Preview Grid */}
+              {mediaFiles.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {mediaFiles.map((media, index) => (
+                    <div key={media.id} className="relative group">
+                      <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                        {media.type === 'image' ? (
+                          <img
+                            src={media.url}
+                            alt={`Product image ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                            <Video className="w-12 h-12 text-gray-400 mb-2" />
+                            <span className="text-xs text-gray-500 text-center truncate w-full">
+                              {media.file.name}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Upload status overlay */}
+                        {media.uploading && (
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                          </div>
+                        )}
+                        
+                        {media.uploaded && (
+                          <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Primary badge for first image */}
+                      {index === 0 && media.type === 'image' && (
+                        <div className="absolute top-2 left-2">
+                          <Badge size="small" className="bg-blue-500 text-white">
+                            Primary
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => removeMedia(media.id)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {mediaFiles.length === 0 && (
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No media files added yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Add images and videos to showcase your product</p>
+                </div>
+              )}
             </Container>
 
             {/* Product Type Specific Options */}
