@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
+import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { IProductModuleService, ISalesChannelModuleService, IPricingModuleService } from "@medusajs/types"
 import { authenticate } from "@medusajs/medusa";
 import { PODProviderManager } from "../../../modules/printful/services/pod-provider-facade";
@@ -31,8 +31,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     let count = 0
     
     try {
-      // Get Medusa v2 product service
+      // Get Medusa v2 product service and query service
       const productService = req.scope.resolve(Modules.PRODUCT)
+      const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
       console.log("Product service resolved:", !!productService)
       
       // Build filters
@@ -41,31 +42,59 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         filters.title = { $ilike: `%${q}%` }
       }
       
-      // Build options
-      const options: any = {
-        relations: ["variants", "tags", "metadata"]
-      }
-      
-      // List products using the correct method
-      const [result, resultCount] = await productService.listAndCountProducts(
-        filters,
-        {
-          take: parseInt(limit as string),
+      // Fetch products with pricing data using the query service
+      const { data: result } = await query.graph({
+        entity: "product",
+        filters: filters,
+        fields: [
+          "id",
+          "title", 
+          "description",
+          "status",
+          "metadata",
+          "created_at",
+          "updated_at",
+          "variants.*",
+          "variants.price_set.*",
+          "variants.price_set.prices.*"
+        ],
+        pagination: {
           skip: parseInt(offset as string),
-          relations: ["variants", "tags", "metadata"],
-        }
-      )
+          take: parseInt(limit as string),
+        },
+      })
+      
       console.log("Products fetched:", result?.length || 0)
       
       // Format response to match expected structure
       products = result?.map(product => {
+        // Format variants with pricing data
+        const formattedVariants = (product.variants || []).map((variant: any) => {
+          const prices = variant.price_set?.prices || []
+          const defaultPrice = prices.find((p: any) => p.currency_code === 'eur') || prices.find((p: any) => p.currency_code === 'usd') || prices[0]
+          
+          return {
+            id: variant.id,
+            title: variant.title,
+            sku: variant.sku,
+            prices: defaultPrice ? [{
+              amount: defaultPrice.amount,
+              currency_code: defaultPrice.currency_code
+            }] : [],
+            calculated_price: defaultPrice ? {
+              amount: defaultPrice.amount,
+              currency_code: defaultPrice.currency_code
+            } : null
+          }
+        })
+        
         const formatted: any = {
           id: product.id,
           title: product.title,
           description: product.description,
           status: product.status,
           metadata: product.metadata || {},
-          variants: product.variants || [],
+          variants: formattedVariants,
           tags: product.tags || [],
           created_at: product.created_at,
           updated_at: product.updated_at
@@ -79,7 +108,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         return formatted
       })
       
-      count = resultCount
+      count = result?.length || 0
       
     } catch (productError) {
       console.error("Could not fetch real products:", productError)

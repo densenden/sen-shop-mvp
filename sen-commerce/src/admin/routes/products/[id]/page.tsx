@@ -759,7 +759,7 @@ const ProductDetailPage = () => {
                           </span>
                           {variant.prices && variant.prices.length > 0 && (
                             <span className="text-sm text-gray-500">
-                              Price: ${(variant.prices[0].amount / 100).toFixed(2)}
+                              Price: {(variant.prices[0].amount / 100).toFixed(2)} {variant.prices[0].currency_code?.toUpperCase()}
                             </span>
                           )}
                         </div>

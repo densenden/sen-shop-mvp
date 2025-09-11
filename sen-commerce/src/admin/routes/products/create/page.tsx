@@ -843,7 +843,7 @@ const CreateProductPage = () => {
 
 export const config = defineRouteConfig({
   label: "Create Product",
-  icon: Plus,
+  nested: "/products",
 })
 
 export default CreateProductPage

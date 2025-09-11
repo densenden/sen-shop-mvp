@@ -42,7 +42,7 @@ export default async function orderConfirmationHandler({
     }
     
     console.log(`[Order Confirmation Subscriber] 🚀 Triggering email workflow for ${emailData.customer_email}`)
-    console.log(`[Order Confirmation Subscriber] Order total: $${(emailData.total_amount / 100).toFixed(2)}`)
+    console.log(`[Order Confirmation Subscriber] Order total: ${(emailData.total_amount / 100).toFixed(2)} ${emailData.currency_code.toUpperCase()}`)
     console.log(`[Order Confirmation Subscriber] Items to email:`, emailData.items.map(i => `${i.title} (${i.fulfillment_type})`))
     
     // Trigger the email workflow

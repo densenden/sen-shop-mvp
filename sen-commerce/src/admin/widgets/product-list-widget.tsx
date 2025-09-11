@@ -523,7 +523,7 @@ const ProductListWidget = () => {
                             const variant = product.variants[0]
                             const price = variant.calculated_price?.amount || 
                                          variant.prices?.[0]?.amount || 
-                                         2000
+                                         0
                             const currency = variant.calculated_price?.currency_code || 
                                            variant.prices?.[0]?.currency_code || 
                                            'EUR'
@@ -538,7 +538,7 @@ const ProductListWidget = () => {
                             const prices = product.variants.map(v => 
                               v.calculated_price?.amount || 
                               v.prices?.[0]?.amount || 
-                              2000
+                              0
                             )
                             const minPrice = Math.min(...prices)
                             const maxPrice = Math.max(...prices)
