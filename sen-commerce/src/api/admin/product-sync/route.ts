@@ -171,6 +171,7 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
     const productModuleService: IProductModuleService = req.scope.resolve(Modules.PRODUCT);
     const importedProducts: any[] = [];
     const errors: any[] = [];
+    const skippedProducts: any[] = [];
 
     let printfulService;
     try {
@@ -368,12 +369,14 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                   price = Math.round(parseFloat(printfulProduct.price.toString()) * 100);
                 }
                 
-                // If no valid price found, set reasonable defaults based on product type
+                // If no valid price found, skip the product instead of using hardcoded fallbacks
                 if (price === 0 || isNaN(price)) {
-                  // Set default prices for POD products ($15-$35 range)
-                  const defaultPrices = [1500, 2000, 2500, 3000, 3500]; // $15-$35
-                  price = defaultPrices[Math.floor(Math.random() * defaultPrices.length)];
-                  console.log(`Set default price $${price/100} for product: ${productName}`);
+                  console.log(`Skipping product ${productName} - no valid price found and no hardcoded fallbacks`)
+                  skippedProducts.push({
+                    name: productName,
+                    reason: 'No valid price found'
+                  })
+                  continue
                 }
 
                 // Use the proper workflow to create products with prices
