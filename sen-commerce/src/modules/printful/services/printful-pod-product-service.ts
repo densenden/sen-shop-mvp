@@ -452,14 +452,16 @@ export class PrintfulPodProductService extends MedusaService({
     throw new Error('Mockup generation timed out')
   }
 
-  // Enhanced product import with mockups
+  // Enhanced product import with comprehensive image collection
   async importProductWithMockups(printfulProduct: PrintfulV2StoreProduct, artworkUrl?: string): Promise<any> {
     let mockupUrls: string[] = []
+    let catalogImages: string[] = []
     
+    // 1. Generate mockups for more variants (up to 8 instead of 3)
     if (artworkUrl && printfulProduct.variants.length > 0) {
       try {
-        // Take first few variants to generate mockups
-        const variantIds = printfulProduct.variants.slice(0, 3).map(v => v.id)
+        // Take more variants to generate diverse mockups (different sizes/colors)
+        const variantIds = printfulProduct.variants.slice(0, 8).map(v => v.id)
         mockupUrls = await this.generateAndWaitForMockups(printfulProduct.id, variantIds, artworkUrl)
         console.log(`Generated ${mockupUrls.length} mockups for product ${printfulProduct.id}`)
       } catch (error) {
@@ -468,8 +470,54 @@ export class PrintfulPodProductService extends MedusaService({
       }
     }
 
-    // Create product with mockup images
-    const productImages = [printfulProduct.thumbnail_url, ...mockupUrls].filter(Boolean)
+    // 2. Fetch catalog product for additional images
+    try {
+      const catalogProduct = await this.getCatalogProduct(printfulProduct.id)
+      if (catalogProduct) {
+        // Add main catalog image
+        if (catalogProduct.image) {
+          catalogImages.push(catalogProduct.image)
+        }
+        // Add variant images from catalog (often better quality than store variants)
+        catalogProduct.variants.forEach(variant => {
+          if (variant.image && !catalogImages.includes(variant.image)) {
+            catalogImages.push(variant.image)
+          }
+        })
+        console.log(`Found ${catalogImages.length} catalog images for product ${printfulProduct.id}`)
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch catalog images for product ${printfulProduct.id}:`, error)
+    }
+
+    // 3. Collect variant-specific images (color variations, etc.)
+    const variantImages: string[] = []
+    printfulProduct.variants.forEach(variant => {
+      if (variant.image && !variantImages.includes(variant.image)) {
+        variantImages.push(variant.image)
+      }
+    })
+
+    // 4. Combine all image sources with priority order
+    const allImages = [
+      printfulProduct.thumbnail_url,     // Primary thumbnail
+      ...mockupUrls,                     // Generated mockups (highest priority)
+      ...catalogImages,                  // Catalog product images  
+      ...variantImages                   // Variant-specific images
+    ].filter(Boolean)
+
+    // Remove duplicates while preserving order
+    const uniqueImages = [...new Set(allImages)]
+    
+    // Limit total images to avoid overwhelming the product page (max 15 images)
+    const maxImages = 15
+    const productImages = uniqueImages.slice(0, maxImages)
+    
+    if (uniqueImages.length > maxImages) {
+      console.log(`Limited images from ${uniqueImages.length} to ${maxImages} for product ${printfulProduct.name}`)
+    }
+    
+    console.log(`Total images collected for ${printfulProduct.name}: ${productImages.length} (${mockupUrls.length} mockups, ${catalogImages.length} catalog, ${variantImages.length} variants)`)
     
     const productInput = {
       title: printfulProduct.name,
@@ -480,8 +528,16 @@ export class PrintfulPodProductService extends MedusaService({
       metadata: {
         printful_product_id: printfulProduct.id,
         mockup_urls: mockupUrls,
+        catalog_images: catalogImages,
+        variant_images: variantImages,
         artwork_url: artworkUrl,
-        fulfillment_type: "printful_pod"
+        fulfillment_type: "printful_pod",
+        total_images: productImages.length,
+        image_sources: {
+          mockups: mockupUrls.length,
+          catalog: catalogImages.length,
+          variants: variantImages.length
+        }
       }
     }
 
