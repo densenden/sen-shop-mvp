@@ -83,26 +83,16 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
             }
           }
           
-          // Fallback if no prices found
+          // No fallback - leave empty if no prices found
           if (!variant.prices || variant.prices.length === 0) {
-            variant.prices = [
-              { amount: 2000, currency_code: "usd" }
-            ]
-            variant.calculated_price = {
-              amount: 2000,
-              currency_code: "usd"
-            }
+            variant.prices = []
+            variant.calculated_price = null
           }
         } catch (priceError) {
           console.error(`Error fetching prices for variant ${variant.id}:`, priceError)
-          // Set default price on error
-          variant.prices = [
-            { amount: 2000, currency_code: "usd" }
-          ]
-          variant.calculated_price = {
-            amount: 2000,
-            currency_code: "usd"
-          }
+          // No fallback price on error - leave empty
+          variant.prices = []
+          variant.calculated_price = null
         }
       }
     }

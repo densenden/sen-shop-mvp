@@ -25,21 +25,9 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       if (product.variants && product.variants.length > 0) {
         for (const variant of product.variants) {
           try {
-            // Create a basic price set for the variant
-            const priceSet = await pricingService.createPriceSets({
-              prices: [
-                {
-                  amount: 2000, // $20.00 in cents
-                  currency_code: "USD",
-                  rules: {}
-                },
-                {
-                  amount: 1800, // €18.00 in cents
-                  currency_code: "EUR",
-                  rules: {}
-                }
-              ]
-            })
+            // Skip creating hardcoded prices - this endpoint should not create default prices
+            console.log(`Skipping price creation for variant ${variant.id} - no hardcoded fallback prices`)
+            continue
             
             // Link the price set to the variant using remote query
             await remoteQuery.graph({

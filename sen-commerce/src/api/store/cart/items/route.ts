@@ -48,26 +48,70 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       
       // Fallback to manual cart service
       const cartService: ICartModuleService = req.scope.resolve(Modules.CART)
+      const productService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
       
-      // Create line item manually
-      const lineItem = await cartService.addLineItems(cartId, [{
-        cart_id: cartId,
-        variant_id,
-        quantity,
-        unit_price: 2000, // Default price
-        title: `Product ${variant_id}`,
-        metadata: { variant_id }
-      }])
+      // Get variant price instead of using hardcoded fallback
+      let unit_price = 0
+      let title = `Product ${variant_id}`
       
-      // Get updated cart
-      const cart = await cartService.retrieveCart(cartId, {
-        relations: ["items"]
-      })
+      try {
+        const [variant] = await productService.listProductVariants(
+          { id: variant_id },
+          { relations: ["product"] }
+        )
+        if (variant?.product) {
+          title = variant.product.title
+          
+          // Try to get price from price service
+          const query = req.scope.resolve("query")
+          const priceData = await query.graph({
+            entity: "product_variant_price_set",
+            fields: ["variant_id", "price_set_id"],
+            filters: { variant_id: variant_id }
+          })
+          
+          if (priceData?.data?.[0]?.price_set_id) {
+            const pricingService = req.scope.resolve(Modules.PRICING)
+            const prices = await pricingService.listPrices({
+              price_set_id: [priceData.data[0].price_set_id]
+            })
+            
+            if (prices && prices.length > 0) {
+              const price = prices.find(p => p.currency_code === 'eur') || prices[0]
+              unit_price = price.amount
+            }
+          }
+        }
+      } catch (priceError) {
+        console.error("Error fetching variant price:", priceError)
+      }
       
-      res.json({ 
-        cart,
-        message: "Item added to cart successfully" 
-      })
+      // Only add to cart if we found a valid price
+      if (unit_price > 0) {
+        const lineItem = await cartService.addLineItems(cartId, [{
+          cart_id: cartId,
+          variant_id,
+          quantity,
+          unit_price,
+          title,
+          metadata: { variant_id }
+        }])
+        
+        // Get updated cart
+        const cart = await cartService.retrieveCart(cartId, {
+          relations: ["items"]
+        })
+        
+        res.json({ 
+          cart,
+          message: "Item added to cart successfully" 
+        })
+      } else {
+        res.status(400).json({
+          error: "Product price not found",
+          message: "Cannot add item to cart without a valid price"
+        })
+      }
     }
     
   } catch (error) {

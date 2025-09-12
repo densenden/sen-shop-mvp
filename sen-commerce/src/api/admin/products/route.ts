@@ -54,6 +54,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           "metadata",
           "created_at",
           "updated_at",
+          "thumbnail",
+          "images.*",
           "variants.*",
           "variants.price_set.*",
           "variants.price_set.prices.*"
@@ -100,9 +102,30 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           updated_at: product.updated_at
         }
         
-        // Add thumbnail from first variant's image if available
-        if ((product.variants?.[0] as any)?.images?.[0]) {
-          formatted.thumbnail = ((product.variants[0] as any).images as any)[0].url
+        // Enhanced thumbnail extraction with multiple fallback options
+        let thumbnail = null
+        
+        // 1. Try from product's direct thumbnail field (highest priority)
+        if (product.thumbnail) {
+          thumbnail = product.thumbnail
+        }
+        // 2. Try from product metadata (Printful products store thumbnail here)
+        else if (product.metadata?.original_thumbnail) {
+          thumbnail = product.metadata.original_thumbnail
+        }
+        // 3. Try from product images array (if available)
+        else if (product.images?.[0]?.url) {
+          thumbnail = product.images[0].url
+        }
+        // 4. Try from first variant's images (old method)
+        else if ((product.variants?.[0] as any)?.images?.[0]) {
+          thumbnail = ((product.variants[0] as any).images as any)[0].url
+        }
+        
+        if (thumbnail) {
+          formatted.thumbnail = thumbnail
+        } else {
+          console.warn(`No thumbnail found for product ${product.id} (${product.title})`)
         }
         
         return formatted
@@ -173,9 +196,27 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         throw new Error(`Printful product with ID ${printful_product_id} not found.`);
       }
 
+      // Collect images from Printful product (same logic as sync process)
+      const productImages: string[] = [];
+      
+      // 1. Primary thumbnail
+      if (printfulProduct.thumbnail_url) {
+        productImages.push(printfulProduct.thumbnail_url);
+      }
+      
+      // 2. Variant images
+      if (printfulProduct.variants && printfulProduct.variants.length > 0) {
+        printfulProduct.variants.forEach(variant => {
+          if (variant.image && !productImages.includes(variant.image)) {
+            productImages.push(variant.image);
+          }
+        });
+      }
+
       productMetadata = {
         fulfillment_type: "printful_pod",
         printful_product_id: printful_product_id,
+        original_thumbnail: printfulProduct.thumbnail_url, // Store for thumbnail extraction
       };
 
       medusaProduct = (await productModuleService.createProducts([
@@ -183,6 +224,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           title: title || printfulProduct.name,
           description: description || printfulProduct.description,
           status: "published",
+          thumbnail: productImages[0], // Set primary thumbnail
+          images: productImages.map(url => ({ url })), // Include all collected images
           variants: [
             {
               title: "Default",
@@ -199,7 +242,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         priceSetId: medusaProduct.variants[0].price_set_id,
         prices: [{
           amount: price_usd || printfulProduct.price || 0,
-          currency_code: "usd",
+          currency_code: "eur",
         }],
       });
 
@@ -245,7 +288,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         priceSetId: medusaProduct.variants[0].price_set_id,
         prices: [{
           amount: price_usd || 0,
-          currency_code: "usd",
+          currency_code: "eur",
         }],
       });
     }
