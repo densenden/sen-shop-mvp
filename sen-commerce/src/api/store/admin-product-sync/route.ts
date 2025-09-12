@@ -4,6 +4,7 @@
 import { PrintfulPodProductService } from "../../../modules/printful/services/printful-pod-product-service"
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
+import { IPricingModuleService, ISalesChannelModuleService } from "@medusajs/framework/types"
 
 interface SyncLog {
   id: string
@@ -289,8 +290,45 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
           const printfulProduct = printfulProducts.find(p => p.id === productId)
           
           if (!printfulProduct) {
-            errors.push({ productId, error: "Product not found in Printful" })
-            continue
+            // Try catalog products if not found in store products
+            const catalogProducts = await printfulService.fetchCatalogProducts()
+            const catalogProduct = catalogProducts.find(p => `catalog-${p.id}` === productId || p.id === productId)
+            
+            if (!catalogProduct) {
+              errors.push({ productId, error: "Product not found in Printful" })
+              continue
+            }
+            
+            // Use catalog product as fallback
+            printfulProduct = {
+              id: catalogProduct.id,
+              name: catalogProduct.name,
+              description: catalogProduct.description,
+              thumbnail_url: catalogProduct.image,
+              variants: catalogProduct.variants || []
+            }
+          }
+
+          // Collect all available images from Printful product
+          const productImages: string[] = []
+          
+          // 1. Primary thumbnail
+          if (printfulProduct.thumbnail_url) {
+            productImages.push(printfulProduct.thumbnail_url)
+          }
+          
+          // 2. Variant images
+          if (printfulProduct.variants && printfulProduct.variants.length > 0) {
+            printfulProduct.variants.forEach(variant => {
+              if (variant.image && !productImages.includes(variant.image)) {
+                productImages.push(variant.image)
+              }
+            })
+          }
+          
+          // Ensure we have at least a placeholder if no images found
+          if (productImages.length === 0 && printfulProduct.thumbnail_url) {
+            productImages.push(printfulProduct.thumbnail_url)
           }
 
           // Create Medusa product using the product module service
@@ -298,24 +336,55 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
           
           medusaProduct = await productModuleService.createProducts({
             title: printfulProduct.name,
-            description: printfulProduct.description,
+            description: printfulProduct.description || `${printfulProduct.name} - Custom print-on-demand product`,
             status: "draft",
+            thumbnail: productImages[0], // Set primary thumbnail
+            images: productImages.map(url => ({ url })), // Include all collected images
             metadata: {
               fulfillment_type: "printful_pod",
               printful_product_id: printfulProduct.id,
-              source_provider: "printful"
+              source_provider: "printful",
+              original_thumbnail: printfulProduct.thumbnail_url // Store for fallback
             }
           })
 
-          // Create product variants
-          await productModuleService.createProductVariants({
+          // Create product variants with pricing
+          const pricingModuleService: IPricingModuleService = req.scope.resolve(Modules.PRICING)
+          const variants = await productModuleService.createProductVariants([{
             title: "Default",
             sku: `printful-${printfulProduct.id}`,
             product_id: medusaProduct.id,
             metadata: {
               printful_product_id: printfulProduct.id
             }
+          }])
+          
+          // Add EUR pricing to the variant
+          if (variants && variants[0] && variants[0].price_set_id) {
+            await pricingModuleService.addPrices({
+              priceSetId: variants[0].price_set_id,
+              prices: [{
+                amount: printfulProduct.price || 2500, // Default to €25 if no price
+                currency_code: "eur"
+              }]
+            })
+          }
+          
+          // Link product to default sales channel
+          const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL)
+          const [defaultSalesChannel] = await salesChannelService.listSalesChannels({
+            name: "Default",
           })
+          
+          if (defaultSalesChannel) {
+            const remoteLink = req.scope.resolve("remoteLink")
+            await remoteLink.create([
+              {
+                [Modules.PRODUCT]: { product_id: medusaProduct.id },
+                [Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+              },
+            ])
+          }
 
         } else if (provider === "digital") {
           // Get digital product details
