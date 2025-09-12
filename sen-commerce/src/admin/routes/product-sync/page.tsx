@@ -73,7 +73,7 @@ const ProductSyncPage = () => {
   const fetchSyncLogs = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/store/admin-product-sync", {
+      const response = await fetch("/admin/product-sync", {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ const ProductSyncPage = () => {
   const importSingleProduct = async (provider: string, productId: string) => {
     setImporting(true)
     try {
-      const response = await fetch("/store/admin-product-sync", {
+      const response = await fetch("/admin/product-sync", {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -153,7 +153,7 @@ const ProductSyncPage = () => {
 
     setImporting(true)
     try {
-      const response = await fetch("/store/admin-product-sync", {
+      const response = await fetch("/admin/product-sync", {
         method: 'POST',
         credentials: 'include',
         headers: {

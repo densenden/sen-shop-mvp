@@ -577,7 +577,12 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                     throw new Error("Failed to create digital product - no result returned from workflow")
                 }
             }
-            importedProducts.push(medusaProduct);
+            importedProducts.push({
+                productId,
+                medusaProductId: medusaProduct.id,
+                medusaProduct: medusaProduct, // Include full product object for frontend
+                provider
+            });
         } catch (error) {
             console.error(`[DEBUG] Error importing product ${productId}:`, error);
             console.error(`[DEBUG] Error stack:`, error.stack);
@@ -593,7 +598,7 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
             });
         }
     }
-    return { success: true, imported: importedProducts.length, failed: errors.length, errors };
+    return { success: true, imported: importedProducts.length, failed: errors.length, imported_products: importedProducts, errors };
 }
 
 async function processSync(syncId: string, action: string, provider: string) {
