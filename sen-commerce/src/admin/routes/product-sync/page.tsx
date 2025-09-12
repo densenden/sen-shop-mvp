@@ -73,7 +73,7 @@ const ProductSyncPage = () => {
   const fetchSyncLogs = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/admin/product-sync", {
+      const response = await fetch("/store/admin-product-sync", {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ const ProductSyncPage = () => {
   const importSingleProduct = async (provider: string, productId: string) => {
     setImporting(true)
     try {
-      const response = await fetch("/admin/product-sync", {
+      const response = await fetch("/store/admin-product-sync", {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -120,17 +120,21 @@ const ProductSyncPage = () => {
       
       if (result.failed > 0) {
         const errorDetails = result.errors.map((e: { productId: string; error: string }) => `Product ID: ${e.productId}, Error: ${e.error}`).join("\n")
-        alert(`Failed to import product.\n\nErrors:\n${errorDetails}`)
-      } else {
-        alert(`Successfully imported product!`)
+        console.error("Import failed:", errorDetails)
+        // Optionally show a toast notification instead of alert
+      } else if (result.imported_products && result.imported_products.length > 0) {
+        // Redirect to the newly created product for editing
+        const newProductId = result.imported_products[0].medusaProductId
+        navigate(`/products/${newProductId}/edit`)
+        return // Exit early to avoid refresh
       }
       
-      // Refresh data
+      // Only refresh if we didn't redirect
       await fetchSyncLogs()
       
     } catch (error) {
       console.error("Error importing product:", error)
-      alert("Failed to import product")
+      // Optionally show a toast notification instead of alert
     } finally {
       setImporting(false)
     }
@@ -149,7 +153,7 @@ const ProductSyncPage = () => {
 
     setImporting(true)
     try {
-      const response = await fetch("/admin/product-sync", {
+      const response = await fetch("/store/admin-product-sync", {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -170,9 +174,11 @@ const ProductSyncPage = () => {
       
       if (result.failed > 0) {
         const errorDetails = result.errors.map((e: { productId: string; error: string }) => `Product ID: ${e.productId}, Error: ${e.error}`).join("\n")
-        alert(`Successfully imported ${result.imported} products. ${result.failed} failed.\n\nErrors:\n${errorDetails}`)
+        console.error(`Import summary: ${result.imported} successful, ${result.failed} failed:`, errorDetails)
+        // Optionally show a toast notification
       } else {
-        alert(`Successfully imported ${result.imported} products.`)
+        console.log(`Successfully imported ${result.imported} products.`)
+        // Optionally show a success toast notification
       }
       
       // Clear selection and refresh data
@@ -181,7 +187,7 @@ const ProductSyncPage = () => {
       
     } catch (error) {
       console.error("Error importing products:", error)
-      alert("Failed to import products")
+      // Optionally show a toast notification instead of alert
     } finally {
       setImporting(false)
     }

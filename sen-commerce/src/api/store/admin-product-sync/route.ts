@@ -287,7 +287,7 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
         if (provider === "printful") {
           // Get Printful product details
           const printfulProducts = await printfulService.fetchStoreProducts()
-          const printfulProduct = printfulProducts.find(p => p.id === productId)
+          let printfulProduct = printfulProducts.find(p => p.id === productId)
           
           if (!printfulProduct) {
             // Try catalog products if not found in store products
@@ -425,6 +425,7 @@ async function importProducts(req: MedusaRequest, res: MedusaResponse, provider:
         importedProducts.push({
           productId,
           medusaProductId: medusaProduct.id,
+          medusaProduct: medusaProduct, // Include full product object for frontend
           provider
         })
 
