@@ -1,7 +1,8 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { IProductModuleService, ISalesChannelModuleService, IPricingModuleService } from "@medusajs/types"
-import { authenticate } from "@medusajs/medusa";
+import { authenticate } from "@medusajs/medusa"
+import { ProductImageService } from "../../../services/product-image-service"
 
 interface SyncLog {
   id: string
@@ -19,41 +20,7 @@ interface SyncLog {
 // In-memory storage for sync logs (in production, use database)
 let syncLogs: SyncLog[] = []
 
-// Helper function to download and upload image to Medusa
-async function downloadAndUploadImage(imageUrl: string, req: MedusaRequest): Promise<string> {
-    try {
-        console.log(`[DEBUG] Downloading image: ${imageUrl}`)
-        
-        // Download image
-        const response = await fetch(imageUrl)
-        if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.status}`)
-        }
-        
-        const buffer = await response.arrayBuffer()
-        const contentType = response.headers.get('content-type') || 'image/jpeg'
-        const fileName = `imported-${Date.now()}.${contentType.split('/')[1] || 'jpg'}`
-        
-        // Get file service to upload the image
-        const fileModuleService = req.scope.resolve(Modules.FILE)
-        
-        // Create a File object from the buffer
-        const file = new File([buffer], fileName, { type: contentType })
-        
-        // Upload the file
-        const uploadResult = await fileModuleService.uploadFiles([{
-            file,
-            fileName
-        }])
-        
-        console.log(`[DEBUG] Image uploaded successfully:`, uploadResult[0]?.url)
-        return uploadResult[0]?.url || imageUrl // Fallback to original URL if upload fails
-        
-    } catch (error) {
-        console.error(`[DEBUG] Failed to download/upload image ${imageUrl}:`, error)
-        return imageUrl // Fallback to original URL
-    }
-}
+// Note: Replaced by ProductImageService - keeping for backwards compatibility if needed
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   console.log("[Product Sync] GET request received")
@@ -219,7 +186,18 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                         throw new Error('No product retrieval method found on Printful service');
                     }
                     
-                    console.log(`Fetched product:`, printfulProduct ? 'Success' : 'Null')
+                    console.log(`[DEBUG] Fetched Printful product:`, printfulProduct ? 'Success' : 'Null')
+                if (printfulProduct) {
+                    console.log(`[DEBUG] Printful product structure:`)
+                    console.log(`  - ID: ${printfulProduct.id}`)
+                    console.log(`  - Name: ${printfulProduct.name}`)
+                    console.log(`  - Thumbnail: ${printfulProduct.thumbnail_url}`)
+                    console.log(`  - Description: ${printfulProduct.description}`)
+                    console.log(`  - Variants count: ${printfulProduct.variants ? printfulProduct.variants.length : 0}`)
+                    if (printfulProduct.variants && printfulProduct.variants.length > 0) {
+                        console.log(`  - First variant:`, JSON.stringify(printfulProduct.variants[0], null, 2))
+                    }
+                }
                 } catch (apiError) {
                     console.error(`Error fetching Printful product ${productId}:`, apiError);
                     throw new Error(`Failed to fetch product from Printful: ${apiError?.message || apiError}`);
@@ -326,20 +304,58 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                 printfulProduct.thumbnail_url = productThumbnail;
                 printfulProduct.variants = variants;
 
-                // Try to generate mockups if we have artwork
-                let mockupUrls: string[] = []
-                if (artworkUrl && variants.length > 0 && printfulService.generateAndWaitForMockups) {
-                  try {
-                    console.log(`Attempting to generate mockups for product ${productId} with artwork ${artworkUrl}`)
-                    const variantIds = variants.slice(0, 3).map(v => v.id)
-                    mockupUrls = await printfulService.generateAndWaitForMockups(productId, variantIds, artworkUrl, 20000)
-                    console.log(`Successfully generated ${mockupUrls.length} mockups`)
-                  } catch (mockupError) {
-                    console.warn(`Failed to generate mockups for product ${productId}:`, mockupError.message || mockupError)
-                    // Continue with import even if mockups fail
-                  }
-                } else {
-                  console.log('Skipping mockup generation - method not available or missing artwork/variants')
+                // Collect all available Printful images
+                console.log(`[DEBUG] Starting image collection for product ${productId}`)
+                console.log(`[DEBUG] Available data - Thumbnail: ${productThumbnail}, Variants: ${variants.length}`)
+                
+                let imageCollection
+                let collectedImages = []
+                
+                // 1. Always add thumbnail if available
+                if (productThumbnail) {
+                    collectedImages.push(productThumbnail)
+                    console.log(`[DEBUG] Added thumbnail: ${productThumbnail}`)
+                }
+                
+                // 2. Add variant images if available
+                variants.forEach((variant, index) => {
+                    if (variant.image && !collectedImages.includes(variant.image)) {
+                        collectedImages.push(variant.image)
+                        console.log(`[DEBUG] Added variant ${index} image: ${variant.image}`)
+                    }
+                })
+                
+                // 3. Try comprehensive image collection with fallback
+                try {
+                    const imageService = new ProductImageService(req)
+                    console.log(`[DEBUG] Attempting comprehensive image collection...`)
+                    
+                    console.log(`[DEBUG] Passing original Printful product data to image service`)
+                    console.log(`[DEBUG] Original product variants:`, printfulProduct.variants?.length)
+                    
+                    imageCollection = await imageService.collectPrintfulImages(
+                      printfulProduct, // Pass original Printful data, not processed variants
+                      artworkUrl,
+                      8, // max mockups
+                      20 // max total images
+                    )
+                    
+                    console.log(`[DEBUG] ✅ Comprehensive collection succeeded: ${imageCollection.images.length} images`)
+                } catch (imageError) {
+                    console.warn(`[DEBUG] ⚠️ Comprehensive collection failed, using basic images:`, imageError.message)
+                    
+                    // Create basic image collection from what we have
+                    imageCollection = {
+                        images: collectedImages.map(url => ({ url, type: 'basic' })),
+                        thumbnail: collectedImages[0] || productThumbnail,
+                        metadata: {
+                            total_images: collectedImages.length,
+                            image_sources: { mockups: 0, catalog: 0, variants: collectedImages.length - 1, user_uploads: 0 },
+                            printful_product_id: productId,
+                            artwork_url: artworkUrl
+                        }
+                    }
+                    console.log(`[DEBUG] Using ${collectedImages.length} basic images`)
                 }
 
                 const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL);
@@ -379,123 +395,134 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                   continue
                 }
 
-                // Use the proper workflow to create products with prices
-                const { createProductsWorkflow } = await import("@medusajs/core-flows")
-                
-                // Build options based on available attributes
-                const productOptions = [];
-                const hasMultipleSizes = sizeValues.size > 1;
-                const hasMultipleColors = colorValues.size > 1;
-                
-                if (hasMultipleSizes) {
-                    productOptions.push({
-                        title: "Size",
-                        values: Array.from(sizeValues)
-                    });
-                }
-                
-                if (hasMultipleColors) {
-                    productOptions.push({
-                        title: "Color", 
-                        values: Array.from(colorValues)
-                    });
-                }
-                
-                // If no options, add a default one
-                if (productOptions.length === 0) {
-                    productOptions.push({
-                        title: "Size",
-                        values: ["One Size"]
-                    });
-                }
-                
-                // Create product variants for Medusa
-                const medusaVariants = variants.map((variant, index) => {
-                    console.log(`Creating medusa variant ${index} from:`, variant)
-                    const variantOptions: Record<string, string> = {};
-                    
-                    if (hasMultipleSizes) {
-                        variantOptions["Size"] = String(variant.size || "One Size");
+                // Convert image collection to Medusa format
+                let medusaImageData
+                try {
+                    if (imageCollection && imageCollection.images) {
+                        // Try using the image service for conversion
+                        try {
+                            const imageService = new ProductImageService(req)
+                            medusaImageData = imageService.convertToMedusaFormat(imageCollection)
+                            console.log(`[DEBUG] ✅ Image service conversion succeeded`)
+                        } catch (conversionError) {
+                            console.warn(`[DEBUG] ⚠️ Image service conversion failed:`, conversionError.message)
+                            throw conversionError
+                        }
+                    } else {
+                        throw new Error("No image collection available")
                     }
-                    if (hasMultipleColors) {
-                        variantOptions["Color"] = String(variant.color || "Default");
+                } catch (conversionError) {
+                    console.warn(`[DEBUG] Using manual image format conversion`)
+                    // Manual conversion as fallback
+                    medusaImageData = {
+                        thumbnail: imageCollection?.thumbnail || collectedImages[0] || productThumbnail,
+                        images: collectedImages.map(url => ({ url })),
+                        metadata: {
+                            total_images: collectedImages.length,
+                            image_sources: { mockups: 0, catalog: 0, variants: collectedImages.length, user_uploads: 0 },
+                            printful_product_id: productId,
+                            artwork_url: artworkUrl,
+                            fallback_conversion: true
+                        }
                     }
-                    if (!hasMultipleSizes && !hasMultipleColors) {
-                        variantOptions["Size"] = "One Size";
-                    }
-                    
-                    const variantPrice = parseFloat(String(variant.price || "25.00"))
-                    return {
-                        title: String(variant.name),
-                        sku: `pod-${productId}-${String(variant.id)}`,
-                        manage_inventory: false,
-                        allow_backorder: true,
-                        options: variantOptions,
-                        prices: [
-                            {
-                                amount: Math.round(isNaN(variantPrice) ? 2500 : variantPrice * 100),
-                                currency_code: "usd",
-                            }
-                        ]
-                    };
-                });
-                
-                // Process all Printful images as CDN URLs - no downloading
-                const allPrintfulImages = []
-                if (productThumbnail) {
-                  allPrintfulImages.push(productThumbnail)
                 }
                 
-                // Add variant images if available
-                for (const variant of variants) {
-                  if (variant.image) {
-                    allPrintfulImages.push(variant.image)
-                  }
-                }
+                console.log(`[DEBUG] Final image data for product creation:`)
+                console.log(`  - Thumbnail: ${medusaImageData.thumbnail}`)
+                console.log(`  - Images count: ${medusaImageData.images.length}`)
+                console.log(`  - First few images:`, medusaImageData.images.slice(0, 3))
                 
-                // Use CDN URLs directly - no downloading
-                const allImageUrls = [...allPrintfulImages, ...mockupUrls].filter(Boolean)
-                const cdnImages = allImageUrls // Keep all as CDN URLs
+                console.log(`[DEBUG] Creating product with ${medusaImageData.images.length} images`)
+                console.log(`[DEBUG] Image data structure:`, JSON.stringify(medusaImageData, null, 2))
+                console.log(`[DEBUG] Thumbnail:`, medusaImageData.thumbnail)
+                console.log(`[DEBUG] Images array:`, medusaImageData.images)
                 
-                console.log(`[DEBUG] Using ${cdnImages.length} CDN image URLs for product ${productId}`)
-                
+                // Create the product with comprehensive image data
                 const productInput = {
-                  title: productName,
-                  status: "published",
-                  description: productDescription,
-                  thumbnail: cdnImages[0] || productThumbnail,
-                  images: cdnImages.map(url => ({ url })),
-                  options: productOptions,
-                  variants: medusaVariants,
-                  sales_channels: [{ id: defaultSalesChannel.id }],
-                  metadata: {
-                    fulfillment_type: "printful_pod",
-                    printful_product_id: productId,
-                    product_type: "store",
-                    mockup_urls: mockupUrls,
-                    artwork_url: artworkUrl,
-                    original_thumbnail: productThumbnail,
-                  },
+                    title: productName,
+                    description: productDescription,
+                    status: "draft", // Start as draft
+                    thumbnail: medusaImageData.thumbnail,
+                    images: medusaImageData.images,
+                    metadata: {
+                        fulfillment_type: "printful_pod",
+                        printful_product_id: productId,
+                        product_type: "store",
+                        artwork_url: artworkUrl,
+                        original_thumbnail: productThumbnail,
+                        // Include comprehensive image metadata
+                        ...medusaImageData.metadata,
+                    },
                 }
-
-                const { result } = await createProductsWorkflow(req.scope).run({
-                  input: { products: [productInput] }
-                })
                 
-                console.log(`[DEBUG] Workflow result structure:`, JSON.stringify(result, null, 2))
+                console.log(`[DEBUG] Product input:`, JSON.stringify(productInput, null, 2))
                 
-                // Handle different possible result structures
-                if (result && result.products && Array.isArray(result.products)) {
-                    medusaProduct = result.products[0]
-                } else if (result && Array.isArray(result)) {
-                    medusaProduct = result[0]
-                } else if (result) {
-                    medusaProduct = result
+                medusaProduct = (await productModuleService.createProducts([productInput]))[0]
+                
+                console.log(`[DEBUG] Created medusaProduct:`, medusaProduct ? 'Success' : 'Failed')
+                
+                if (medusaProduct) {
+                    console.log(`[DEBUG] ✅ Product created successfully!`)
+                    console.log(`  - ID: ${medusaProduct.id}`)
+                    console.log(`  - Title: ${medusaProduct.title}`)
+                    console.log(`  - Status: ${medusaProduct.status}`)
+                    console.log(`  - Thumbnail: ${medusaProduct.thumbnail}`)
+                    console.log(`  - Images count: ${medusaProduct.images ? medusaProduct.images.length : 0}`)
+                    
+                    // Retrieve the product immediately after creation to verify what was stored
+                    try {
+                        const retrievedProduct = await productModuleService.retrieveProduct(medusaProduct.id, {
+                            relations: ["images", "variants"]
+                        })
+                        console.log(`[DEBUG] 🔍 Retrieved product verification:`)
+                        console.log(`  - Retrieved thumbnail: ${retrievedProduct.thumbnail}`)
+                        console.log(`  - Retrieved images count: ${retrievedProduct.images ? retrievedProduct.images.length : 0}`)
+                        console.log(`  - Retrieved images:`, retrievedProduct.images)
+                        console.log(`  - Retrieved variants count: ${retrievedProduct.variants ? retrievedProduct.variants.length : 0}`)
+                    } catch (retrieveError) {
+                        console.error(`[DEBUG] ⚠️ Failed to retrieve product for verification:`, retrieveError.message)
+                    }
                 } else {
-                    throw new Error("No result returned from product creation workflow")
+                    console.error(`[DEBUG] ❌ Product creation failed - no product returned`)
                 }
                 
-                console.log(`[DEBUG] Created medusaProduct:`, medusaProduct ? 'Success' : 'Null')
+                // Create basic variant with price
+                console.log(`[DEBUG] Creating variant for product ${medusaProduct.id}`)
+                const variants_created = await productModuleService.createProductVariants([{
+                    title: "Default",
+                    sku: `printful-${productId}`,
+                    product_id: medusaProduct.id,
+                    prices: [{
+                        amount: price,
+                        currency_code: "eur"
+                    }],
+                    metadata: {
+                        printful_product_id: productId
+                    }
+                }])
+                
+                console.log(`[DEBUG] Created variants:`, variants_created)
+                
+                // Verify pricing was set correctly
+                if (variants_created && variants_created[0]) {
+                    const variant = variants_created[0] as any
+                    console.log(`[DEBUG] ✅ Variant created with pricing:`)
+                    console.log(`  - Variant ID: ${variant.id}`)
+                    console.log(`  - SKU: ${variant.sku}`)
+                    console.log(`  - Has prices: ${variant.prices ? 'Yes' : 'No'}`)
+                    console.log(`  - Price details:`, variant.prices)
+                } else {
+                    console.error(`[DEBUG] ❌ No variants created for product ${productId}`)
+                }
+                
+                // Link to sales channel  
+                const remoteLink = req.scope.resolve("remoteLink")
+                await remoteLink.create([
+                    {
+                        [Modules.PRODUCT]: { product_id: medusaProduct.id },
+                        [Modules.SALES_CHANNEL]: { sales_channel_id: defaultSalesChannel.id },
+                    },
+                ])
             } else if (provider === "digital") {
                 const digitalProductService = req.scope.resolve("digitalProductModuleService") as any;
                 // Just get all and filter manually since the service doesn't support where clause properly
@@ -525,7 +552,7 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                 
                 const digitalProductInput = {
                   title: digitalProduct.name,
-                  status: "published",
+                  status: "published" as const,
                   description: digitalProduct.description || `Digital download: ${digitalProduct.name}`,
                   options: [
                     {

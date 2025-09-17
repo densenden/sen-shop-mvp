@@ -161,10 +161,42 @@ export default function ProductPage() {
   }
 
   const processProduct = (productData: any) => {
+    // Comprehensive image processing for all image sources
+    const allImages = []
+    
+    // Add thumbnail first
+    if (productData.thumbnail) {
+      allImages.push(productData.thumbnail)
+    }
+    
+    // Add all product images, handling both string and object formats
+    if (productData.images && Array.isArray(productData.images)) {
+      productData.images.forEach((img: any) => {
+        const imageUrl = typeof img === 'string' ? img : img.url
+        if (imageUrl && !allImages.includes(imageUrl)) {
+          allImages.push(imageUrl)
+        }
+      })
+    }
+    
+    // If we have image source details in metadata, ensure we're showing all images
+    if (productData.metadata?.image_source_details) {
+      productData.metadata.image_source_details.forEach((detail: any) => {
+        if (detail.url && !allImages.includes(detail.url)) {
+          allImages.push(detail.url)
+        }
+      })
+    }
+    
+    // Fallback: if no images, use thumbnail
+    if (allImages.length === 0 && productData.thumbnail) {
+      allImages.push(productData.thumbnail)
+    }
+    
     const productWithImages = {
       ...productData,
       thumbnail: productData.thumbnail,
-      images: productData.images?.map((img: any) => typeof img === 'string' ? img : img.url) || [productData.thumbnail],
+      images: allImages.filter(Boolean), // Filter out any null/undefined values
       variants: productData.variants?.length > 0 ? productData.variants.map((v: any) => ({
         ...v,
         price_set: v.price_set, // Ensure price_set is preserved
@@ -436,21 +468,48 @@ export default function ProductPage() {
             {product.images && product.images.length > 1 && (
               <div className="mx-auto mt-6 hidden w-full max-w-2xl sm:block lg:max-w-none">
                 <div className="grid grid-cols-4 gap-6">
-                  {product.images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setActiveImageIndex(index)}
-                      className={`relative h-24 cursor-pointer rounded border-2 ${
-                        index === activeImageIndex ? 'border-gray-900' : 'border-gray-200'
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`${product.title} ${index + 1}`}
-                        className="h-full w-full object-cover rounded"
-                      />
-                    </button>
-                  ))}
+                  {product.images.map((image, index) => {
+                    // Determine image type from metadata if available
+                    let imageType = 'product'
+                    if (product.metadata?.image_source_details) {
+                      const sourceDetail = product.metadata.image_source_details.find((detail: any) => detail.url === image)
+                      if (sourceDetail) {
+                        imageType = sourceDetail.type
+                      }
+                    }
+                    
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => setActiveImageIndex(index)}
+                        className={`relative h-24 cursor-pointer rounded border-2 ${
+                          index === activeImageIndex ? 'border-gray-900' : 'border-gray-200'
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`${product.title} ${index + 1}`}
+                          className="h-full w-full object-cover rounded"
+                        />
+                        {/* Image type indicator */}
+                        {imageType === 'mockup' && (
+                          <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            AI
+                          </div>
+                        )}
+                        {imageType === 'user_upload' && (
+                          <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 rounded">
+                            +
+                          </div>
+                        )}
+                        {imageType === 'catalog' && (
+                          <div className="absolute top-1 left-1 bg-purple-500 text-white text-xs px-1 rounded">
+                            HD
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -805,6 +864,44 @@ export default function ProductPage() {
 
             {activeTab === 'product' && (
               <div className="max-w-4xl space-y-6">
+                {/* Image Sources Summary */}
+                {product.metadata?.image_sources && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3">Image Collection</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      {product.metadata.image_sources.mockups > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded">AI</div>
+                          <span>{product.metadata.image_sources.mockups} AI Generated</span>
+                        </div>
+                      )}
+                      {product.metadata.image_sources.catalog > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="bg-purple-500 text-white text-xs px-2 py-1 rounded">HD</div>
+                          <span>{product.metadata.image_sources.catalog} High-Def</span>
+                        </div>
+                      )}
+                      {product.metadata.image_sources.variants > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded">VAR</div>
+                          <span>{product.metadata.image_sources.variants} Variants</span>
+                        </div>
+                      )}
+                      {product.metadata.image_sources.user_uploads > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="bg-green-500 text-white text-xs px-2 py-1 rounded">+</div>
+                          <span>{product.metadata.image_sources.user_uploads} Custom</span>
+                        </div>
+                      )}
+                    </div>
+                    {product.metadata.total_images && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Total: {product.metadata.total_images} images from {Object.values(product.metadata.image_sources).filter(count => count > 0).length} sources
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 {product.metadata?.fulfillment_type === 'printful_pod' ? (
                   <div>
                     <h3 className="text-xl font-medium text-gray-900 mb-4">Printful Product Details</h3>

@@ -22,8 +22,12 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         fields: [
           "id",
           "title", 
+          "subtitle",
           "description",
+          "handle",
           "status",
+          "thumbnail",
+          "images.*",
           "metadata",
           "created_at",
           "updated_at",
@@ -60,12 +64,24 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         }
       })
       
+      // Debug logging for images
+      console.log(`[Product API] Product ${id} details:`)
+      console.log(`  - Title: ${product.title}`)
+      console.log(`  - Thumbnail: ${product.thumbnail}`)
+      console.log(`  - Images: ${product.images?.length || 0}`)
+      console.log(`  - Image details:`, product.images)
+      console.log(`  - Metadata keys:`, Object.keys(product.metadata || {}))
+      
       // Format response to match expected structure
       const formatted = {
         id: product.id,
         title: product.title,
+        subtitle: product.subtitle,
         description: product.description,
+        handle: product.handle,
         status: product.status,
+        thumbnail: product.thumbnail,
+        images: product.images || [],
         metadata: product.metadata || {},
         variants: formattedVariants,
         tags: product.tags || [],

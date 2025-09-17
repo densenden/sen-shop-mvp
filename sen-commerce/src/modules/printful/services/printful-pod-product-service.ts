@@ -137,20 +137,49 @@ export class PrintfulPodProductService extends MedusaService({
 
   // V2 API: Get specific catalog product with variants
   async getCatalogProduct(productId: string): Promise<PrintfulV2CatalogProduct | null> {
-    const res = await fetch(`${this.apiBaseUrlV2}/catalog-products/${productId}`, {
-      headers: { 
-        Authorization: `Bearer ${this.apiToken}`,
-        'Content-Type': 'application/json'
-      },
-    })
-    if (!res.ok) {
-      if (res.status === 404) return null
-      const errorText = await res.text()
-      console.error("Printful V2 API error:", res.status, errorText)
-      throw new Error("Failed to fetch catalog product from Printful V2")
+    try {
+      console.log(`[PrintfulService] Fetching V2 catalog product ${productId}`)
+      const res = await fetch(`${this.apiBaseUrlV2}/catalog-products/${productId}`, {
+        headers: { 
+          Authorization: `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json'
+        },
+      })
+      
+      if (!res.ok) {
+        if (res.status === 404) {
+          console.log(`[PrintfulService] V2 catalog product ${productId} not found`)
+          return null
+        }
+        const errorText = await res.text()
+        console.error("Printful V2 API error:", res.status, errorText)
+        return null
+      }
+      
+      const data = await res.json()
+      console.log(`[PrintfulService] V2 Catalog API response for product ${productId}:`)
+      console.log(JSON.stringify(data, null, 2))
+      
+      if (data.data) {
+        const catalogProduct = data.data
+        console.log(`[PrintfulService] V2 Catalog product details:`)
+        console.log(`  - ID: ${catalogProduct.id}`)
+        console.log(`  - Name: ${catalogProduct.name}`)
+        console.log(`  - Image: ${catalogProduct.image}`)
+        console.log(`  - Variants: ${catalogProduct.variants?.length || 0}`)
+        
+        catalogProduct.variants?.forEach((variant: any, index: number) => {
+          console.log(`  - V2 Variant ${index}: ${variant.name} - Image: ${variant.image}`)
+        })
+        
+        return catalogProduct
+      }
+      
+      return null
+    } catch (error) {
+      console.error(`[PrintfulService] Error fetching V2 catalog product ${productId}:`, error)
+      return null
     }
-    const data = await res.json()
-    return data.data || null
   }
 
   // V1 API: Fetch store products (still needed for store operations)
@@ -193,10 +222,19 @@ export class PrintfulPodProductService extends MedusaService({
     }
     const data = await res.json()
     
+    console.log(`[PrintfulService] Raw API response for product ${productId}:`)
+    console.log(JSON.stringify(data, null, 2))
+    
     // The Printful API returns data in result.sync_product with variants in result.sync_variants
     if (data.result && data.result.sync_product) {
       const syncProduct = data.result.sync_product
       const syncVariants = data.result.sync_variants || []
+      
+      console.log(`[PrintfulService] Sync product:`, syncProduct)
+      console.log(`[PrintfulService] Found ${syncVariants.length} sync variants`)
+      syncVariants.forEach((variant, index) => {
+        console.log(`[PrintfulService] Variant ${index}:`, JSON.stringify(variant, null, 2))
+      })
       
       // Map to expected format
       return {
@@ -208,7 +246,9 @@ export class PrintfulPodProductService extends MedusaService({
           id: v.id.toString(),
           name: v.name,
           price: parseFloat(v.retail_price),
-          currency: v.currency || 'USD'
+          currency: v.currency || 'USD',
+          image: v.image || v.preview_url,
+          files: v.files || [] // Include files array for additional images
         }))
       }
     }

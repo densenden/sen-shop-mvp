@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { IProductModuleService } from "@medusajs/types"
 import { authenticate } from "@medusajs/medusa"
+import { ProductImageService } from "../../../../../services/product-image-service"
 import { createClient } from '@supabase/supabase-js'
 import multer from 'multer'
 
@@ -103,18 +104,28 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         uploadedImages.push(`https://picsum.photos/400/400?random=${timestamp}`)
         uploadedImages.push(`https://picsum.photos/400/400?random=${timestamp + 1}`)
         
-        // Get existing images
-        const existingImages = product.images || []
-        const existingImageUrls = existingImages.map(img => img.url)
+        // Use ProductImageService to handle image merging properly
+        const imageService = new ProductImageService(req)
+        const currentImageCollection = imageService.parseExistingProductImages(product)
         
-        // Add new URLs
-        const allImageUrls = [...existingImageUrls, ...uploadedImages]
+        // Add new user uploads
+        const newUserUploads = uploadedImages.map(url => ({ url }))
+        const updatedImageCollection = await imageService.mergeWithUserUploads(
+          currentImageCollection, 
+          newUserUploads
+        )
+        
+        // Convert to Medusa format
+        const medusaImageData = imageService.convertToMedusaFormat(updatedImageCollection)
         
         // Update product with new images
         await productService.updateProducts(id, {
-          images: allImageUrls.map(url => ({ url })),
-          // Set first image as thumbnail if no thumbnail exists
-          ...((!product.thumbnail && allImageUrls.length > 0) ? { thumbnail: allImageUrls[0] } : {})
+          thumbnail: medusaImageData.thumbnail,
+          images: medusaImageData.images,
+          metadata: {
+            ...product.metadata,
+            ...medusaImageData.metadata
+          }
         })
         
         console.log(`[DEBUG] Uploaded ${uploadedImages.length} images to product ${id}`)
@@ -122,8 +133,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         return res.json({ 
           success: true, 
           images: uploadedImages.map(url => ({ url })),
-          total_images: allImageUrls.length,
-          thumbnail_set: !product.thumbnail && allImageUrls.length > 0
+          total_images: updatedImageCollection.images.length,
+          image_sources: updatedImageCollection.metadata.image_sources
         })
         
       } catch (uploadError) {
