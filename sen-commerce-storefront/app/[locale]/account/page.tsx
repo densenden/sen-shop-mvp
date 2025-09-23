@@ -1,8 +1,11 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { 
   User, Package, Heart, Settings, LogOut, Eye, Calendar, 
   CreditCard, Truck, MapPin, Phone, Mail, Edit3, Save, X, 
@@ -88,6 +91,7 @@ interface Order {
 
 export default function AccountPage() {
   const router = useRouter()
+  const t = useTranslations('account')
   const [user, setUser] = useState<UserData | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -714,7 +718,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <User className="h-4 w-4" />
-                  <span>Overview</span>
+                  <span>{t('profile')}</span>
                 </button>
                 
                 <button
@@ -726,7 +730,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <Package className="h-4 w-4" />
-                  <span>Orders ({orders.length})</span>
+                  <span>{t('orders')} ({orders.length})</span>
                 </button>
                 
                 <button
@@ -738,7 +742,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <MaterialIcon icon={MaterialIcons.download} size="small" className="w-4 h-4" />
-                  <span>Downloads ({downloads.length})</span>
+                  <span>{t('downloads')} ({downloads.length})</span>
                 </button>
                 
                 <button
@@ -750,7 +754,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <MapPin className="h-4 w-4" />
-                  <span>Addresses ({addresses.length})</span>
+                  <span>{t('addresses')} ({addresses.length})</span>
                 </button>
                 
                 <button
@@ -762,7 +766,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <Heart className="h-4 w-4" />
-                  <span>Favorites ({favorites.length})</span>
+                  <span>{t('favorites')} ({favorites.length})</span>
                 </button>
                 
                 <button
@@ -774,7 +778,7 @@ export default function AccountPage() {
                   }`}
                 >
                   <Settings className="h-4 w-4" />
-                  <span>Settings</span>
+                  <span>{t('settings')}</span>
                 </button>
                 
                 <button
@@ -782,7 +786,7 @@ export default function AccountPage() {
                   className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>{t('signOut')}</span>
                 </button>
               </nav>
             </div>
@@ -795,7 +799,7 @@ export default function AccountPage() {
                 {/* Account Stats */}
                 <div className="bg-white border border-gray-100">
                   <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="text-lg font-medium text-gray-900">Account Overview</h3>
+                    <h3 className="text-lg font-medium text-gray-900">{t('title')}</h3>
                   </div>
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -804,7 +808,7 @@ export default function AccountPage() {
                           <Package className="h-6 w-6 text-blue-600" />
                         </div>
                         <div className="text-2xl font-medium text-gray-900">{orders.length}</div>
-                        <div className="text-sm text-gray-600">Total Orders</div>
+                        <div className="text-sm text-gray-600">{t('totalOrders')}</div>
                       </div>
                       
                       <div className="text-center">
@@ -814,7 +818,7 @@ export default function AccountPage() {
                         <div className="text-2xl font-medium text-gray-900">
                           {orders.filter(o => o.status === 'completed').length}
                         </div>
-                        <div className="text-sm text-gray-600">Completed</div>
+                        <div className="text-sm text-gray-600">{t('completed')}</div>
                       </div>
                       
                       <div className="text-center">
@@ -822,7 +826,7 @@ export default function AccountPage() {
                           <Heart className="h-6 w-6 text-purple-600" />
                         </div>
                         <div className="text-2xl font-medium text-gray-900">{favorites.length}</div>
-                        <div className="text-sm text-gray-600">Favorites</div>
+                        <div className="text-sm text-gray-600">{t('favorites')}</div>
                       </div>
                       
                       <div className="text-center">
@@ -832,7 +836,7 @@ export default function AccountPage() {
                         <div className="text-sm font-medium text-gray-900">
                           {formatDate(user.created_at)}
                         </div>
-                        <div className="text-sm text-gray-600">Member Since</div>
+                        <div className="text-sm text-gray-600">{t('memberSince')}</div>
                       </div>
                     </div>
                   </div>
@@ -842,7 +846,7 @@ export default function AccountPage() {
                 {orders.length > 0 && (
                   <div className="bg-white border border-gray-100">
                     <div className="px-6 py-4 border-b border-gray-100">
-                      <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{t('recentOrders')}</h3>
                     </div>
                     <div className="p-6">
                       <div className="space-y-4">
@@ -853,7 +857,7 @@ export default function AccountPage() {
                               <div className="text-sm text-gray-600">{formatDate(order.created_at)}</div>
                               <div className="flex items-center space-x-2 mt-1">
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getOrderStatusColor(order.status)}`}>
-                                  {order.status || 'Unknown'}
+                                  {order.status || t('unknown')}
                                 </span>
                                 {isDigitalOnlyOrder(order) ? (
                                   <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
@@ -862,15 +866,15 @@ export default function AccountPage() {
                                 ) : hasDigitalProducts(order) ? (
                                   <>
                                     <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
-                                      Download Available
+                                      {t('downloadAvailable')}
                                     </span>
                                     <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                      {order.fulfillment_status || 'Not fulfilled'}
+                                      {order.fulfillment_status || t('notFulfilled')}
                                     </span>
                                   </>
                                 ) : (
                                   <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                    {order.fulfillment_status || 'Not fulfilled'}
+                                    {order.fulfillment_status || t('notFulfilled')}
                                   </span>
                                 )}
                               </div>
@@ -882,7 +886,7 @@ export default function AccountPage() {
                               <div className="flex items-center justify-end space-x-1 mt-1">
                                 {getPaymentStatusIcon(order.payment_status)}
                                 <span className="text-sm text-gray-600 capitalize">
-                                  {order.payment_status || 'pending'}
+                                  {order.payment_status || t('pending')}
                                 </span>
                               </div>
                             </div>
@@ -895,7 +899,7 @@ export default function AccountPage() {
                             onClick={() => setActiveTab('orders')}
                             className="text-gray-900 hover:text-gray-700 font-medium"
                           >
-                            View all orders
+                            {t('viewAllOrders')}
                           </button>
                         </div>
                       )}
@@ -908,19 +912,19 @@ export default function AccountPage() {
             {activeTab === 'orders' && (
               <div className="bg-white border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-medium text-gray-900">Order History</h3>
+                  <h3 className="text-lg font-medium text-gray-900">{t('orderHistory')}</h3>
                 </div>
                 <div className="p-6">
                   {orders.length === 0 ? (
                     <div className="text-center py-12">
                       <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
-                      <p className="text-gray-600 mb-6">Start shopping to see your orders here.</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('noOrders')}</h3>
+                      <p className="text-gray-600 mb-6">{t('noOrdersDescription')}</p>
                       <Link
                         href="/"
                         className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800"
                       >
-                        Start Shopping
+                        {t('startShopping')}
                       </Link>
                     </div>
                   ) : (
@@ -933,7 +937,7 @@ export default function AccountPage() {
                                 Order #{order.display_id}
                               </h4>
                               <p className="text-sm text-gray-600">
-                                Placed on {formatDate(order.created_at)}
+                                {t('placedOn', { date: formatDate(order.created_at) })}
                               </p>
                             </div>
                             <div className="text-right">
@@ -942,7 +946,7 @@ export default function AccountPage() {
                               </div>
                               <div className="flex items-center justify-end space-x-2 mt-1">
                                 <span className={`inline-block px-2 py-1 text-xs font-medium ${getOrderStatusColor(order.status)}`}>
-                                  {order.status || 'Unknown'}
+                                  {order.status || t('unknown')}
                                 </span>
                                 {isDigitalOnlyOrder(order) ? (
                                   <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
@@ -951,15 +955,15 @@ export default function AccountPage() {
                                 ) : hasDigitalProducts(order) ? (
                                   <>
                                     <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
-                                      Download Available
+                                      {t('downloadAvailable')}
                                     </span>
                                     <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                      {order.fulfillment_status || 'Not fulfilled'}
+                                      {order.fulfillment_status || t('notFulfilled')}
                                     </span>
                                   </>
                                 ) : (
                                   <span className={`inline-block px-2 py-1 text-xs font-medium ${getFulfillmentStatusColor(order.fulfillment_status)}`}>
-                                    {order.fulfillment_status || 'Not fulfilled'}
+                                    {order.fulfillment_status || t('notFulfilled')}
                                   </span>
                                 )}
                               </div>
@@ -984,7 +988,7 @@ export default function AccountPage() {
                                 <div className="flex-1">
                                   <h5 className="font-medium text-gray-900">{item.title}</h5>
                                   <p className="text-sm text-gray-600">
-                                    Quantity: {item.quantity} × {formatPrice(item.unit_price, order.currency_code)}
+                                    {t('quantity')}: {item.quantity} × {formatPrice(item.unit_price, order.currency_code)}
                                   </p>
                                   {item.metadata?.fulfillment_type && (
                                     <span className={`inline-block px-2 py-1 text-xs font-medium mt-1 ${
@@ -992,7 +996,7 @@ export default function AccountPage() {
                                         ? 'bg-blue-100 text-blue-800'
                                         : 'bg-green-100 text-green-800'
                                     }`}>
-                                      {(item.metadata.fulfillment_type === 'digital_download' || item.metadata.fulfillment_type === 'digital') ? 'Digital' : 'Physical'}
+                                      {(item.metadata.fulfillment_type === 'digital_download' || item.metadata.fulfillment_type === 'digital') ? t('digital') : t('physical')}
                                     </span>
                                   )}
                                 </div>
@@ -1035,12 +1039,12 @@ export default function AccountPage() {
                                       {generatingToken[`${order.id}_${item.id}`] ? (
                                         <>
                                           <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                                          <span>Generating...</span>
+                                          <span>{t('generating')}</span>
                                         </>
                                       ) : (
                                         <>
                                           <MaterialIcon icon={MaterialIcons.download} size="small" className="h-3 w-3" />
-                                          <span>Download</span>
+                                          <span>{t('download')}</span>
                                         </>
                                       )}
                                     </button>
@@ -1054,19 +1058,19 @@ export default function AccountPage() {
                           <div className="border-t border-gray-100 pt-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
-                                <span className="text-gray-600">Subtotal:</span>
+                                <span className="text-gray-600">{t('subtotal')}:</span>
                                 <div className="font-medium">{formatPrice(order.subtotal, order.currency_code)}</div>
                               </div>
                               <div>
-                                <span className="text-gray-600">Shipping:</span>
+                                <span className="text-gray-600">{t('shipping')}:</span>
                                 <div className="font-medium">{formatPrice(order.shipping_total, order.currency_code)}</div>
                               </div>
                               <div>
-                                <span className="text-gray-600">Tax:</span>
+                                <span className="text-gray-600">{t('tax')}:</span>
                                 <div className="font-medium">{formatPrice(order.tax_total, order.currency_code)}</div>
                               </div>
                               <div>
-                                <span className="text-gray-600">Total:</span>
+                                <span className="text-gray-600">{t('total')}:</span>
                                 <div className="font-medium">{formatPrice(order.total, order.currency_code)}</div>
                               </div>
                             </div>
@@ -1078,7 +1082,7 @@ export default function AccountPage() {
                               <div className="flex items-start space-x-2 text-sm text-gray-600">
                                 <Truck className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                 <div>
-                                  <div className="font-medium text-gray-900">Shipping Address:</div>
+                                  <div className="font-medium text-gray-900">{t('shippingAddress')}</div>
                                   <div>
                                     {order.shipping_address.first_name} {order.shipping_address.last_name}
                                   </div>
@@ -1099,7 +1103,7 @@ export default function AccountPage() {
                           {order.tracking_links && order.tracking_links.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-gray-100">
                               <div className="text-sm">
-                                <span className="font-medium text-gray-900">Tracking:</span>
+                                <span className="font-medium text-gray-900">{t('tracking')}</span>
                                 <div className="mt-1 space-y-1">
                                   {order.tracking_links.map((link, index) => (
                                     <div key={index}>
@@ -1132,19 +1136,19 @@ export default function AccountPage() {
             {activeTab === 'downloads' && (
               <div className="bg-white border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-medium text-gray-900">Digital Downloads</h3>
+                  <h3 className="text-lg font-medium text-gray-900">{t('digitalDownloads')}</h3>
                 </div>
                 <div className="p-6">
                   {downloads.length === 0 ? (
                     <div className="text-center py-12">
                       <MaterialIcon icon={MaterialIcons.download} size="xlarge" className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No digital downloads yet</h3>
-                      <p className="text-gray-600 mb-6">Purchase digital artworks to see your download links here.</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('noDownloads')}</h3>
+                      <p className="text-gray-600 mb-6">{t('noDownloadsDescription')}</p>
                       <Link
                         href="/artworks"
                         className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800"
                       >
-                        Browse Digital Artworks
+                        {t('browseDigitalArtworks')}
                       </Link>
                     </div>
                   ) : (
@@ -1157,11 +1161,11 @@ export default function AccountPage() {
                                 <h4 className="font-medium text-gray-900">{download.product_name}</h4>
                                 {download.is_expired ? (
                                   <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
-                                    Expired
+                                    {t('expired')}
                                   </span>
                                 ) : (
                                   <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
-                                    Active
+                                    {t('active')}
                                   </span>
                                 )}
                               </div>
@@ -1172,30 +1176,30 @@ export default function AccountPage() {
                               
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                                 <div>
-                                  <span className="font-medium">Order:</span>
+                                  <span className="font-medium">{t('order')}</span>
                                   <div>#{download.order_display_id}</div>
                                 </div>
                                 <div>
-                                  <span className="font-medium">Purchased:</span>
+                                  <span className="font-medium">{t('purchased')}</span>
                                   <div>{formatDate(download.order_date)}</div>
                                 </div>
                                 <div>
-                                  <span className="font-medium">Downloads:</span>
+                                  <span className="font-medium">{t('downloads')}:</span>
                                   <div>
                                     {download.download_count} / {download.max_downloads === -1 ? '∞' : download.max_downloads}
                                   </div>
                                 </div>
                                 <div>
-                                  <span className="font-medium">Expires:</span>
+                                  <span className="font-medium">{t('expires')}</span>
                                   <div>
-                                    {download.expires_at ? formatDate(download.expires_at) : 'Never'}
+                                    {download.expires_at ? formatDate(download.expires_at) : t('never')}
                                   </div>
                                 </div>
                               </div>
                               
                               {download.file_size && (
                                 <div className="mt-2 text-sm text-gray-600">
-                                  File size: {(download.file_size / (1024 * 1024)).toFixed(1)} MB
+                                  {t('fileSize', { size: (download.file_size / (1024 * 1024)).toFixed(1) })}
                                 </div>
                               )}
                             </div>
@@ -1204,7 +1208,7 @@ export default function AccountPage() {
                               {download.is_expired ? (
                                 <div className="text-center">
                                   <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                                  <p className="text-xs text-red-600">Link expired</p>
+                                  <p className="text-xs text-red-600">{t('linkExpired')}</p>
                                 </div>
                               ) : (
                                 <button
@@ -1223,12 +1227,12 @@ export default function AccountPage() {
                                   {generatingToken[download.download_id || `${download.order_id}_${download.product_id || download.product_name}`] ? (
                                     <>
                                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
-                                      <span>Generating...</span>
+                                      <span>{t('generating')}</span>
                                     </>
                                   ) : (
                                     <>
                                       <MaterialIcon icon={MaterialIcons.download} size="small" className="h-5 w-5" />
-                                      <span>Download</span>
+                                      <span>{t('download')}</span>
                                     </>
                                   )}
                                 </button>
@@ -1247,7 +1251,7 @@ export default function AccountPage() {
               <div className="bg-white border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Saved Addresses</h3>
+                    <h3 className="text-lg font-medium text-gray-900">{t('savedAddresses')}</h3>
                     {!showAddressForm && (
                       <button 
                         onClick={() => {
@@ -1267,7 +1271,7 @@ export default function AccountPage() {
                           })
                         }}
                         className="bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800">
-                        Add Address
+                        {t('addAddress')}
                       </button>
                     )}
                   </div>
@@ -1276,11 +1280,11 @@ export default function AccountPage() {
                   {showAddressForm && (
                     <div className="border border-gray-200 p-6 mb-6">
                       <h4 className="font-medium text-gray-900 mb-4">
-                        {editingAddress ? 'Edit Address' : 'Add New Address'}
+                        {editingAddress ? t('editAddress') : t('addNewAddress')}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('firstName')}</label>
                           <input
                             type="text"
                             value={addressForm.first_name}
@@ -1290,7 +1294,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('lastName')}</label>
                           <input
                             type="text"
                             value={addressForm.last_name}
@@ -1300,7 +1304,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company')}</label>
                           <input
                             type="text"
                             value={addressForm.company}
@@ -1309,7 +1313,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
                           <input
                             type="tel"
                             value={addressForm.phone}
@@ -1318,7 +1322,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('addressLine1')}</label>
                           <input
                             type="text"
                             value={addressForm.address_1}
@@ -1328,7 +1332,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('addressLine2')}</label>
                           <input
                             type="text"
                             value={addressForm.address_2}
@@ -1337,7 +1341,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('city')}</label>
                           <input
                             type="text"
                             value={addressForm.city}
@@ -1347,7 +1351,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('stateProvince')}</label>
                           <input
                             type="text"
                             value={addressForm.province}
@@ -1356,7 +1360,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('postalCode')}</label>
                           <input
                             type="text"
                             value={addressForm.postal_code}
@@ -1366,7 +1370,7 @@ export default function AccountPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Country Code *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('countryCode')}</label>
                           <select
                             value={addressForm.country_code}
                             onChange={(e) => setAddressForm(prev => ({ ...prev, country_code: e.target.value }))}
@@ -1403,7 +1407,7 @@ export default function AccountPage() {
                           }}
                           className="bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800"
                         >
-                          {editingAddress ? 'Update Address' : 'Save Address'}
+                          {editingAddress ? t('updateAddress') : t('saveAddress')}
                         </button>
                         <button
                           onClick={() => {
@@ -1412,7 +1416,7 @@ export default function AccountPage() {
                           }}
                           className="border border-gray-300 text-gray-700 px-4 py-2 text-sm font-medium hover:bg-gray-50"
                         >
-                          Cancel
+                          {t('cancel')}
                         </button>
                       </div>
                     </div>
@@ -1421,8 +1425,8 @@ export default function AccountPage() {
                   {addresses.length === 0 && !showAddressForm ? (
                     <div className="text-center py-12">
                       <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No addresses saved</h3>
-                      <p className="text-gray-600 mb-6">Add an address to make checkout faster.</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('noAddresses')}</h3>
+                      <p className="text-gray-600 mb-6">{t('noAddressesDescription')}</p>
                       <button 
                         onClick={() => {
                           setShowAddressForm(true)
@@ -1441,7 +1445,7 @@ export default function AccountPage() {
                           })
                         }}
                         className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800">
-                        Add Address
+                        {t('addAddress')}
                       </button>
                     </div>
                   ) : addresses.length > 0 && (
@@ -1460,12 +1464,12 @@ export default function AccountPage() {
                             <div className="flex space-x-1">
                               {address.is_default_shipping && (
                                 <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
-                                  Default Shipping
+                                  {t('defaultShipping')}
                                 </span>
                               )}
                               {address.is_default_billing && (
                                 <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
-                                  Default Billing
+                                  {t('defaultBilling')}
                                 </span>
                               )}
                             </div>
@@ -1505,10 +1509,10 @@ export default function AccountPage() {
                                 setShowAddressForm(true)
                               }}
                               className="text-gray-600 hover:text-gray-900 text-sm font-medium">
-                              Edit
+                              {t('edit')}
                             </button>
                             <button className="text-red-600 hover:text-red-700 text-sm font-medium">
-                              Delete
+                              {t('delete')}
                             </button>
                           </div>
                         </div>
@@ -1522,32 +1526,32 @@ export default function AccountPage() {
             {activeTab === 'favorites' && (
               <div className="bg-white border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-medium text-gray-900">Favorite Items</h3>
+                  <h3 className="text-lg font-medium text-gray-900">{t('favoriteItems')}</h3>
                 </div>
                 <div className="p-6">
                   {favorites.length === 0 ? (
                     <div className="text-center py-12">
                       <Heart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No favorites yet</h3>
-                      <p className="text-gray-600 mb-6">Heart items you love to keep track of them here.</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">{t('noFavorites')}</h3>
+                      <p className="text-gray-600 mb-6">{t('noFavoritesDescription')}</p>
                       <Link
                         href="/artworks"
                         className="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800"
                       >
-                        Browse Artworks
+                        {t('browseArtworks')}
                       </Link>
                     </div>
                   ) : (
                     <div className="text-center py-8">
                       <Heart className="h-12 w-12 text-red-400 mx-auto mb-4" />
                       <p className="text-gray-600">
-                        You have {favorites.length} favorite items. Visit the artworks page to see them with full details.
+                        {t('favoritesCount', { count: favorites.length })}
                       </p>
                       <Link
                         href="/artworks"
                         className="mt-4 inline-block bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800"
                       >
-                        View Favorites
+                        {t('viewFavorites')}
                       </Link>
                     </div>
                   )}
@@ -1558,21 +1562,21 @@ export default function AccountPage() {
             {activeTab === 'settings' && (
               <div className="bg-white border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-medium text-gray-900">Account Settings</h3>
+                  <h3 className="text-lg font-medium text-gray-900">{t('accountSettings')}</h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-6">
                     {/* Profile Information */}
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-medium text-gray-900">Personal Information</h4>
+                        <h4 className="font-medium text-gray-900">{t('personalInformation')}</h4>
                         {!editingProfile && (
                           <button
                             onClick={() => setEditingProfile(true)}
                             className="flex items-center space-x-1 text-gray-600 hover:text-gray-900"
                           >
                             <Edit3 className="h-4 w-4" />
-                            <span className="text-sm">Edit</span>
+                            <span className="text-sm">{t('editProfile')}</span>
                           </button>
                         )}
                       </div>
@@ -1582,7 +1586,7 @@ export default function AccountPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                First Name
+                                {t('firstName')}
                               </label>
                               <input
                                 type="text"
@@ -1593,7 +1597,7 @@ export default function AccountPage() {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Last Name
+                                {t('lastName')}
                               </label>
                               <input
                                 type="text"
@@ -1606,7 +1610,7 @@ export default function AccountPage() {
                           
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Email Address
+                              {t('emailAddress')}
                             </label>
                             <input
                               type="email"
@@ -1618,7 +1622,7 @@ export default function AccountPage() {
                           
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Phone Number
+                              {t('phoneNumber')}
                             </label>
                             <input
                               type="tel"
@@ -1635,7 +1639,7 @@ export default function AccountPage() {
                               className="flex items-center space-x-2 bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
                             >
                               <Save className="h-4 w-4" />
-                              <span>{updatingProfile ? 'Saving...' : 'Save Changes'}</span>
+                              <span>{updatingProfile ? t('saving') : t('saveChanges')}</span>
                             </button>
                             <button
                               onClick={() => {
@@ -1650,7 +1654,7 @@ export default function AccountPage() {
                               className="flex items-center space-x-2 border border-gray-300 text-gray-700 px-4 py-2 text-sm font-medium hover:bg-gray-50"
                             >
                               <X className="h-4 w-4" />
-                              <span>Cancel</span>
+                              <span>{t('cancel')}</span>
                             </button>
                           </div>
                         </div>
@@ -1661,7 +1665,7 @@ export default function AccountPage() {
                               First Name
                             </label>
                             <div className="w-full px-3 py-2 bg-gray-50 text-gray-700 text-sm">
-                              {user.first_name || 'Not provided'}
+                              {user.first_name || t('notProvided')}
                             </div>
                           </div>
                           <div>
@@ -1669,12 +1673,12 @@ export default function AccountPage() {
                               Last Name
                             </label>
                             <div className="w-full px-3 py-2 bg-gray-50 text-gray-700 text-sm">
-                              {user.last_name || 'Not provided'}
+                              {user.last_name || t('notProvided')}
                             </div>
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Email Address
+                              {t('emailAddress')}
                             </label>
                             <div className="w-full px-3 py-2 bg-gray-50 text-gray-700 text-sm">
                               {user.email}
@@ -1682,10 +1686,10 @@ export default function AccountPage() {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Phone Number
+                              {t('phoneNumber')}
                             </label>
                             <div className="w-full px-3 py-2 bg-gray-50 text-gray-700 text-sm">
-                              {user.phone || 'Not provided'}
+                              {user.phone || t('notProvided')}
                             </div>
                           </div>
                         </div>
@@ -1694,18 +1698,18 @@ export default function AccountPage() {
 
                     {/* Account Actions */}
                     <div className="border-t border-gray-100 pt-6">
-                      <h4 className="font-medium text-gray-900 mb-3">Account Actions</h4>
+                      <h4 className="font-medium text-gray-900 mb-3">{t('accountActions')}</h4>
                       <div className="space-y-3">
                         <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm">
-                          <span>Change Password</span>
+                          <span>{t('changePassword')}</span>
                         </button>
                         <button 
                           onClick={downloadMyData}
                           className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 text-sm">
-                          <span>Download My Data</span>
+                          <span>{t('downloadMyData')}</span>
                         </button>
                         <button className="flex items-center space-x-2 text-red-600 hover:text-red-700 text-sm">
-                          <span>Delete Account</span>
+                          <span>{t('deleteAccount')}</span>
                         </button>
                       </div>
                     </div>

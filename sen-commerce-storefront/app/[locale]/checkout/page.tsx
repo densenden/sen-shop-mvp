@@ -1,8 +1,11 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { CreditCard, Lock, Check, AlertCircle, Truck } from 'lucide-react'
 import MaterialIcon, { MaterialIcons } from '../../components/MaterialIcon'
 import Layout from '../../components/Layout'
@@ -51,6 +54,11 @@ interface ShippingAddress {
 }
 
 export default function CheckoutPage() {
+  const t = useTranslations('checkout')
+  const tCommon = useTranslations('common')
+  const tCart = useTranslations('cart')
+  const tNav = useTranslations('navigation')
+  const tAuth = useTranslations('auth')
   const router = useRouter()
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
@@ -319,13 +327,13 @@ export default function CheckoutPage() {
       <Layout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <h1 className="text-2xl font-medium text-gray-900 mb-4">Your cart is empty</h1>
-            <p className="text-gray-600 mb-8">Add some items to your cart before checking out.</p>
+            <h1 className="text-2xl font-medium text-gray-900 mb-4">{tCart('empty')}</h1>
+            <p className="text-gray-600 mb-8">{tCart('emptyDescription')}</p>
             <Link
               href="/products"
               className="bg-gray-900 text-white px-8 py-3 text-sm font-medium hover:bg-gray-800"
             >
-              Continue Shopping
+              {tCart('continueShopping')}
             </Link>
           </div>
         </div>
@@ -340,19 +348,19 @@ export default function CheckoutPage() {
         <div className="py-8 border-b border-gray-100">
           <div className="flex items-center space-x-2 text-sm">
             <Link href="/" className="text-gray-500 hover:text-gray-700">
-              Home
+              {tNav('home')}
             </Link>
             <span className="text-gray-400">/</span>
             <Link href="/cart" className="text-gray-500 hover:text-gray-700">
-              Cart
+              {tNav('cart')}
             </Link>
             <span className="text-gray-400">/</span>
-            <span className="text-gray-900 font-medium">Checkout</span>
+            <span className="text-gray-900 font-medium">{t('title')}</span>
           </div>
         </div>
 
         <div className="py-20">
-          <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-8">Checkout</h1>
+          <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-8">{t('title')}</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Checkout Form */}
@@ -363,15 +371,15 @@ export default function CheckoutPage() {
                   <div className="bg-blue-50 border border-blue-200 p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-lg font-medium text-gray-900">Have an account?</h3>
-                        <p className="text-sm text-gray-600 mt-1">Sign in to use your saved information</p>
+                        <h3 className="text-lg font-medium text-gray-900">{tAuth('alreadyHaveAccount')}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{t('signInPrompt')}</p>
                       </div>
                       {!showLoginForm && (
                         <button
                           onClick={() => setShowLoginForm(true)}
                           className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                         >
-                          Sign In
+                          {tAuth('loginButton')}
                         </button>
                       )}
                     </div>
@@ -399,7 +407,7 @@ export default function CheckoutPage() {
                             type="email"
                             required
                             className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Email address"
+                            placeholder={t('email')}
                           />
                         </div>
                         <div>
@@ -408,7 +416,7 @@ export default function CheckoutPage() {
                             type="password"
                             required
                             className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Password"
+                            placeholder={tAuth('password')}
                           />
                         </div>
                         <div className="flex items-center justify-between">
@@ -416,14 +424,14 @@ export default function CheckoutPage() {
                             type="submit"
                             className="bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700"
                           >
-                            Sign In
+                            {tAuth('loginButton')}
                           </button>
                           <button
                             type="button"
                             onClick={() => setShowLoginForm(false)}
                             className="text-gray-600 hover:text-gray-700 text-sm"
                           >
-                            Cancel
+                            {tCommon('cancel')}
                           </button>
                         </div>
                       </form>
@@ -433,11 +441,11 @@ export default function CheckoutPage() {
 
                 {/* Customer Information */}
                 <div className="bg-white border border-gray-100 p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Customer Information</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">{t('customerInformation')}</h2>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address
+                        {t('email')}
                       </label>
                       <input
                         type="email"
@@ -452,27 +460,27 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          First Name
+                          {t('firstName')}
                         </label>
                         <input
                           type="text"
                           value={customerInfo.first_name}
                           onChange={(e) => handleCustomerInfoChange('first_name', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500"
-                          placeholder="First name"
+                          placeholder={t('firstName')}
                           required
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Last Name
+                          {t('lastName')}
                         </label>
                         <input
                           type="text"
                           value={customerInfo.last_name}
                           onChange={(e) => handleCustomerInfoChange('last_name', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500"
-                          placeholder="Last name"
+                          placeholder={t('lastName')}
                           required
                         />
                       </div>
@@ -480,7 +488,7 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone (optional)
+                        {t('phone')} (optional)
                       </label>
                       <input
                         type="tel"
@@ -495,12 +503,12 @@ export default function CheckoutPage() {
 
                 {/* Shipping Address */}
                 <div className="bg-white border border-gray-100 p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Shipping Address</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">{t('shippingAddress')}</h2>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          First Name
+                          {t('firstName')}
                         </label>
                         <input
                           type="text"
@@ -512,7 +520,7 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Last Name
+                          {t('lastName')}
                         </label>
                         <input
                           type="text"
@@ -526,7 +534,7 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Address Line 1
+                        {t('addressLine1')}
                       </label>
                       <input
                         type="text"
@@ -540,41 +548,41 @@ export default function CheckoutPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Address Line 2 (optional)
+                        {t('addressLine2')}
                       </label>
                       <input
                         type="text"
                         value={shippingAddress.address_2}
                         onChange={(e) => handleShippingAddressChange('address_2', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500"
-                        placeholder="Apartment, suite, etc."
+                        placeholder={t('apartmentSuite')}
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          City
+                          {t('city')}
                         </label>
                         <input
                           type="text"
                           value={shippingAddress.city}
                           onChange={(e) => handleShippingAddressChange('city', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500"
-                          placeholder="City"
+                          placeholder={t('city')}
                           required
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          State/Province
+                          {t('state')}/Province
                         </label>
                         <input
                           type="text"
                           value={shippingAddress.province}
                           onChange={(e) => handleShippingAddressChange('province', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500"
-                          placeholder="State/Province"
+                          placeholder={`${t('state')}/Province`}
                           required
                         />
                       </div>
@@ -583,7 +591,7 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Postal Code
+                          {t('postalCode')}
                         </label>
                         <input
                           type="text"
@@ -596,18 +604,18 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Country
+                          {t('country')}
                         </label>
                         <select
                           value={shippingAddress.country_code}
                           onChange={(e) => handleShippingAddressChange('country_code', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-gray-500 focus:border-gray-500"
                         >
-                          <option value="US">United States</option>
-                          <option value="CA">Canada</option>
-                          <option value="GB">United Kingdom</option>
-                          <option value="DE">Germany</option>
-                          <option value="FR">France</option>
+                          <option value="US">{t('unitedStates')}</option>
+                          <option value="CA">{t('canada')}</option>
+                          <option value="GB">{t('unitedKingdom')}</option>
+                          <option value="DE">{t('germany')}</option>
+                          <option value="FR">{t('france')}</option>
                         </select>
                       </div>
                     </div>
@@ -616,7 +624,7 @@ export default function CheckoutPage() {
 
                 {/* Payment Method */}
                 <div className="bg-white border border-gray-100 p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Payment Method</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-6">{t('paymentMethod')}</h2>
                   <div className="space-y-3">
                     <label className="flex items-center p-4 border border-gray-200 cursor-pointer hover:bg-gray-50">
                       <input
@@ -628,8 +636,8 @@ export default function CheckoutPage() {
                       />
                       <CreditCard className="h-5 w-5 mr-3 text-gray-600" />
                       <div>
-                        <span className="text-sm font-medium text-gray-900">Credit Card (Stripe)</span>
-                        <p className="text-xs text-gray-500">Secure payment processing via Stripe</p>
+                        <span className="text-sm font-medium text-gray-900">{t('creditCard')}</span>
+                        <p className="text-xs text-gray-500">{t('securePayment')}</p>
                       </div>
                     </label>
                   </div>
@@ -641,7 +649,7 @@ export default function CheckoutPage() {
             <div className="lg:col-span-1">
               <div className="bg-white border border-gray-100 sticky top-8">
                 <div className="px-6 py-4 border-b border-gray-100">
-                  <h2 className="text-lg font-medium text-gray-900">Order Summary</h2>
+                  <h2 className="text-lg font-medium text-gray-900">{t('orderSummary')}</h2>
                 </div>
 
                 <div className="p-6">
@@ -677,34 +685,34 @@ export default function CheckoutPage() {
                   {/* Totals */}
                   <div className="space-y-2 border-t border-gray-100 pt-4">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-gray-600">{tCart('subtotal')}</span>
                       <span className="font-medium text-gray-900">
                         {formatPrice(cart.subtotal, cart.currency_code)}
                       </span>
                     </div>
                     {cart.shipping_total > 0 ? (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Shipping</span>
+                        <span className="text-gray-600">{tCart('shipping')}</span>
                         <span className="font-medium text-gray-900">
                           {formatPrice(cart.shipping_total, cart.currency_code)}
                         </span>
                       </div>
                     ) : (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Shipping</span>
+                        <span className="text-gray-600">{tCart('shipping')}
                         <span className="text-gray-600">Free</span>
                       </div>
                     )}
                     {cart.tax_total > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Tax</span>
+                        <span className="text-gray-600">{tCart('tax')}</span>
                         <span className="font-medium text-gray-900">
                           {formatPrice(cart.tax_total, cart.currency_code)}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between border-t border-gray-100 pt-2">
-                      <span className="text-lg font-medium text-gray-900">Total</span>
+                      <span className="text-lg font-medium text-gray-900">{tCart('total')}</span>
                       <span className="text-lg font-bold text-gray-900">
                         {formatPrice(cart.total, cart.currency_code)}
                       </span>
@@ -719,18 +727,18 @@ export default function CheckoutPage() {
                     {processingPayment ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Processing...</span>
+                        <span>{t('processing')}</span>
                       </>
                     ) : (
                       <>
                         <Lock className="h-4 w-4" />
-                        <span>Complete Order • {formatPrice(cart.total, cart.currency_code)}</span>
+                        <span>{t('placeOrder')} • {formatPrice(cart.total, cart.currency_code)}</span>
                       </>
                     )}
                   </button>
 
                   <p className="text-xs text-gray-500 mt-4 text-center">
-                    Your payment information is secure and encrypted via Stripe
+                    {t('paymentSecure')}
                   </p>
                 </div>
               </div>

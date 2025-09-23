@@ -1,14 +1,20 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, CreditCard } from 'lucide-react'
 import Layout from '../../components/Layout'
 import { cartService, Cart, CartItem, formatPrice } from '../../../lib/cart'
+import { TranslatedContent, TranslatedVariable } from '../../../components/TranslatedContent'
 
 export default function CartPage() {
   const router = useRouter()
+  const t = useTranslations('cart')
+  const tNav = useTranslations('navigation')
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
@@ -40,7 +46,7 @@ export default function CartPage() {
       setCart(updatedCart)
     } catch (error) {
       console.error('Error updating item quantity:', error)
-      alert('Failed to update item quantity. Please try again.')
+      alert(t('failedToUpdate'))
     } finally {
       setTimeout(() => setUpdating(null), 300)
     }
@@ -52,18 +58,18 @@ export default function CartPage() {
       setCart(updatedCart)
     } catch (error) {
       console.error('Error removing item:', error)
-      alert('Failed to remove item. Please try again.')
+      alert(t('failedToRemove'))
     }
   }
 
   const clearCart = async () => {
-    if (confirm('Are you sure you want to clear your cart?')) {
+    if (confirm(t('clearCartConfirm'))) {
       try {
         await cartService.clearCart()
         setCart(null)
       } catch (error) {
         console.error('Error clearing cart:', error)
-        alert('Failed to clear cart. Please try again.')
+        alert(t('failedToClear'))
       }
     }
   }
@@ -96,35 +102,35 @@ export default function CartPage() {
         <div className="py-8 border-b border-gray-100">
           <div className="flex items-center space-x-2 text-sm">
             <Link href="/" className="text-gray-500 hover:text-gray-700">
-              Home
+              {tNav('home')}
             </Link>
             <span className="text-gray-400">/</span>
-            <span className="text-gray-900 font-medium">Shopping Cart</span>
+            <span className="text-gray-900 font-medium">{t('title')}</span>
           </div>
         </div>
 
         <div className="py-20">
-          <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-8">Shopping Cart</h1>
+          <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-8">{t('title')}</h1>
 
           {!cart || cart.items.length === 0 ? (
             <div className="text-center py-16">
               <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-              <h2 className="text-2xl font-medium text-gray-900 mb-4">Your cart is empty</h2>
+              <h2 className="text-2xl font-medium text-gray-900 mb-4">{t('empty')}</h2>
               <p className="text-gray-600 mb-8">
-                Looks like you haven't added any items to your cart yet.
+                {t('emptyDescription')}
               </p>
               <div className="space-x-4">
                 <Link
                   href="/"
                   className="bg-gray-900 text-white px-8 py-3 text-sm font-medium hover:bg-gray-800 inline-block"
                 >
-                  Continue Shopping
+                  {t('continueShopping')}
                 </Link>
                 <Link
                   href="/artworks"
                   className="bg-gray-100 text-gray-900 px-8 py-3 text-sm font-medium hover:bg-gray-200 inline-block"
                 >
-                  Browse Artworks
+                  {t('browseArtworks')}
                 </Link>
               </div>
             </div>
@@ -136,14 +142,14 @@ export default function CartPage() {
                   <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-medium text-gray-900">
-                        Cart Items ({cart.items.length})
+                        {t('cartItems')} ({cart.items.length})
                       </h2>
                       {cart.items.length > 0 && (
                         <button
                           onClick={clearCart}
                           className="text-gray-600 hover:text-gray-700 text-sm font-medium"
                         >
-                          Clear Cart
+                          {t('clearCart')}
                         </button>
                       )}
                     </div>
@@ -170,7 +176,11 @@ export default function CartPage() {
 
                           {/* Product Details */}
                           <div className="flex-1">
-                            <h3 className="text-sm font-medium text-gray-900">{item.title}</h3>
+                            <h3 className="text-sm font-medium text-gray-900">
+                              <TranslatedContent context="product">
+                                <TranslatedVariable name="title">{item.title}</TranslatedVariable>
+                              </TranslatedContent>
+                            </h3>
                             <div className="flex items-center space-x-2 mt-1">
                               <span className="text-sm font-medium text-gray-900">
                                 {formatPrice(item.unit_price, cart.currency_code)}
@@ -181,7 +191,7 @@ export default function CartPage() {
                                     ? 'bg-gray-100 text-gray-800'
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {item.metadata.fulfillment_type === 'digital_download' ? 'Digital' : 'Print'}
+                                  {item.metadata.fulfillment_type === 'digital_download' ? t('digital') : t('print')}
                                 </span>
                               )}
                             </div>
@@ -228,34 +238,34 @@ export default function CartPage() {
               <div className="lg:col-span-1">
                 <div className="bg-white border border-gray-100 sticky top-8">
                   <div className="px-6 py-4 border-b border-gray-100">
-                    <h2 className="text-lg font-medium text-gray-900">Order Summary</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('orderSummary')}</h2>
                   </div>
 
                   <div className="p-6 space-y-4">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-gray-600">{t('subtotal')}</span>
                       <span className="font-medium text-gray-900">
                         {formatPrice(cart.subtotal, cart.currency_code)}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping</span>
+                      <span className="text-gray-600">{t('shipping')}</span>
                       <span className="text-gray-600">
-                        {cart.shipping_total > 0 ? formatPrice(cart.shipping_total, cart.currency_code) : 'Calculated at checkout'}
+                        {cart.shipping_total > 0 ? formatPrice(cart.shipping_total, cart.currency_code) : t('calculatedAtCheckout')}
                       </span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tax</span>
+                      <span className="text-gray-600">{t('tax')}</span>
                       <span className="text-gray-600">
-                        {cart.tax_total > 0 ? formatPrice(cart.tax_total, cart.currency_code) : 'Calculated at checkout'}
+                        {cart.tax_total > 0 ? formatPrice(cart.tax_total, cart.currency_code) : t('calculatedAtCheckout')}
                       </span>
                     </div>
 
                     <div className="border-t border-gray-100 pt-4">
                       <div className="flex justify-between">
-                        <span className="text-lg font-medium text-gray-900">Total</span>
+                        <span className="text-lg font-medium text-gray-900">{t('total')}</span>
                         <span className="text-lg font-bold text-gray-900">
                           {formatPrice(cart.total, cart.currency_code)}
                         </span>
@@ -267,7 +277,7 @@ export default function CartPage() {
                       className="w-full bg-gray-900 text-white py-3 px-4 font-medium hover:bg-gray-800 transition-colors flex items-center justify-center space-x-2"
                     >
                       <CreditCard className="h-4 w-4" />
-                      <span>Proceed to Checkout</span>
+                      <span>{t('proceedToCheckout')}</span>
                     </button>
 
                     <div className="text-center">
@@ -276,14 +286,14 @@ export default function CartPage() {
                         className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 font-medium"
                       >
                         <ArrowLeft className="h-4 w-4" />
-                        <span>Continue Shopping</span>
+                        <span>{t('continueShopping')}</span>
                       </Link>
                     </div>
                   </div>
 
                   {/* Payment Methods */}
                   <div className="px-6 pb-6">
-                    <div className="text-sm text-gray-600 mb-3">We accept:</div>
+                    <div className="text-sm text-gray-600 mb-3">{t('weAccept')}</div>
                     <div className="flex space-x-3">
                       <div className="bg-gray-100 px-3 py-2 text-xs font-medium">
                         VISA

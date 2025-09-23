@@ -18,8 +18,12 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [cartItemCount, setCartItemCount] = useState(0)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    // Set isClient to true to indicate we're on the client side
+    setIsClient(true)
+    
     // Check login status
     const token = localStorage.getItem('authToken')
     setIsLoggedIn(!!token)
@@ -91,7 +95,7 @@ export default function Layout({ children }: LayoutProps) {
                 <Search className="h-5 w-5" />
               </button>
               <Link
-                href={isLoggedIn ? "/account" : "/login"}
+                href={isClient && isLoggedIn ? "/account" : "/login"}
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <User className="h-5 w-5" />
@@ -101,7 +105,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ShoppingBag className="h-5 w-5" />
-                {cartItemCount > 0 && (
+                {isClient && cartItemCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                     {cartItemCount > 99 ? '99+' : cartItemCount}
                   </span>
@@ -123,7 +127,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Mobile Navigation */}
-          {mobileMenuOpen && (
+          {mobileMenuOpen && isClient && (
             <div className="md:hidden py-4 border-t border-gray-100">
               <div className="space-y-2">
                 {navigation.map((item) => {

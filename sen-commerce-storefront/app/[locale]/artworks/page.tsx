@@ -1,10 +1,14 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Layout from '../../components/Layout'
 import { Filter, ArrowRight, Image } from 'lucide-react'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../lib/config'
+import { TranslatedProductContent, TranslatedContent, TranslatedVariable } from '../../../components/TranslatedContent'
+import { useTranslations } from 'next-intl'
 
 interface Artwork {
   id: string
@@ -36,6 +40,7 @@ interface ArtworkCollection {
 }
 
 export default function ArtworksPage() {
+  const t = useTranslations('artworks')
   const [collections, setCollections] = useState<ArtworkCollection[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'collections' | 'all-artworks'>('collections')
@@ -94,10 +99,10 @@ export default function ArtworksPage() {
         {/* Header */}
         <div className="py-20 text-center">
           <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-6">
-            Artwork Collections
+            {t('title')}
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-            Curated collections of original digital artworks with matching products
+            {t('subtitle')}
           </p>
           
           {/* View Mode Toggle */}
@@ -110,7 +115,7 @@ export default function ArtworksPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Collections
+              {t('collections')}
             </button>
             <button
               onClick={() => setViewMode('all-artworks')}
@@ -120,7 +125,7 @@ export default function ArtworksPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              All Artworks ({allArtworks.length})
+              {t('allArtworks')} ({allArtworks.length})
             </button>
           </div>
         </div>
@@ -212,12 +217,16 @@ export default function ArtworksPage() {
                     </div>
                     
                     <div className="p-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2 group-hover:text-gray-700 transition-colors">
-                        {collection.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {collection.description}
-                      </p>
+                      <TranslatedContent context="collection">
+                        <h3 className="text-lg font-medium text-gray-900 mb-2 group-hover:text-gray-700 transition-colors">
+                          <TranslatedVariable name="name">{collection.name}</TranslatedVariable>
+                        </h3>
+                        {collection.description && (
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            <TranslatedVariable name="description">{collection.description}</TranslatedVariable>
+                          </p>
+                        )}
+                      </TranslatedContent>
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -274,12 +283,16 @@ export default function ArtworksPage() {
                     </div>
                     
                     <div>
-                      <h3 className="text-sm font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
-                        {artwork.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {artwork.description}
-                      </p>
+                      <TranslatedContent context="artwork">
+                        <h3 className="text-sm font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
+                          <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
+                        </h3>
+                        {artwork.description && (
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            <TranslatedVariable name="description">{artwork.description}</TranslatedVariable>
+                          </p>
+                        )}
+                      </TranslatedContent>
                       
                       {/* Related Products */}
                       {artwork.products && artwork.products.length > 0 && (
@@ -291,7 +304,9 @@ export default function ArtworksPage() {
                                 key={product.id}
                                 className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
                               >
-                                {product.title} - {formatPrice(product.price, product.currency_code)}
+                                <TranslatedContent context="product">
+                                  <TranslatedVariable name="title">{product.title}</TranslatedVariable>
+                                </TranslatedContent> - {formatPrice(product.price, product.currency_code)}
                               </span>
                             ))}
                             {artwork.products.length > 3 && (

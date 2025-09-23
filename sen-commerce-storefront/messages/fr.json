@@ -191,10 +191,15 @@
       "phone": "Appelez-nous au",
       "hours": "Heures d'ouverture",
       "hoursValue": "Lundi - Vendredi, 9h - 18h CET"
-    }
+    },
+    "browseArtworks": "Parcourir les œuvres"
   },
   "artworks": {
-    "title": "Œuvres d'art",
+    "title": "Collections d'Œuvres d'Art",
+    "subtitle": "Collections sélectionnées d'œuvres d'art numériques originales avec produits assortis",
+    "collections": "Collections",
+    "allArtworks": "Toutes les Œuvres",
+    "all": "Toutes",
     "allCollections": "Toutes les collections",
     "viewCollection": "Voir la collection",
     "artworkBy": "par {artist}",

@@ -8,6 +8,7 @@ import Layout from '../../../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../../lib/config'
 import { cartService } from '../../../../lib/cart'
 import { digitalOwnershipService, OwnedDigitalProduct } from '../../../../lib/digital-ownership'
+import { TranslatedContent, TranslatedVariable, TranslatedProductContent } from '../../../../components/TranslatedContent'
 
 interface Product {
   id: string
@@ -375,29 +376,42 @@ export default function ProductPage() {
   }
 
   const formatPrice = (variant: ProductVariant | null, product: Product) => {
-    if (!variant) return '$0.00'
+    if (!variant) return '€0.00'
     
-    // Use calculated_price for EUR pricing, fallback to price_set for other currencies  
-    const price = variant.calculated_price?.currency_code === 'eur' ? variant.calculated_price.amount :
-                  variant.price_set?.prices?.[0]?.amount ||
-                  variant.prices?.[0]?.amount || 
-                  variant.price || 
-                  product.price || 
-                  0
+    // Priority order: calculated_price -> price_set -> prices -> variant.price -> product.price
+    let price = 0
+    let currency = 'eur'
     
-    const currency = variant.calculated_price?.currency_code === 'eur' ? 'eur' :
-                     variant.price_set?.prices?.[0]?.currency_code ||
-                     variant.prices?.[0]?.currency_code || 
-                     product.currency_code || 
-                     'eur'
+    if (variant.calculated_price) {
+      price = variant.calculated_price.amount
+      currency = variant.calculated_price.currency_code
+    } else if (variant.price_set?.prices?.[0]) {
+      price = variant.price_set.prices[0].amount
+      currency = variant.price_set.prices[0].currency_code
+    } else if (variant.prices?.[0]) {
+      price = variant.prices[0].amount
+      currency = variant.prices[0].currency_code
+    } else if (variant.price) {
+      price = variant.price
+      currency = product.currency_code || 'eur'
+    } else if (product.price) {
+      price = product.price
+      currency = product.currency_code || 'eur'
+    }
     
-    const safePrice = typeof price === 'number' && !isNaN(price) ? price : 0
-    const safeCurrency = (currency || 'eur').toUpperCase()
+    const safePrice = typeof price === 'number' && !isNaN(price) && price > 0 ? price : 0
+    const safeCurrency = (currency || 'eur').toLowerCase()
     
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: safeCurrency
-    }).format(safePrice / 100)
+    // Convert to proper format based on currency
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: safeCurrency.toUpperCase()
+      }).format(safePrice / 100)
+    } catch {
+      // Fallback for invalid currency codes
+      return `€${(safePrice / 100).toFixed(2)}`
+    }
   }
 
   const getVariantDisplayName = (variant: ProductVariant, product: Product) => {
@@ -447,7 +461,11 @@ export default function ProductPage() {
           <span>/</span>
           <Link href="/" className="hover:text-gray-700">Products</Link>
           <span>/</span>
-          <span className="text-gray-900">{product.title}</span>
+          <span className="text-gray-900">
+            <TranslatedContent context="breadcrumb">
+              <TranslatedVariable>{product.title}</TranslatedVariable>
+            </TranslatedContent>
+          </span>
         </nav>
 
         {/* Back button */}
@@ -532,9 +550,11 @@ export default function ProductPage() {
 
           {/* Product info */}
           <div className="mt-10 px-4 sm:px-0 sm:mt-16 lg:mt-0">
-            <h1 className="text-3xl font-medium tracking-tight text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-              {product.title}
-            </h1>
+            <TranslatedContent context="product_details">
+              <h1 className="text-3xl font-medium tracking-tight text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                <TranslatedVariable name="title">{product.title}</TranslatedVariable>
+              </h1>
+            </TranslatedContent>
 
             <div className="mt-3">
               <p className="text-3xl text-gray-900">
@@ -577,9 +597,15 @@ export default function ProductPage() {
             </div>
 
             <div className="mt-6">
-              <div className="text-base text-gray-700 space-y-6">
-                <p>{product.description || 'No description available.'}</p>
-              </div>
+              <TranslatedContent context="product_details">
+                <div className="text-base text-gray-700 space-y-6">
+                  <p>
+                    <TranslatedVariable name="description">
+                      {product.description || 'No description available.'}
+                    </TranslatedVariable>
+                  </p>
+                </div>
+              </TranslatedContent>
             </div>
 
             {/* Variants */}
@@ -778,10 +804,16 @@ export default function ProductPage() {
                     
                     {/* Artwork Details */}
                     <div className="space-y-4">
-                      <h3 className="text-xl font-medium text-gray-900">{artwork.title}</h3>
-                      {artwork.description && (
-                        <p className="text-gray-700 leading-relaxed">{artwork.description}</p>
-                      )}
+                      <TranslatedContent context="artwork_details">
+                        <h3 className="text-xl font-medium text-gray-900">
+                          <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
+                        </h3>
+                        {artwork.description && (
+                          <p className="text-gray-700 leading-relaxed">
+                            <TranslatedVariable name="description">{artwork.description}</TranslatedVariable>
+                          </p>
+                        )}
+                      </TranslatedContent>
                     </div>
                   </div>
                 ) : (
@@ -796,47 +828,65 @@ export default function ProductPage() {
               <div className="max-w-4xl">
                 {artwork?.collection ? (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xl font-medium text-gray-900 mb-4">{artwork.collection.name}</h3>
-                      {artwork.collection.description && (
-                        <p className="text-gray-700 leading-relaxed mb-6">{artwork.collection.description}</p>
+                    <TranslatedContent context="collection_details">
+                      <div>
+                        <h3 className="text-xl font-medium text-gray-900 mb-4">
+                          <TranslatedVariable name="name">{artwork.collection.name}</TranslatedVariable>
+                        </h3>
+                        {artwork.collection.description && (
+                          <p className="text-gray-700 leading-relaxed mb-6">
+                            <TranslatedVariable name="description">{artwork.collection.description}</TranslatedVariable>
+                          </p>
+                        )}
+                      </div>
+                    </TranslatedContent>
+                    
+                    <TranslatedContent context="collection_details">
+                      {artwork.collection.topic && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Topic</h4>
+                          <p className="text-gray-700 mb-4">
+                            <TranslatedVariable name="topic">{artwork.collection.topic}</TranslatedVariable>
+                          </p>
+                        </div>
                       )}
-                    </div>
-                    
-                    {artwork.collection.topic && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Topic</h4>
-                        <p className="text-gray-700 mb-4">{artwork.collection.topic}</p>
-                      </div>
-                    )}
-                    
-                    {artwork.collection.purpose && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Purpose</h4>
-                        <p className="text-gray-700 mb-4">{artwork.collection.purpose}</p>
-                      </div>
-                    )}
-                    
-                    {artwork.collection.brand_story && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Brand Story</h4>
-                        <p className="text-gray-700 mb-4">{artwork.collection.brand_story}</p>
-                      </div>
-                    )}
-                    
-                    {artwork.collection.design_philosophy && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Design Philosophy</h4>
-                        <p className="text-gray-700 mb-4">{artwork.collection.design_philosophy}</p>
-                      </div>
-                    )}
-                    
-                    {artwork.collection.genesis_story && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-2">Genesis Story</h4>
-                        <p className="text-gray-700 mb-4">{artwork.collection.genesis_story}</p>
-                      </div>
-                    )}
+                      
+                      {artwork.collection.purpose && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Purpose</h4>
+                          <p className="text-gray-700 mb-4">
+                            <TranslatedVariable name="purpose">{artwork.collection.purpose}</TranslatedVariable>
+                          </p>
+                        </div>
+                      )}
+                      
+                      {artwork.collection.brand_story && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Brand Story</h4>
+                          <p className="text-gray-700 mb-4">
+                            <TranslatedVariable name="brand_story">{artwork.collection.brand_story}</TranslatedVariable>
+                          </p>
+                        </div>
+                      )}
+                      
+                      {artwork.collection.design_philosophy && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Design Philosophy</h4>
+                          <p className="text-gray-700 mb-4">
+                            <TranslatedVariable name="design_philosophy">{artwork.collection.design_philosophy}</TranslatedVariable>
+                          </p>
+                        </div>
+                      )}
+                      
+                      {artwork.collection.genesis_story && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Genesis Story</h4>
+                          <p className="text-gray-700 mb-4">
+                            <TranslatedVariable name="genesis_story">{artwork.collection.genesis_story}</TranslatedVariable>
+                          </p>
+                        </div>
+                      )}
+                    </TranslatedContent>
                     
                     {artwork.collection.month_created && (
                       <div>

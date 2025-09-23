@@ -80,6 +80,20 @@ export class ProductImageService {
     maxMockups: number = 8,
     maxTotalImages: number = 20
   ): Promise<ProductImageCollection> {
+    console.log(`[ImageService] 🔍 STARTING COMPREHENSIVE IMAGE COLLECTION`)
+    console.log(`[ImageService] Input product structure:`, {
+      id: printfulProduct.id,
+      name: printfulProduct.name,
+      thumbnail_url: printfulProduct.thumbnail_url,
+      has_variants: !!printfulProduct.variants,
+      has_sync_variants: !!printfulProduct.sync_variants,
+      variants_count: printfulProduct.variants?.length || 0,
+      sync_variants_count: printfulProduct.sync_variants?.length || 0,
+      artworkUrl,
+      maxMockups,
+      maxTotalImages
+    })
+    
     const imageCollection: ImageSource[] = []
     let mockupUrls: string[] = []
     let catalogImages: string[] = []
@@ -166,10 +180,33 @@ export class ProductImageService {
     }
 
     // 3. Collect store product variant images and files
-    console.log(`[ImageService] Processing ${printfulProduct.variants?.length || 0} store variants`)
-    if (printfulProduct.variants) {
-      printfulProduct.variants.forEach((variant: any, index: number) => {
-        console.log(`[ImageService] Store variant ${index}:`, JSON.stringify(variant, null, 2))
+    // Handle both sync_variants (from raw Printful API) and variants (from our service mapping)
+    const storeVariants = printfulProduct.sync_variants || printfulProduct.variants || []
+    console.log(`[ImageService] Processing ${storeVariants.length} store variants`)
+    console.log(`[ImageService] Full printful product structure:`, {
+      id: printfulProduct.id,
+      name: printfulProduct.name,
+      thumbnail_url: printfulProduct.thumbnail_url,
+      has_sync_variants: !!printfulProduct.sync_variants,
+      has_variants: !!printfulProduct.variants,
+      sync_variants_length: printfulProduct.sync_variants?.length || 0,
+      variants_length: printfulProduct.variants?.length || 0,
+      first_variant_sample: printfulProduct.variants?.[0] ? {
+        id: printfulProduct.variants[0].id,
+        name: printfulProduct.variants[0].name,
+        has_files: !!printfulProduct.variants[0].files,
+        files_count: printfulProduct.variants[0].files?.length || 0
+      } : 'No variants'
+    })
+    
+    if (storeVariants.length > 0) {
+      storeVariants.forEach((variant: any, index: number) => {
+        console.log(`[ImageService] Store variant ${index}:`, {
+          id: variant.id,
+          name: variant.name,
+          has_image: !!variant.image,
+          files_count: variant.files?.length || 0
+        })
         
         // Collect variant main image
         if (variant.image && !variantImages.includes(variant.image)) {
@@ -180,43 +217,50 @@ export class ProductImageService {
             type: 'variant',
             metadata: { 
               variant_id: variant.id,
+              variant_name: variant.name,
               original_printful_url: variant.image 
             }
           })
         } else if (variant.image) {
           console.log(`[ImageService] Store variant image already collected: ${variant.image}`)
         } else {
-          console.log(`[ImageService] Store variant ${index} has no image`)
+          console.log(`[ImageService] Store variant ${index} has no main image`)
         }
         
-        // Collect variant files (additional detailed images)
+        // Collect variant files (additional detailed images) - this is the key fix!
         if (variant.files && Array.isArray(variant.files)) {
           console.log(`[ImageService] Processing ${variant.files.length} files for variant ${index}`)
           variant.files.forEach((file: any, fileIndex: number) => {
-            console.log(`[ImageService] Variant file ${fileIndex}:`, JSON.stringify(file, null, 2))
+            console.log(`[ImageService] Variant file ${fileIndex}: type=${file.type}, has_preview=${!!file.preview_url}, has_url=${!!file.url}`)
+            
             // Use preview_url if available, otherwise use main url
             const fileUrl = file.preview_url || file.url
             if (fileUrl && !variantImages.includes(fileUrl)) {
-              console.log(`[ImageService] Adding variant file image: ${fileUrl}`)
+              console.log(`[ImageService] ✅ Adding variant file image: ${fileUrl}`)
               variantImages.push(fileUrl)
               imageCollection.push({
                 url: fileUrl,
                 type: 'variant',
                 metadata: { 
                   variant_id: variant.id,
+                  variant_name: variant.name,
                   file_id: file.id,
                   file_type: file.type,
                   original_printful_url: fileUrl,
                   is_file_attachment: true
                 }
               })
+            } else if (fileUrl) {
+              console.log(`[ImageService] Variant file image already collected: ${fileUrl}`)
+            } else {
+              console.log(`[ImageService] ⚠️ Variant file ${fileIndex} has no usable URL`)
             }
           })
         } else {
           console.log(`[ImageService] Store variant ${index} has no files`)
         }
       })
-      console.log(`[ImageService] ✅ Found ${variantImages.length} store variant images`)
+      console.log(`[ImageService] ✅ Found ${variantImages.length} store variant/file images total`)
     } else {
       console.log(`[ImageService] ⚠️ No store variants available`)
     }

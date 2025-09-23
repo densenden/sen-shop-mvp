@@ -3,57 +3,9 @@ import { Modules } from "@medusajs/framework/utils"
 import { IProductModuleService } from "@medusajs/types"
 import { authenticate } from "@medusajs/medusa"
 import { ProductImageService } from "../../../../../services/product-image-service"
-import { createClient } from '@supabase/supabase-js'
+import { ImageUploadService } from "../../../../../modules/artwork-module"
 import multer from 'multer'
 
-// Supabase configuration
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
-const bucketName = 'product-images'
-
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
-
-async function uploadImageToSupabase(file: Buffer, filename: string, productId: string): Promise<string> {
-  if (!supabase) {
-    throw new Error('Supabase not configured')
-  }
-
-  const fileExt = filename.split('.').pop()
-  const timestamp = Date.now()
-  const randomId = Math.random().toString(36).substring(7)
-  const filePath = `${productId}/${timestamp}-${randomId}.${fileExt}`
-
-  console.log('[Product Image Upload] Starting upload:', {
-    bucketName,
-    filePath,
-    originalName: filename,
-    fileSize: file.length,
-    productId
-  })
-
-  // Upload file to Supabase Storage
-  const { data, error } = await supabase.storage
-    .from(bucketName)
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    })
-
-  if (error) {
-    console.error('[Product Image Upload] Upload failed:', error)
-    throw new Error(`Supabase upload error: ${error.message}`)
-  }
-
-  console.log('[Product Image Upload] Upload successful:', data)
-
-  // Get public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from(bucketName)
-    .getPublicUrl(filePath)
-
-  console.log('[Product Image Upload] Public URL:', publicUrl)
-  return publicUrl
-}
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
@@ -76,33 +28,46 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const contentType = req.headers['content-type']
     
     if (contentType?.includes('multipart/form-data')) {
-      // Handle file uploads
       try {
-        // Parse multipart form data manually (simplified approach)
-        const buffer = []
+        console.log(`[DEBUG] 📤 Processing multipart file upload for product ${id}`)
+        console.log(`[DEBUG] Content-Type: ${contentType}`)
         
-        // Read request body
-        for await (const chunk of req) {
-          buffer.push(chunk)
+        // Use Multer to handle file upload in memory (same as working uploads endpoint)
+        const upload = multer({ storage: multer.memoryStorage() })
+        
+        // Multer needs to be called as middleware, so we wrap it in a promise
+        await new Promise<void>((resolve, reject) => {
+          upload.array('files', 10)(req as any, res as any, (err: any) => {
+            if (err) {
+              console.error(`[DEBUG] Multer error:`, err)
+              return reject(err)
+            }
+            resolve()
+          })
+        })
+        
+        // @ts-ignore - Handle both req.file and req.files
+        const files = req.files || (req.file ? [req.file] : [])
+        console.log(`[DEBUG] Files received:`, files.length)
+        
+        if (!files || files.length === 0) {
+          return res.status(400).json({ error: "No files uploaded" })
         }
         
-        const bodyBuffer = Buffer.concat(buffer)
-        const body = bodyBuffer.toString()
+        // Create the upload service with the container (for DI)
+        const imageUploadService = new ImageUploadService(req.scope)
+        const uploadedImages = []
         
-        // Simple multipart parsing (for demonstration - in production use proper multipart parser)
-        const boundary = contentType.split('boundary=')[1]
-        if (!boundary) {
-          throw new Error('No boundary found in multipart data')
+        // Upload each file
+        for (const file of files) {
+          const publicUrl = await imageUploadService.uploadImage(
+            file.buffer,
+            file.originalname,
+            file.mimetype
+          )
+          console.log(`[DEBUG] File uploaded:`, publicUrl)
+          uploadedImages.push(publicUrl)
         }
-        
-        // For now, use placeholder images that actually work
-        // TODO: Implement proper multipart parsing with multer or busboy
-        const uploadedImages: string[] = []
-        
-        // Generate working placeholder images
-        const timestamp = Date.now()
-        uploadedImages.push(`https://picsum.photos/400/400?random=${timestamp}`)
-        uploadedImages.push(`https://picsum.photos/400/400?random=${timestamp + 1}`)
         
         // Use ProductImageService to handle image merging properly
         const imageService = new ProductImageService(req)
@@ -128,20 +93,22 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           }
         })
         
-        console.log(`[DEBUG] Uploaded ${uploadedImages.length} images to product ${id}`)
+        console.log(`[DEBUG] Successfully processed ${uploadedImages.length} images for product ${id}`)
         
         return res.json({ 
           success: true, 
           images: uploadedImages.map(url => ({ url })),
           total_images: updatedImageCollection.images.length,
-          image_sources: updatedImageCollection.metadata.image_sources
+          image_sources: updatedImageCollection.metadata.image_sources,
+          files_processed: files.length
         })
         
       } catch (uploadError) {
         console.error(`[DEBUG] File upload failed:`, uploadError)
         return res.status(500).json({ 
           error: "Failed to upload files", 
-          message: uploadError.message 
+          message: uploadError.message,
+          details: uploadError.stack
         })
       }
       

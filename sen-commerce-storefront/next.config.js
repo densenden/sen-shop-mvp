@@ -1,12 +1,16 @@
 const createNextIntlPlugin = require('next-intl/plugin')
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
+// Temporarily disable GT until proper API keys are configured
+// const { withGTConfig } = require('gt-next/config')
+// const withGT = withGTConfig({
+//   apiKey: process.env.GT_API_KEY || 'your-general-translation-api-key',
+//   projectId: process.env.GT_PROJECT_ID || 'your-project-id'
+// })
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  
-  // Skip prerendering for client-side pages
-  trailingSlash: false,
   
   // Image optimization
   images: {
@@ -74,6 +78,7 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     scrollRestoration: true,
+    forceSwcTransforms: true,
   },
 }
 

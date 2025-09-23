@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import Layout from '../../components/Layout'
 import MaterialIcon, { MaterialIcons } from '../../components/MaterialIcon'
 import { useTranslations, useLocale } from 'next-intl'
@@ -117,7 +119,7 @@ export default function AboutPage() {
               href={`/${locale}/artworks`}
               className="bg-gray-100 text-gray-900 px-6 py-3 text-sm font-medium hover:bg-gray-200 transition-colors"
             >
-              Browse Artworks
+              {t('browseArtworks')}
             </Link>
           </div>
         </div>

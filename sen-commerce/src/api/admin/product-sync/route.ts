@@ -28,9 +28,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const printfulService = req.scope.resolve("printfulModule") as any
     const digitalProductService = req.scope.resolve("digitalProductModuleService") as any
     
+    const { apiVersion } = options
     const productModuleService: IProductModuleService = req.scope.resolve(Modules.PRODUCT);
     
-    const [printfulStoreProducts, existingMedusaProducts, digitalProducts] = await Promise.all([
+    const [printfulStoreProductsBasic, existingMedusaProducts, digitalProducts] = await Promise.all([
       printfulService.fetchProducts().catch((err) => {
         console.error("Error fetching Printful products:", err)
         return []
@@ -45,12 +46,105 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       })
     ]);
 
+    // Fetch detailed data for each Printful product to get all images and variants
+    const printfulStoreProducts = await Promise.all(
+      printfulStoreProductsBasic.map(async (basicProduct) => {
+        try {
+          // Use the service method that exists - first try getProduct, then direct API methods
+          let rawPrintfulData = null
+          if (typeof printfulService.getProduct === 'function') {
+            rawPrintfulData = await printfulService.getProduct(basicProduct.id)
+          } else if (typeof printfulService.getStoreProduct === 'function') {
+            rawPrintfulData = await printfulService.getStoreProduct(basicProduct.id)
+          }
+          console.log(`[DEBUG] Fetched detailed raw Printful product ${basicProduct.id}:`, rawPrintfulData ? 'Success' : 'Failed')
+          
+          if (rawPrintfulData) {
+            // Merge basic product data with detailed raw data to preserve all fields
+            return {
+              ...basicProduct,
+              ...rawPrintfulData,
+              // Ensure we have the detailed variants and image data
+              sync_product: rawPrintfulData.sync_product,
+              sync_variants: rawPrintfulData.sync_variants
+            }
+          }
+          return basicProduct
+        } catch (error) {
+          console.warn(`Failed to fetch detailed data for product ${basicProduct.id}:`, error)
+          return basicProduct
+        }
+      })
+    )
+
     const availableProducts = {
       printful: printfulStoreProducts.map(p => {
         const productId = p.id || p.external_id
         const alreadyImported = existingMedusaProducts.some((mp: any) => 
           mp.metadata && mp.metadata.printful_product_id === productId
         )
+        
+        // Calculate comprehensive image count
+        let imageCount = 0
+        const imageUrls = new Set() // Use Set to avoid counting duplicates
+        
+        // Add main thumbnail
+        if (p.thumbnail_url) imageUrls.add(p.thumbnail_url)
+        if (p.image && p.image !== p.thumbnail_url) imageUrls.add(p.image)
+        
+        // Add images from sync_product if available (detailed data)
+        if (p.sync_product?.thumbnail_url) {
+          imageUrls.add(p.sync_product.thumbnail_url)
+        }
+        
+        // Add images from sync_variants (detailed product data)
+        if (p.sync_variants && Array.isArray(p.sync_variants)) {
+          p.sync_variants.forEach(variant => {
+            if (variant.files && Array.isArray(variant.files)) {
+              variant.files.forEach(file => {
+                if (file.thumbnail_url) imageUrls.add(file.thumbnail_url)
+                if (file.preview_url) imageUrls.add(file.preview_url)
+                if (file.url) imageUrls.add(file.url)
+              })
+            }
+          })
+        }
+        
+        // Fallback: Add images from basic variants structure
+        if (p.variants && Array.isArray(p.variants)) {
+          p.variants.forEach(variant => {
+            if (variant.files && Array.isArray(variant.files)) {
+              variant.files.forEach(file => {
+                if (file.thumbnail_url) imageUrls.add(file.thumbnail_url)
+                if (file.preview_url) imageUrls.add(file.preview_url)
+                if (file.url) imageUrls.add(file.url)
+              })
+            }
+            if (variant.image && variant.image !== p.thumbnail_url) {
+              imageUrls.add(variant.image)
+            }
+          })
+        }
+        
+        imageCount = imageUrls.size
+        
+        // Debug logging for the first few products
+        if (printfulStoreProducts.indexOf(p) < 3) {
+          console.log(`[DEBUG] Product ${p.name || p.id}:`)
+          console.log(`  - Has sync_variants: ${!!(p.sync_variants && p.sync_variants.length)}`)
+          console.log(`  - sync_variants count: ${p.sync_variants?.length || 0}`)
+          console.log(`  - Basic variants count: ${p.variants?.length || 0}`)
+          console.log(`  - Total images found: ${imageCount}`)
+          console.log(`  - Image URLs collected: ${Array.from(imageUrls).slice(0, 3).join(', ')}`)
+        }
+        
+        // Calculate variations count (prioritize detailed data)
+        const variationsCount = (p.sync_variants && Array.isArray(p.sync_variants)) 
+          ? p.sync_variants.length 
+          : (p.variants && Array.isArray(p.variants)) 
+            ? p.variants.length 
+            : 0
+        
         return {
           id: productId,
           name: p.name,
@@ -60,6 +154,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           provider: 'printful',
           already_imported: alreadyImported,
           product_type: p.product_type || 'store',
+          image_count: imageCount,
+          variations_count: variationsCount,
           medusa_product_id: alreadyImported ? existingMedusaProducts.find((mp: any) => 
             mp.metadata && mp.metadata.printful_product_id === productId
           )?.id : null
@@ -78,6 +174,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           status: 'available',
           provider: 'digital',
           already_imported: alreadyImported,
+          image_count: dp.image_url ? 1 : 0,
+          variations_count: 1, // Digital products typically have one variation
           medusa_product_id: alreadyImported ? existingMedusaProducts.find((mp: any) => 
             mp.metadata && mp.metadata.digital_product_id === dp.id
           )?.id : null
@@ -132,7 +230,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 }
 
-async function importProducts(req: MedusaRequest, provider: string, productIds: string[]) {
+export async function importProducts(req: MedusaRequest, provider: string, productIds: string[], options: { apiVersion?: string } = {}) {
     console.log(`[DEBUG] Starting import for provider: ${provider}, products: ${JSON.stringify(productIds)}`)
     
     const productModuleService: IProductModuleService = req.scope.resolve(Modules.PRODUCT);
@@ -165,7 +263,14 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                 });
                 
                 if (existingProduct) {
-                    throw new Error(`Product with Printful ID ${productId} already exists in Medusa as "${existingProduct.title}"`);
+                    skippedProducts.push({
+                      productId,
+                      reason: "already_imported",
+                      medusa_product_id: existingProduct.id,
+                      medusa_product_title: existingProduct.title,
+                    })
+                    console.log(`[DEBUG] Skipping product ${productId} - already imported as ${existingProduct.id}`)
+                    continue
                 }
                 console.log(`[DEBUG] No existing product found, proceeding with import`)
 
@@ -325,26 +430,26 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                     }
                 })
                 
-                // 3. Try comprehensive image collection with fallback
+                // 3. Use ProductImageService for comprehensive image collection
+                const imageService = new ProductImageService(req)
+                console.log(`[DEBUG] Starting comprehensive image collection with ProductImageService`)
+                
                 try {
-                    const imageService = new ProductImageService(req)
-                    console.log(`[DEBUG] Attempting comprehensive image collection...`)
-                    
-                    console.log(`[DEBUG] Passing original Printful product data to image service`)
-                    console.log(`[DEBUG] Original product variants:`, printfulProduct.variants?.length)
-                    
                     imageCollection = await imageService.collectPrintfulImages(
-                      printfulProduct, // Pass original Printful data, not processed variants
+                      printfulProduct, // Pass original Printful data
                       artworkUrl,
                       8, // max mockups
                       20 // max total images
                     )
                     
                     console.log(`[DEBUG] ✅ Comprehensive collection succeeded: ${imageCollection.images.length} images`)
-                } catch (imageError) {
-                    console.warn(`[DEBUG] ⚠️ Comprehensive collection failed, using basic images:`, imageError.message)
+                    console.log(`[DEBUG] Image sources: ${JSON.stringify(imageCollection.metadata.image_sources)}`)
                     
-                    // Create basic image collection from what we have
+                } catch (imageError) {
+                    console.error(`[DEBUG] ❌ Comprehensive collection failed:`, imageError)
+                    
+                    // Fallback: Create basic image collection from manually collected images
+                    console.log(`[DEBUG] Using fallback with ${collectedImages.length} basic images`)
                     imageCollection = {
                         images: collectedImages.map(url => ({ url, type: 'basic' })),
                         thumbnail: collectedImages[0] || productThumbnail,
@@ -352,10 +457,10 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                             total_images: collectedImages.length,
                             image_sources: { mockups: 0, catalog: 0, variants: collectedImages.length - 1, user_uploads: 0 },
                             printful_product_id: productId,
-                            artwork_url: artworkUrl
+                            artwork_url: artworkUrl,
+                            collection_method: 'fallback'
                         }
                     }
-                    console.log(`[DEBUG] Using ${collectedImages.length} basic images`)
                 }
 
                 const salesChannelService: ISalesChannelModuleService = req.scope.resolve(Modules.SALES_CHANNEL);
@@ -372,59 +477,90 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
 
                 // Get price from variants or set a default price for POD products
                 let price = 0;
+                console.log(`[DEBUG] 💰 PRICING DEBUG for ${productName}:`)
+                console.log(`[DEBUG] Available variants: ${variants.length}`)
+                console.log(`[DEBUG] Variants structure:`, variants.map(v => ({
+                    id: v.id,
+                    name: v.name,
+                    price: v.price,
+                    currency: v.currency,
+                    has_price: !!v.price,
+                    price_type: typeof v.price
+                })))
+                
                 if (variants && variants.length > 0 && variants[0]) {
                   const firstVariant = variants[0];
+                  console.log(`[DEBUG] First variant pricing:`, {
+                    name: firstVariant.name,
+                    price: firstVariant.price,
+                    currency: firstVariant.currency,
+                    raw_price: firstVariant.price,
+                    is_number: !isNaN(parseFloat(firstVariant.price?.toString() || '0'))
+                  })
+                  
                   const variantPrice = firstVariant.price;
                   if (variantPrice && !isNaN(parseFloat(variantPrice.toString()))) {
                     price = Math.round(parseFloat(variantPrice.toString()) * 100);
+                    console.log(`[DEBUG] ✅ Converted price: ${variantPrice} -> ${price} cents`)
+                  } else {
+                    console.log(`[DEBUG] ❌ Invalid variant price: ${variantPrice}`)
                   }
                 }
                 
                 // Fallback to product price if available
                 if (price === 0 && printfulProduct && printfulProduct.price && !isNaN(parseFloat(printfulProduct.price.toString()))) {
                   price = Math.round(parseFloat(printfulProduct.price.toString()) * 100);
+                  console.log(`[DEBUG] ✅ Used product fallback price: ${printfulProduct.price} -> ${price} cents`)
                 }
+                
+                // Additional fallback - check if printfulProduct has retail_price
+                if (price === 0 && printfulProduct?.variants?.[0]?.retail_price) {
+                  const retailPrice = parseFloat(printfulProduct.variants[0].retail_price);
+                  if (!isNaN(retailPrice)) {
+                    price = Math.round(retailPrice * 100);
+                    console.log(`[DEBUG] ✅ Used retail_price fallback: ${retailPrice} -> ${price} cents`)
+                  }
+                }
+                
+                console.log(`[DEBUG] 💰 FINAL PRICE: ${price} cents (${price/100} ${printfulProduct?.variants?.[0]?.currency || 'USD'})`)
                 
                 // If no valid price found, skip the product instead of using hardcoded fallbacks
                 if (price === 0 || isNaN(price)) {
-                  console.log(`Skipping product ${productName} - no valid price found and no hardcoded fallbacks`)
+                  console.log(`❌ Skipping product ${productName} - no valid price found`)
+                  console.log(`[DEBUG] Price sources checked:`)
+                  console.log(`  - variants[0].price: ${variants?.[0]?.price}`)
+                  console.log(`  - printfulProduct.price: ${printfulProduct?.price}`)
+                  console.log(`  - printfulProduct.variants[0].retail_price: ${printfulProduct?.variants?.[0]?.retail_price}`)
                   skippedProducts.push({
+                    productId,
                     name: productName,
-                    reason: 'No valid price found'
+                    reason: 'no_price'
                   })
                   continue
                 }
 
-                // Convert image collection to Medusa format
+                // Convert image collection to Medusa format using ProductImageService
                 let medusaImageData
                 try {
-                    if (imageCollection && imageCollection.images) {
-                        // Try using the image service for conversion
-                        try {
-                            const imageService = new ProductImageService(req)
-                            medusaImageData = imageService.convertToMedusaFormat(imageCollection)
-                            console.log(`[DEBUG] ✅ Image service conversion succeeded`)
-                        } catch (conversionError) {
-                            console.warn(`[DEBUG] ⚠️ Image service conversion failed:`, conversionError.message)
-                            throw conversionError
-                        }
-                    } else {
-                        throw new Error("No image collection available")
-                    }
+                    medusaImageData = imageService.convertToMedusaFormat(imageCollection)
+                    console.log(`[DEBUG] ✅ Image conversion succeeded: ${medusaImageData.images.length} images`)
                 } catch (conversionError) {
-                    console.warn(`[DEBUG] Using manual image format conversion`)
-                    // Manual conversion as fallback
+                    console.error(`[DEBUG] ❌ Image conversion failed:`, conversionError)
+                    
+                    // Final fallback: Manual conversion
                     medusaImageData = {
                         thumbnail: imageCollection?.thumbnail || collectedImages[0] || productThumbnail,
-                        images: collectedImages.map(url => ({ url })),
+                        images: (imageCollection?.images || collectedImages).map(img => 
+                            typeof img === 'string' ? { url: img } : { url: img.url || img }
+                        ),
                         metadata: {
-                            total_images: collectedImages.length,
-                            image_sources: { mockups: 0, catalog: 0, variants: collectedImages.length, user_uploads: 0 },
+                            ...(imageCollection?.metadata || {}),
                             printful_product_id: productId,
                             artwork_url: artworkUrl,
-                            fallback_conversion: true
+                            conversion_method: 'manual_fallback'
                         }
                     }
+                    console.log(`[DEBUG] Using manual fallback conversion`)
                 }
                 
                 console.log(`[DEBUG] Final image data for product creation:`)
@@ -448,6 +584,7 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                         fulfillment_type: "printful_pod",
                         printful_product_id: productId,
                         product_type: "store",
+                        printful_api_version: apiVersion || 'v1',
                         artwork_url: artworkUrl,
                         original_thumbnail: productThumbnail,
                         // Include comprehensive image metadata
@@ -608,6 +745,7 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
                 productId,
                 medusaProductId: medusaProduct.id,
                 medusaProduct: medusaProduct, // Include full product object for frontend
+                medusa_product_title: medusaProduct.title,
                 provider
             });
         } catch (error) {
@@ -625,7 +763,27 @@ async function importProducts(req: MedusaRequest, provider: string, productIds: 
             });
         }
     }
-    return { success: true, imported: importedProducts.length, failed: errors.length, imported_products: importedProducts, errors };
+    try {
+        if (typeof printfulService?.getProvider === "function") {
+            const provider = printfulService.getProvider("printful")
+            const internalService = provider?.getInternalProductService?.()
+            internalService?.clearCaches?.()
+        } else if (printfulService?.clearCaches) {
+            printfulService.clearCaches()
+        }
+    } catch (cacheError) {
+        console.warn("[DEBUG] Failed to clear Printful caches after import", cacheError)
+    }
+
+    return { 
+      success: errors.length === 0,
+      imported: importedProducts.length,
+      failed: errors.length,
+      skipped: skippedProducts,
+      skipped_count: skippedProducts.length,
+      imported_products: importedProducts,
+      errors 
+    };
 }
 
 async function processSync(syncId: string, action: string, provider: string) {

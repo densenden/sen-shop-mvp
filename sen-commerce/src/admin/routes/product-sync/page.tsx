@@ -37,6 +37,8 @@ interface AvailableProduct {
   already_imported: boolean
   medusa_product_id?: string | null
   product_type?: string
+  image_count: number
+  variations_count: number
 }
 
 const ProductSyncPage = () => {
@@ -241,6 +243,14 @@ const ProductSyncPage = () => {
         case 'status':
           aValue = a.already_imported ? 'imported' : 'available'
           bValue = b.already_imported ? 'imported' : 'available'
+          break
+        case 'image_count':
+          aValue = a.image_count || 0
+          bValue = b.image_count || 0
+          break
+        case 'variations_count':
+          aValue = a.variations_count || 0
+          bValue = b.variations_count || 0
           break
         default:
           aValue = a.name || ''
@@ -521,7 +531,24 @@ const ProductSyncPage = () => {
                   <SortIcon field="status" />
                 </div>
               </Table.HeaderCell>
-              <Table.HeaderCell>Details</Table.HeaderCell>
+              <Table.HeaderCell 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleSort('image_count')}
+              >
+                <div className="flex items-center gap-1">
+                  Images
+                  <SortIcon field="image_count" />
+                </div>
+              </Table.HeaderCell>
+              <Table.HeaderCell 
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => handleSort('variations_count')}
+              >
+                <div className="flex items-center gap-1">
+                  Variations
+                  <SortIcon field="variations_count" />
+                </div>
+              </Table.HeaderCell>
               <Table.HeaderCell className="text-right">Actions</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
@@ -574,16 +601,13 @@ const ProductSyncPage = () => {
                   )}
                 </Table.Cell>
                 <Table.Cell>
-                  <div className="text-sm text-gray-600">
-                    {product.provider === 'digital' && product.file_size && (
-                      <div>Size: {Math.round(product.file_size / 1024 / 1024 * 10) / 10} MB</div>
-                    )}
-                    {product.provider === 'digital' && product.mime_type && (
-                      <div>Type: {product.mime_type}</div>
-                    )}
-                    {product.provider === 'printful' && product.product_type && (
-                      <div>Type: {product.product_type}</div>
-                    )}
+                  <div className="text-center">
+                    <span className="text-sm font-medium">{product.image_count || 0}</span>
+                  </div>
+                </Table.Cell>
+                <Table.Cell>
+                  <div className="text-center">
+                    <span className="text-sm font-medium">{product.variations_count || 0}</span>
                   </div>
                 </Table.Cell>
                 <Table.Cell>

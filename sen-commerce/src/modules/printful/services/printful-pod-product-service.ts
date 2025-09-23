@@ -108,6 +108,9 @@ export class PrintfulPodProductService extends MedusaService({
   private apiBaseUrlV2: string
   private container: any
   private orderService: PrintfulOrderService
+  private syncProductsCache: { data: any[]; fetchedAt: number } | null = null
+  private catalogProductsCache: { data: PrintfulV2CatalogProduct[]; fetchedAt: number } | null = null
+  private cacheTTL = 15000 // 15 seconds to stay within Printful rate limits
 
   constructor(container: any, options?: any) {
     super(container, options)
@@ -118,8 +121,61 @@ export class PrintfulPodProductService extends MedusaService({
     this.apiBaseUrlV2 = "https://api.printful.com/v2"
   }
 
+  clearCaches() {
+    this.syncProductsCache = null
+    this.catalogProductsCache = null
+  }
+
+  // V1 API: Fetch sync products (templates that can be pushed to the store)
+  async fetchSyncProducts(forceRefresh = false): Promise<any[]> {
+    if (!forceRefresh && this.syncProductsCache && Date.now() - this.syncProductsCache.fetchedAt < this.cacheTTL) {
+      return this.syncProductsCache.data
+    }
+
+    const res = await fetch(`${this.apiBaseUrlV1}/sync/products`, {
+      headers: { Authorization: `Bearer ${this.apiToken}` },
+    })
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After") || "15"
+        throw new Error(`Printful rate limit reached. Try again after ${retryAfter} seconds.`)
+      }
+      const errorText = await res.text()
+      console.error("Printful V1 sync products error:", res.status, errorText)
+      throw new Error("Failed to fetch sync products from Printful")
+    }
+
+    const data = await res.json()
+    const products = Array.isArray(data.result) ? data.result : []
+    this.syncProductsCache = { data: products, fetchedAt: Date.now() }
+    return products
+  }
+
+  async getSyncProduct(productId: string): Promise<any | null> {
+    const res = await fetch(`${this.apiBaseUrlV1}/sync/products/${productId}`, {
+      headers: { Authorization: `Bearer ${this.apiToken}` },
+    })
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        return null
+      }
+      const errorText = await res.text()
+      console.error("Printful sync product fetch error:", res.status, errorText)
+      throw new Error("Failed to fetch sync product from Printful")
+    }
+
+    const data = await res.json()
+    return data.result || null
+  }
+
   // V2 API: Fetch catalog products (available for printing)
-  async fetchCatalogProducts(): Promise<PrintfulV2CatalogProduct[]> {
+  async fetchCatalogProducts(forceRefresh = false): Promise<PrintfulV2CatalogProduct[]> {
+    if (!forceRefresh && this.catalogProductsCache && Date.now() - this.catalogProductsCache.fetchedAt < this.cacheTTL) {
+      return this.catalogProductsCache.data
+    }
+
     const res = await fetch(`${this.apiBaseUrlV2}/catalog-products`, {
       headers: { 
         Authorization: `Bearer ${this.apiToken}`,
@@ -127,12 +183,18 @@ export class PrintfulPodProductService extends MedusaService({
       },
     })
     if (!res.ok) {
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After") || "15"
+        throw new Error(`Printful catalog rate limit reached. Try again after ${retryAfter} seconds.`)
+      }
       const errorText = await res.text()
       console.error("Printful V2 API error:", res.status, errorText)
       throw new Error("Failed to fetch catalog products from Printful V2")
     }
     const data = await res.json()
-    return data.data || []
+    const products = data.data || []
+    this.catalogProductsCache = { data: products, fetchedAt: Date.now() }
+    return products
   }
 
   // V2 API: Get specific catalog product with variants
@@ -237,7 +299,7 @@ export class PrintfulPodProductService extends MedusaService({
       })
       
       // Map to expected format
-      return {
+      const mappedProduct = {
         id: syncProduct.id.toString(),
         name: syncProduct.name,
         thumbnail_url: syncProduct.thumbnail_url,
@@ -251,6 +313,20 @@ export class PrintfulPodProductService extends MedusaService({
           files: v.files || [] // Include files array for additional images
         }))
       }
+      
+      console.log(`[PrintfulService] ✅ Final mapped product structure:`)
+      console.log(`  - Product ID: ${mappedProduct.id}`)
+      console.log(`  - Product Name: ${mappedProduct.name}`)
+      console.log(`  - Thumbnail: ${mappedProduct.thumbnail_url}`)
+      console.log(`  - Variants: ${mappedProduct.variants.length}`)
+      mappedProduct.variants.forEach((variant, index) => {
+        console.log(`    Variant ${index}: ${variant.name} - Files: ${variant.files.length}`)
+        variant.files.forEach((file, fileIndex) => {
+          console.log(`      File ${fileIndex}: ${file.type} -> ${file.preview_url || file.url}`)
+        })
+      })
+      
+      return mappedProduct
     }
     
     return data.result || null
@@ -492,91 +568,27 @@ export class PrintfulPodProductService extends MedusaService({
     throw new Error('Mockup generation timed out')
   }
 
-  // Enhanced product import with comprehensive image collection
+  // Legacy method - use ProductImageService for comprehensive image collection instead
+  // This method is deprecated in favor of ProductImageService.collectPrintfulImages()
   async importProductWithMockups(printfulProduct: PrintfulV2StoreProduct, artworkUrl?: string): Promise<any> {
-    let mockupUrls: string[] = []
-    let catalogImages: string[] = []
+    console.warn('[PrintfulPodProductService] importProductWithMockups is deprecated. Use ProductImageService.collectPrintfulImages() instead.')
     
-    // 1. Generate mockups for more variants (up to 8 instead of 3)
-    if (artworkUrl && printfulProduct.variants.length > 0) {
-      try {
-        // Take more variants to generate diverse mockups (different sizes/colors)
-        const variantIds = printfulProduct.variants.slice(0, 8).map(v => v.id)
-        mockupUrls = await this.generateAndWaitForMockups(printfulProduct.id, variantIds, artworkUrl)
-        console.log(`Generated ${mockupUrls.length} mockups for product ${printfulProduct.id}`)
-      } catch (error) {
-        console.warn(`Failed to generate mockups for product ${printfulProduct.id}:`, error)
-        // Continue with import even if mockups fail
-      }
-    }
-
-    // 2. Fetch catalog product for additional images
-    try {
-      const catalogProduct = await this.getCatalogProduct(printfulProduct.id)
-      if (catalogProduct) {
-        // Add main catalog image
-        if (catalogProduct.image) {
-          catalogImages.push(catalogProduct.image)
-        }
-        // Add variant images from catalog (often better quality than store variants)
-        catalogProduct.variants.forEach(variant => {
-          if (variant.image && !catalogImages.includes(variant.image)) {
-            catalogImages.push(variant.image)
-          }
-        })
-        console.log(`Found ${catalogImages.length} catalog images for product ${printfulProduct.id}`)
-      }
-    } catch (error) {
-      console.warn(`Failed to fetch catalog images for product ${printfulProduct.id}:`, error)
-    }
-
-    // 3. Collect variant-specific images (color variations, etc.)
-    const variantImages: string[] = []
-    printfulProduct.variants.forEach(variant => {
-      if (variant.image && !variantImages.includes(variant.image)) {
-        variantImages.push(variant.image)
-      }
-    })
-
-    // 4. Combine all image sources with priority order
-    const allImages = [
-      printfulProduct.thumbnail_url,     // Primary thumbnail
-      ...mockupUrls,                     // Generated mockups (highest priority)
-      ...catalogImages,                  // Catalog product images  
-      ...variantImages                   // Variant-specific images
-    ].filter(Boolean)
-
-    // Remove duplicates while preserving order
-    const uniqueImages = [...new Set(allImages)]
-    
-    // Limit total images to avoid overwhelming the product page (max 15 images)
-    const maxImages = 15
-    const productImages = uniqueImages.slice(0, maxImages)
-    
-    if (uniqueImages.length > maxImages) {
-      console.log(`Limited images from ${uniqueImages.length} to ${maxImages} for product ${printfulProduct.name}`)
-    }
-    
-    console.log(`Total images collected for ${printfulProduct.name}: ${productImages.length} (${mockupUrls.length} mockups, ${catalogImages.length} catalog, ${variantImages.length} variants)`)
-    
+    // Simple fallback for basic product structure
     const productInput = {
       title: printfulProduct.name,
       description: printfulProduct.description || `${printfulProduct.name} - Custom print-on-demand product`,
-      thumbnail: productImages[0],
-      images: productImages.map(url => ({ url })),
+      thumbnail: printfulProduct.thumbnail_url,
+      images: printfulProduct.thumbnail_url ? [{ url: printfulProduct.thumbnail_url }] : [],
       status: "published",
       metadata: {
         printful_product_id: printfulProduct.id,
-        mockup_urls: mockupUrls,
-        catalog_images: catalogImages,
-        variant_images: variantImages,
         artwork_url: artworkUrl,
         fulfillment_type: "printful_pod",
-        total_images: productImages.length,
+        total_images: printfulProduct.thumbnail_url ? 1 : 0,
         image_sources: {
-          mockups: mockupUrls.length,
-          catalog: catalogImages.length,
-          variants: variantImages.length
+          mockups: 0,
+          catalog: 0,
+          variants: 0
         }
       }
     }

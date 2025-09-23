@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Layout from '../../../../components/Layout'
 import { ArrowLeft, Image, ShoppingBag } from 'lucide-react'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../../../lib/config'
+import { TranslatedContent, TranslatedVariable } from '../../../../../components/TranslatedContent'
 
 interface Artwork {
   id: string
@@ -231,14 +232,16 @@ export default function CollectionDetailPage() {
                       </div>
                       
                       <div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2 group-hover:text-gray-700 transition-colors">
-                          {artwork.title}
-                        </h3>
-                        {artwork.description && (
-                          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                            {artwork.description}
-                          </p>
-                        )}
+                        <TranslatedContent context="artwork">
+                          <h3 className="text-lg font-medium text-gray-900 mb-2 group-hover:text-gray-700 transition-colors">
+                            <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
+                          </h3>
+                          {artwork.description && (
+                            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                              <TranslatedVariable name="description">{artwork.description}</TranslatedVariable>
+                            </p>
+                          )}
+                        </TranslatedContent>
                       </div>
                     </Link>
                     
@@ -267,7 +270,9 @@ export default function CollectionDetailPage() {
                                 )}
                                 <div>
                                   <p className="text-sm font-medium text-gray-900 group-hover/product:text-gray-700">
-                                    {product.title}
+                                    <TranslatedContent context="product">
+                                      <TranslatedVariable name="title">{product.title}</TranslatedVariable>
+                                    </TranslatedContent>
                                   </p>
                                   <p className="text-xs text-gray-600">
                                     {formatPrice(product.price, product.currency_code)}

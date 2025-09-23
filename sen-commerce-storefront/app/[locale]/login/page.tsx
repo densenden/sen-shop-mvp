@@ -1,14 +1,18 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react'
 import Layout from '../../components/Layout'
 import { getHeaders } from '../../../lib/config'
 
 export default function LoginPage() {
   const router = useRouter()
+  const t = useTranslations('auth')
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -39,12 +43,12 @@ export default function LoginPage() {
       if (!isLogin) {
         // Registration validation
         if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match')
+          setError(t('passwordsDoNotMatch'))
           setLoading(false)
           return
         }
         if (formData.password.length < 6) {
-          setError('Password must be at least 6 characters')
+          setError(t('passwordTooShort'))
           setLoading(false)
           return
         }
@@ -77,11 +81,11 @@ export default function LoginPage() {
         const returnUrl = new URLSearchParams(window.location.search).get('return') || '/account'
         router.push(returnUrl)
       } else {
-        setError(data.message || `${isLogin ? 'Login' : 'Registration'} failed`)
+        setError(data.message || t(isLogin ? 'loginFailed' : 'registrationFailed'))
       }
     } catch (error) {
       console.error('Auth error:', error)
-      setError('Network error. Please try again.')
+      setError(t('networkError'))
     } finally {
       setLoading(false)
     }
@@ -93,15 +97,15 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-medium text-gray-900 mb-2">
-            {isLogin ? 'Sign in to your account' : 'Create your account'}
+            {isLogin ? t('signInToAccount') : t('createYourAccount')}
           </h1>
           <p className="text-sm text-gray-600">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            {isLogin ? t('dontHaveAccount') + ' ' : t('alreadyHaveAccount') + ' '}
             <button
               onClick={() => setIsLogin(!isLogin)}
               className="font-medium text-gray-900 hover:text-gray-700"
             >
-              {isLogin ? 'Sign up' : 'Sign in'}
+              {isLogin ? t('signUp') : t('signIn')}
             </button>
           </p>
         </div>
@@ -119,7 +123,7 @@ export default function LoginPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    First name
+                    {t('firstName')}
                   </label>
                   <div className="relative">
                     <input
@@ -130,14 +134,14 @@ export default function LoginPage() {
                       value={formData.first_name}
                       onChange={handleInputChange}
                       className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 text-sm"
-                      placeholder="First name"
+                      placeholder={t('firstName')}
                     />
                     <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   </div>
                 </div>
                 <div>
                   <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last name
+                    {t('lastName')}
                   </label>
                   <div className="relative">
                     <input
@@ -148,7 +152,7 @@ export default function LoginPage() {
                       value={formData.last_name}
                       onChange={handleInputChange}
                       className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 text-sm"
-                      placeholder="Last name"
+                      placeholder={t('lastName')}
                     />
                     <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   </div>
@@ -158,7 +162,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
+                {t('emailAddress')}
               </label>
               <div className="relative">
                 <input
@@ -170,7 +174,7 @@ export default function LoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 text-sm"
-                  placeholder="Enter your email"
+                  placeholder={t('enterYourEmail')}
                 />
                 <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               </div>
@@ -178,7 +182,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <input
@@ -190,7 +194,7 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 text-sm"
-                  placeholder="Enter your password"
+                  placeholder={t('enterYourPassword')}
                 />
                 <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <button
@@ -206,7 +210,7 @@ export default function LoginPage() {
             {!isLogin && (
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm password
+                  {t('confirmPassword')}
                 </label>
                 <div className="relative">
                   <input
@@ -217,7 +221,7 @@ export default function LoginPage() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-gray-500 focus:border-gray-500 text-sm"
-                    placeholder="Confirm your password"
+                    placeholder={t('confirmYourPassword')}
                   />
                   <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 </div>
@@ -234,12 +238,12 @@ export default function LoginPage() {
                     className="h-4 w-4 text-gray-600 focus:ring-gray-500 border-gray-300"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Remember me
+                    {t('rememberMe')}
                   </label>
                 </div>
                 <div className="text-sm">
                   <a href="#" className="font-medium text-gray-600 hover:text-gray-500">
-                    Forgot your password?
+                    {t('forgotPassword')}
                   </a>
                 </div>
               </div>
@@ -254,7 +258,7 @@ export default function LoginPage() {
                 {loading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
-                  isLogin ? 'Sign in' : 'Create account'
+                  isLogin ? t('loginButton') : t('registerButton')
                 )}
               </button>
             </div>
@@ -266,7 +270,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-white text-gray-500">{t('orContinueWith')}</span>
               </div>
             </div>
 
@@ -274,9 +278,9 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                onClick={() => alert('Social login not implemented yet')}
+                onClick={() => alert(t('socialLoginNotImplemented'))}
               >
-                <span>Continue as Guest</span>
+                <span>{t('continueAsGuest')}</span>
               </button>
             </div>
           </div>

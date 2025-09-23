@@ -31,6 +31,16 @@ function getLocaleFromRequest(request: NextRequest): string {
 export default function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
+  // Skip middleware for static assets, API routes, etc.
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.') ||
+    pathname === '/favicon.ico'
+  ) {
+    return NextResponse.next()
+  }
+  
   // Check if there is any supported locale in the pathname
   const pathnameIsMissingLocale = locales.every(
     (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
@@ -39,6 +49,15 @@ export default function middleware(request: NextRequest) {
   // Redirect if there is no locale
   if (pathnameIsMissingLocale) {
     const locale = getLocaleFromRequest(request)
+    
+    // Ensure we have a valid locale
+    if (!locales.includes(locale as any)) {
+      console.warn(`Invalid locale detected: ${locale}, falling back to ${defaultLocale}`)
+      return NextResponse.redirect(
+        new URL(`/${defaultLocale}${pathname}`, request.url)
+      )
+    }
+    
     return NextResponse.redirect(
       new URL(`/${locale}${pathname}`, request.url)
     )
@@ -48,6 +67,10 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Match only internationalized pathnames
-  matcher: ['/', '/(de|fr|es|it|pt|nl|pl|cs|sk|hu|ro|bg|hr|sl|lv|lt|et|el|sv|da|fi|mt|ga|en)/:path*']
+  // Match all pathnames except for
+  // - API routes
+  // - _next (Next.js internals)
+  // - _vercel (Vercel internals)
+  // - Static files like favicon.ico, images, etc.
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)', '/']
 }

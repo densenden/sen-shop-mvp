@@ -17,6 +17,8 @@
     "@types/react-dom": "^18.0.0",
     "autoprefixer": "^10.4.16",
     "critters": "^0.0.25",
+    "gt-next": "^6.4.1",
+    "gt-react": "^10.5.1",
     "lucide-react": "^0.290.0",
     "negotiator": "^1.0.0",
     "next": "^14.0.0",

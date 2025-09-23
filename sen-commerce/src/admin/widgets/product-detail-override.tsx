@@ -72,6 +72,12 @@ const ProductDetailOverride = () => {
   const [showArtworkSelector, setShowArtworkSelector] = useState(false)
   const [artworkSearchTerm, setArtworkSearchTerm] = useState("")
 
+  // Media state
+  const [uploading, setUploading] = useState(false)
+  const [imageUrl, setImageUrl] = useState("")
+  const [selectedImages, setSelectedImages] = useState<number[]>([])
+  const [bulkMode, setBulkMode] = useState(false)
+
   // Hide default Medusa product detail interface
   React.useEffect(() => {
     if (!id) return
@@ -178,6 +184,122 @@ const ProductDetailOverride = () => {
     const updated = { ...metadata }
     delete updated[key]
     setMetadata(updated)
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0 || !id) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      Array.from(files).forEach(file => formData.append('files', file))
+
+      const response = await fetch(`/admin/products/${id}/upload-images`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      })
+
+      if (response.ok) {
+        await fetchData() // Refresh product data to show new images
+        alert('Images uploaded successfully!')
+      } else {
+        throw new Error('Upload failed')
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('Failed to upload images. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleAddImageByUrl = async () => {
+    if (!imageUrl || !id) return
+
+    setUploading(true)
+    try {
+      const response = await fetch(`/admin/products/${id}/upload-images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ imageUrls: [imageUrl] })
+      })
+
+      if (response.ok) {
+        await fetchData() // Refresh product data to show new image
+        setImageUrl('')
+        alert('Image added successfully!')
+      } else {
+        throw new Error('Failed to add image')
+      }
+    } catch (error) {
+      console.error('Add image error:', error)
+      alert('Failed to add image. Please check the URL and try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveThumbnail = async () => {
+    if (!id || !product?.thumbnail) return
+
+    try {
+      const response = await fetch(`/admin/products/${id}/thumbnail`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        await fetchData()
+        alert('Thumbnail removed successfully!')
+      } else {
+        throw new Error('Failed to remove thumbnail')
+      }
+    } catch (error) {
+      console.error('Remove thumbnail error:', error)
+      alert('Failed to remove thumbnail. Please try again.')
+    }
+  }
+
+  const handleImageSelection = (index: number) => {
+    setSelectedImages(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    )
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedImages.length === 0 || !id) return
+
+    if (!confirm(`Delete ${selectedImages.length} selected images?`)) return
+
+    try {
+      const response = await fetch(`/admin/products/${id}/images/bulk-delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ indices: selectedImages })
+      })
+
+      if (response.ok) {
+        await fetchData()
+        setSelectedImages([])
+        setBulkMode(false)
+        alert('Images deleted successfully!')
+      } else {
+        throw new Error('Failed to delete images')
+      }
+    } catch (error) {
+      console.error('Bulk delete error:', error)
+      alert('Failed to delete images. Please try again.')
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -660,14 +782,29 @@ const ProductDetailOverride = () => {
                     </Text>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="secondary" size="small" disabled>
-                      Upload New
-                    </Button>
+                    <label htmlFor="thumbnailUpload">
+                      <Button variant="secondary" size="small" disabled={uploading}>
+                        {uploading ? 'Uploading...' : 'Upload New'}
+                      </Button>
+                      <input
+                        id="thumbnailUpload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        multiple
+                      />
+                    </label>
                     <Button variant="secondary" size="small" disabled>
                       Choose from Images
                     </Button>
                     {product.thumbnail && (
-                      <Button variant="secondary" size="small" disabled className="text-red-600">
+                      <Button 
+                        variant="secondary" 
+                        size="small" 
+                        className="text-red-600"
+                        onClick={handleRemoveThumbnail}
+                      >
                         Remove
                       </Button>
                     )}
@@ -685,27 +822,43 @@ const ProductDetailOverride = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {product.images.map((image, index) => (
-                    <div key={index} className="relative group">
+                    <div 
+                      key={index} 
+                      className={`relative group ${bulkMode && selectedImages.includes(index) ? 'ring-2 ring-blue-500' : ''}`}
+                    >
+                      {bulkMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedImages.includes(index)}
+                          onChange={() => handleImageSelection(index)}
+                          className="absolute top-2 left-2 z-10 w-4 h-4"
+                        />
+                      )}
                       <img
                         src={image.url}
                         alt={`Product image ${index + 1}`}
                         className="w-full aspect-square object-cover rounded-lg border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
-                        onClick={() => window.open(image.url, '_blank')}
+                        onClick={() => bulkMode ? handleImageSelection(index) : window.open(image.url, '_blank')}
                       />
                       {index === 0 && (
-                        <Badge className="absolute top-1 left-1 bg-blue-600 text-white text-xs">
+                        <Badge className="absolute top-1 right-1 bg-blue-600 text-white text-xs">
                           Thumbnail
                         </Badge>
                       )}
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity rounded-lg flex items-center justify-center">
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => window.open(image.url, '_blank')}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
+                        {!bulkMode && (
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(image.url, '_blank')
+                            }}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -720,12 +873,33 @@ const ProductDetailOverride = () => {
                     </Text>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="secondary" size="small" disabled>
+                    <Button 
+                      variant="secondary" 
+                      size="small" 
+                      disabled
+                    >
                       Reorder
                     </Button>
-                    <Button variant="secondary" size="small" disabled>
-                      Bulk Delete
+                    <Button 
+                      variant={bulkMode ? "primary" : "secondary"} 
+                      size="small"
+                      onClick={() => bulkMode ? handleBulkDelete() : setBulkMode(true)}
+                      disabled={bulkMode && selectedImages.length === 0}
+                    >
+                      {bulkMode ? `Delete ${selectedImages.length} Selected` : 'Bulk Delete'}
                     </Button>
+                    {bulkMode && (
+                      <Button 
+                        variant="secondary" 
+                        size="small"
+                        onClick={() => {
+                          setBulkMode(false)
+                          setSelectedImages([])
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -746,10 +920,20 @@ const ProductDetailOverride = () => {
                     Files will be uploaded to product-images bucket
                   </Text>
                   <div className="flex justify-center gap-2">
-                    <Button variant="secondary">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Choose Files
-                    </Button>
+                    <label htmlFor="bulkImageUpload">
+                      <Button variant="secondary" disabled={uploading}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        {uploading ? 'Uploading...' : 'Choose Files'}
+                      </Button>
+                      <input
+                        id="bulkImageUpload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        multiple
+                      />
+                    </label>
                     <Button variant="secondary" disabled>
                       Bulk Upload
                     </Button>
@@ -766,12 +950,18 @@ const ProductDetailOverride = () => {
                 <div className="flex gap-2">
                   <Input
                     id="imageUrl"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="https://example.com/image.jpg"
                     className="flex-1"
                   />
-                  <Button variant="secondary">
+                  <Button 
+                    variant="secondary"
+                    onClick={handleAddImageByUrl}
+                    disabled={!imageUrl || uploading}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add URL
+                    {uploading ? 'Adding...' : 'Add URL'}
                   </Button>
                 </div>
                 <Text className="text-xs text-gray-500 mt-1">

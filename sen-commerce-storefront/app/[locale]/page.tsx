@@ -8,6 +8,7 @@ import MaterialIcon, { MaterialIcons } from '../components/MaterialIcon'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../lib/config'
 import { digitalOwnershipService } from '../../lib/digital-ownership'
 import { useTranslations } from 'next-intl'
+import { TranslatedProductContent } from '../../components/TranslatedContent'
 
 interface Product {
   id: string
@@ -245,12 +246,12 @@ export default function HomePage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
-                      {product.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                      {product.description}
-                    </p>
+                    <TranslatedProductContent
+                      title={product.title}
+                      description={product.description}
+                      titleClassName="text-sm font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors"
+                      descriptionClassName="text-sm text-gray-600 mb-2 line-clamp-2"
+                    />
                     <p className="text-sm font-medium text-gray-900">
                       {formatPrice(product.price, product.currency_code)}
                     </p>

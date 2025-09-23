@@ -10,7 +10,12 @@ export default function LanguageSwitcher() {
   const router = useRouter()
   const currentLocale = useLocale() as Locale
   const [isOpen, setIsOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -19,14 +24,16 @@ export default function LanguageSwitcher() {
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+    if (isClient) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
     }
-  }, [])
+  }, [isClient])
 
   const handleLocaleChange = (newLocale: Locale) => {
-    if (!pathname) return
+    if (!pathname || !isClient) return
     
     // Set the preferred_language cookie
     document.cookie = `preferred_language=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}` // 1 year
@@ -70,7 +77,7 @@ export default function LanguageSwitcher() {
         </svg>
       </button>
       
-      {isOpen && (
+      {isOpen && isClient && (
         <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-md shadow-lg py-1 min-w-[120px] z-10">
           {locales.map((locale) => (
             <button

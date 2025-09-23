@@ -85,7 +85,8 @@ As an artist and developer, I needed a platform that could handle both digital a
 ### 🖨️ Print-on-Demand Integration
 - **Printful V2 API**: Complete product catalog sync
 - **Automated Fulfillment**: Order forwarding with real-time updates
-- **Mockup Generation**: Dynamic product previews
+- **Comprehensive Image Collection**: AI mockups, catalog images, variant images, file attachments
+- **Smart Image Processing**: Deduplication, prioritization, metadata tracking
 - **Webhook Processing**: Status synchronization and tracking
 
 ### 💾 Digital Product Delivery
@@ -99,6 +100,13 @@ As an artist and developer, I needed a platform that could handle both digital a
 - **Shopping Cart**: Real-time updates and persistence
 - **Checkout Flow**: Stripe integration with order tracking
 - **Customer Management**: Account creation and order history
+
+### 🌍 Multilingual Support (NEW)
+- **24 EU Languages**: Complete support for all EU member states
+- **Hybrid Translation**: Static UI (next-intl) + Dynamic content (General Translation)
+- **Automatic Detection**: Browser-based locale detection with manual switching
+- **SEO Optimized**: Proper hreflang, locale-specific URLs, translated meta tags
+- **Currency Localization**: Proper currency formatting per region
 
 ### 📧 Communication System
 - **Resend Integration**: Automated order confirmations
@@ -119,7 +127,10 @@ As an artist and developer, I needed a platform that could handle both digital a
 
 ### Frontend Technologies  
 - **React 18**: Component-based user interfaces
+- **Next.js 14**: App Router with internationalization support
 - **Tailwind CSS**: Utility-first responsive design
+- **next-intl**: Static UI translations in 24 languages
+- **General Translation**: AI-powered dynamic content translation
 - **Vite Admin**: Fast admin interface with Medusa
 - **React Components**: Medusa admin components
 
@@ -342,6 +353,25 @@ RESEND_API_KEY=re_...
     ├── data/                   # Presentation Content
     └── public/images/          # Demo Screenshots
 ```
+
+---
+
+## 📖 Comprehensive Documentation
+
+### **System Architecture Guides**
+- **[Translation System](./TRANSLATION_SYSTEM.md)**: Complete guide to the hybrid multilingual system
+- **[Image Handling](./IMAGE_HANDLING_SYSTEM.md)**: Comprehensive image collection and processing
+- **[I18n Implementation](./sen-commerce-storefront/I18N-IMPLEMENTATION.md)**: Technical internationalization details
+
+### **API & Database Documentation**
+- **[Translation Architecture](./sen-commerce/docs/translation-architecture.md)**: Translation system design
+- **[Database Schema](./sen-commerce/src/modules/)**: Data models and relationships
+- **[Product Sync API](./sen-commerce/docs/)**: Printful integration endpoints
+
+### **Archive Organization**
+- **[SQL Scripts](./archive/sql/)**: Database exports and migration scripts
+- **[Development Scripts](./archive/scripts/)**: Testing and automation scripts
+- **[Historical Docs](./archive/docs/)**: Previous documentation versions
 
 ---
 
