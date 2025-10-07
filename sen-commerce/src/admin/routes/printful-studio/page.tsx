@@ -1464,7 +1464,6 @@ const ComposerUI = ({
                     Select at least one variant above to generate mockups
                   </p>
                 )}
-                )}
               </div>
             )}
           </div>
