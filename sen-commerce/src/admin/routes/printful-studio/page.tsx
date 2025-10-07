@@ -87,6 +87,8 @@ interface ComposerSession {
   } | null
   mockups: {
     mockup_urls: string[]
+    mockup_status?: 'pending' | 'generating' | 'completed' | 'failed'
+    mockup_progress?: string
   } | null
   details: {
     product_title: string
@@ -717,15 +719,27 @@ const ComposerUI = ({
         mockupUrls.push(session.artwork.artwork_url)
       }
 
+      // Show placeholder mockups first
       onUpdate({
         mockups: {
           mockup_urls: mockupUrls,
-          selected_mockup_urls: mockupUrls,
-          mockup_status: 'completed'
+          mockup_status: 'generating',
+          mockup_progress: `Generating mockups for ${session.product.selected_variant_ids.length} variants...`
         }
       })
 
-      // Optional: Try real API call in background (don't wait for it)
+      // Start real API call with progress tracking
+      const variantCount = session.product.selected_variant_ids.length
+      const estimatedTime = Math.ceil(variantCount * 30 / 60) // ~30s per variant in minutes
+
+      onUpdate({
+        mockups: {
+          mockup_urls: mockupUrls,
+          mockup_status: 'generating',
+          mockup_progress: `⏳ Generating ${variantCount} mockups (est. ${estimatedTime} min due to rate limits)...`
+        }
+      })
+
       fetch(`/admin/printful-studio/v2/catalog/${session.product.catalog_product_id}/mockups`, {
         method: 'POST',
         credentials: 'include',
@@ -740,19 +754,35 @@ const ComposerUI = ({
         if (res.ok) {
           return res.json()
         }
+        throw new Error(`Mockup generation failed: ${res.status}`)
       }).then(data => {
         if (data?.mockup_urls && data.mockup_urls.length > 0) {
-          // Update with real mockups if available
+          // Update with real mockups
           onUpdate({
             mockups: {
               mockup_urls: data.mockup_urls,
-              selected_mockup_urls: data.mockup_urls,
-              mockup_status: 'completed'
+              mockup_status: 'completed',
+              mockup_progress: `✅ Generated ${data.mockup_urls.length} mockups successfully!`
+            }
+          })
+        } else {
+          onUpdate({
+            mockups: {
+              mockup_urls: mockupUrls,
+              mockup_status: 'completed',
+              mockup_progress: 'Using placeholder mockups'
             }
           })
         }
       }).catch(err => {
         console.log('Background mockup generation failed (not critical):', err)
+        onUpdate({
+          mockups: {
+            mockup_urls: mockupUrls,
+            mockup_status: 'failed',
+            mockup_progress: `⚠️ Mockup generation failed: ${err.message}`
+          }
+        })
       })
 
     } catch (err) {
@@ -1272,15 +1302,48 @@ const ComposerUI = ({
             <Heading level="h3">Mockup Generation</Heading>
             {session.mockups && session.mockups.mockup_urls.length > 0 ? (
               <div>
-                <div className="rounded-lg border border-ui-tag-green-border bg-ui-tag-green-bg p-4 mb-4">
-                  <p className="font-medium text-green-900">
-                    ✓ Mockups ready ({session.mockups.mockup_urls.length})
-                  </p>
-                </div>
+                {/* Progress indicator */}
+                {session.mockups.mockup_status === 'generating' && (
+                  <div className="rounded-lg border border-ui-border-loud bg-ui-bg-highlight p-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                      <div className="flex-1">
+                        <p className="font-medium text-ui-fg-base">
+                          {session.mockups.mockup_progress || 'Generating mockups...'}
+                        </p>
+                        <p className="text-xs text-ui-fg-subtle mt-1">
+                          This may take several minutes due to API rate limits. Please keep this tab open.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {session.mockups.mockup_status === 'completed' && (
+                  <div className="rounded-lg border border-ui-tag-green-border bg-ui-tag-green-bg p-4 mb-4">
+                    <p className="font-medium text-ui-fg-base">
+                      {session.mockups.mockup_progress || `✓ Mockups ready (${session.mockups.mockup_urls.length})`}
+                    </p>
+                  </div>
+                )}
+
+                {session.mockups.mockup_status === 'failed' && (
+                  <div className="rounded-lg border border-ui-tag-red-border bg-ui-tag-red-bg p-4 mb-4">
+                    <p className="font-medium text-ui-fg-base">
+                      {session.mockups.mockup_progress || '⚠️ Mockup generation failed'}
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid gap-4 md:grid-cols-3">
                   {session.mockups.mockup_urls.map((url, idx) => (
-                    <div key={idx} className="rounded-lg border border-ui-border-base overflow-hidden">
+                    <div key={idx} className="rounded-lg border border-ui-border-base overflow-hidden relative">
                       <img src={url} alt={`Mockup ${idx + 1}`} className="w-full h-48 object-cover" />
+                      {session.mockups?.mockup_status === 'generating' && (
+                        <div className="absolute inset-0 bg-ui-bg-overlay flex items-center justify-center">
+                          <Loader2 className="w-8 h-8 animate-spin text-white" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
