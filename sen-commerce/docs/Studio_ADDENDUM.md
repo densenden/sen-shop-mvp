@@ -1,5 +1,3 @@
-Got it — here’s the Cursor-ready PRD addendum to enable parallel v1 + v2 usage in the same plugin, cleanly separated in the UI so you can test and compare all behaviors without conflicts.
-
 PRD Addendum — Parallel v1 & v2 in printful-studio
 
 0) Goals
