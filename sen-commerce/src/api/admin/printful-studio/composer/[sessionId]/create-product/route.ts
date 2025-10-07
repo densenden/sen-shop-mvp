@@ -111,6 +111,12 @@ export async function POST(
       // Use placement from design settings, or default to 'default'
       const placement = session.design?.placement || 'default'
 
+      console.log('[create-product] Placement value:', {
+        from_session: session.design?.placement,
+        final_placement: placement,
+        placement_type: typeof placement
+      })
+
       const variantsData = session.product.selected_variant_ids.map((variantId) => {
         const retailPrice = session.pricing!.retail_prices[variantId]
 
