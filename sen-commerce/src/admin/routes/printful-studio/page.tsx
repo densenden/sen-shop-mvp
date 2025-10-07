@@ -89,6 +89,7 @@ interface ComposerSession {
     mockup_urls: string[]
     mockup_status?: 'pending' | 'generating' | 'completed' | 'failed'
     mockup_progress?: string
+    selected_variant_ids_for_mockups?: string[] // Which variants to generate mockups for
   } | null
   details: {
     product_title: string
@@ -728,7 +729,7 @@ const ComposerUI = ({
         }
       })
 
-      // Start real API call with progress tracking
+      // Start real API call with incremental progress tracking
       const variantCount = session.product.selected_variant_ids.length
       const estimatedTime = Math.ceil(variantCount * 30 / 60) // ~30s per variant in minutes
 
@@ -740,6 +741,9 @@ const ComposerUI = ({
         }
       })
 
+      // Use selected variants for mockup generation (not all product variants)
+      const variantsForMockups = session.mockups?.selected_variant_ids_for_mockups || session.product.selected_variant_ids
+
       fetch(`/admin/printful-studio/v2/catalog/${session.product.catalog_product_id}/mockups`, {
         method: 'POST',
         credentials: 'include',
@@ -747,7 +751,7 @@ const ComposerUI = ({
         body: JSON.stringify({
           artwork_url: session.artwork.artwork_url,
           artwork_id: session.artwork.artwork_id,
-          variant_ids: session.product.selected_variant_ids, // Generate for all selected variants
+          variant_ids: variantsForMockups,
           wait_for_completion: true
         })
       }).then(res => {
@@ -757,7 +761,7 @@ const ComposerUI = ({
         throw new Error(`Mockup generation failed: ${res.status}`)
       }).then(data => {
         if (data?.mockup_urls && data.mockup_urls.length > 0) {
-          // Update with real mockups
+          // Update with all completed mockups at once
           onUpdate({
             mockups: {
               mockup_urls: data.mockup_urls,
@@ -775,7 +779,7 @@ const ComposerUI = ({
           })
         }
       }).catch(err => {
-        console.log('Background mockup generation failed (not critical):', err)
+        console.log('Mockup generation failed:', err)
         onUpdate({
           mockups: {
             mockup_urls: mockupUrls,
@@ -1300,6 +1304,85 @@ const ComposerUI = ({
         {activeTab === 3 && (
           <div className="space-y-4">
             <Heading level="h3">Mockup Generation</Heading>
+
+            {/* Variant selector for mockup generation */}
+            {!session.mockups && session.product && selectedProduct && (
+              <div className="rounded-lg border border-ui-border-base bg-ui-bg-base p-4 mb-4">
+                <p className="text-sm font-medium mb-3">Select variants for mockup generation</p>
+                <p className="text-xs text-ui-fg-subtle mb-4">
+                  Choose which variants to generate mockups for. Fewer variants = faster generation.
+                  <br />
+                  <strong>Estimated time:</strong> ~30 seconds per variant due to rate limits.
+                </p>
+                <div className="grid gap-2 max-h-64 overflow-y-auto">
+                  {selectedProduct.variants?.map((variant: any) => {
+                    const variantId = String(variant.id)
+                    const isSelectedForProduct = session.product?.selected_variant_ids?.includes(variantId)
+                    const isSelectedForMockup = session.mockups?.selected_variant_ids_for_mockups?.includes(variantId) ?? false
+
+                    if (!isSelectedForProduct) return null
+
+                    return (
+                      <label
+                        key={variantId}
+                        className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition ${
+                          isSelectedForMockup
+                            ? 'border-blue-500 bg-ui-bg-highlight'
+                            : 'border-ui-border-base hover:border-ui-border-strong'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelectedForMockup}
+                          onChange={(e) => {
+                            const currentSelected = session.mockups?.selected_variant_ids_for_mockups || []
+                            const newSelected = e.target.checked
+                              ? [...currentSelected, variantId]
+                              : currentSelected.filter(id => id !== variantId)
+
+                            onUpdate({
+                              mockups: {
+                                ...(session.mockups || { mockup_urls: [] }),
+                                selected_variant_ids_for_mockups: newSelected
+                              }
+                            })
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{variant.name}</div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-xs text-ui-fg-subtle">
+                    {session.mockups?.selected_variant_ids_for_mockups?.length || 0} variant(s) selected
+                    {session.mockups?.selected_variant_ids_for_mockups?.length && (
+                      <span className="ml-2">
+                        (est. {Math.ceil((session.mockups.selected_variant_ids_for_mockups.length * 30) / 60)} min)
+                      </span>
+                    )}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => {
+                      onUpdate({
+                        mockups: {
+                          ...(session.mockups || { mockup_urls: [] }),
+                          selected_variant_ids_for_mockups: session.product?.selected_variant_ids || []
+                        }
+                      })
+                    }}
+                  >
+                    Select All ({session.product?.selected_variant_ids?.length || 0})
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {session.mockups && session.mockups.mockup_urls.length > 0 ? (
               <div>
                 {/* Progress indicator */}
@@ -1356,7 +1439,7 @@ const ComposerUI = ({
                 </p>
                 <Button
                   variant="primary"
-                  disabled={!session.product || generatingMockups}
+                  disabled={!session.product || generatingMockups || !(session.mockups?.selected_variant_ids_for_mockups?.length)}
                   onClick={generateMockups}
                 >
                   {generatingMockups ? (
@@ -1367,7 +1450,7 @@ const ComposerUI = ({
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Generate Mockups
+                      Generate Mockups ({session.mockups?.selected_variant_ids_for_mockups?.length || 0})
                     </>
                   )}
                 </Button>
@@ -1375,6 +1458,12 @@ const ComposerUI = ({
                   <p className="text-xs text-ui-fg-muted mt-2">
                     Select a product first to generate mockups
                   </p>
+                )}
+                {session.product && !(session.mockups?.selected_variant_ids_for_mockups?.length) && (
+                  <p className="text-xs text-ui-fg-muted mt-2">
+                    Select at least one variant above to generate mockups
+                  </p>
+                )}
                 )}
               </div>
             )}
