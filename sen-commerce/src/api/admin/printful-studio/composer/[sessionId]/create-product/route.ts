@@ -125,7 +125,7 @@ export async function POST(
           retail_price: retailPrice?.toFixed(2) || "25.00",
           files: printfulFileId ? [{
             id: printfulFileId,
-            type: placement
+            type: 'default'  // File type must be 'default' or 'mockup', not placement value
           }] : []
         }
       })
@@ -209,13 +209,20 @@ export async function POST(
       // Step 4: Optionally import to Medusa
       if (auto_import_to_medusa && result.printful_product_id) {
         try {
+          console.log('[create-product] Starting Medusa import for product:', result.printful_product_id)
+
           // Fetch the full product with all variants
           const fullProduct = await printfulService.getStoreProduct(result.printful_product_id)
+          console.log('[create-product] Fetched full product:', {
+            id: fullProduct?.id,
+            name: fullProduct?.name,
+            variant_count: fullProduct?.variants?.length
+          })
 
           if (fullProduct) {
-            // Import using the existing importer logic
-            const productModule = req.scope.resolve("productService")
-            const fileModule = req.scope.resolve("fileService")
+            // Import using Medusa v2 API
+            const { Modules } = await import("@medusajs/framework/utils")
+            const productModule = req.scope.resolve(Modules.PRODUCT)
 
             // Collect all images
             const images: string[] = []
@@ -252,13 +259,46 @@ export async function POST(
               })
             }
 
-            // Create Medusa product
+            console.log('[create-product] Creating Medusa product with:', {
+              title: session.details.product_title,
+              images_count: images.length,
+              mockups: mockupCount,
+              variant_count: fullProduct.variants?.length || 0
+            })
+
+            // Create variants data from Printful product
+            const variantData = (fullProduct.variants || []).map((variant: any, idx: number) => {
+              const variantId = String(variant.id)
+              const retailPrice = session.pricing?.retail_prices?.[variantId] || variant.retail_price || "25.00"
+
+              return {
+                title: variant.name || `Variant ${idx + 1}`,
+                sku: variant.sku || `printful-${variant.id}`,
+                prices: [{
+                  amount: Math.round(parseFloat(retailPrice) * 100), // Convert to cents
+                  currency_code: session.pricing?.currency?.toLowerCase() || 'usd'
+                }],
+                options: {
+                  size: variant.size || undefined,
+                  color: variant.color || undefined
+                },
+                metadata: {
+                  printful_variant_id: variant.id,
+                  printful_sync_variant_id: variant.sync_variant_id
+                }
+              }
+            })
+
+            console.log('[create-product] Creating with variants:', variantData.length)
+
+            // Create Medusa product with variants
             const medusaProduct = await productModule.createProducts({
               title: session.details.product_title,
               description: session.details.product_description || '',
               status: medusa_status,
               thumbnail: images[0] || null,
-              images: images.slice(0, 20).map(url => ({ url })), // Limit to 20 images
+              images: images.slice(0, 20).map(url => ({ url })),
+              variants: variantData,
               metadata: {
                 printful_product_id: result.printful_product_id,
                 printful_api_version: 'v1',
@@ -273,6 +313,12 @@ export async function POST(
                   catalog: images.length - mockupCount - variantCount
                 }
               }
+            })
+
+            console.log('[create-product] Medusa product created:', {
+              id: medusaProduct.id,
+              title: medusaProduct.title,
+              variants: medusaProduct.variants?.length || 0
             })
 
             result.medusa_product_id = medusaProduct.id
@@ -294,6 +340,7 @@ export async function POST(
             }
           }
         } catch (error: any) {
+          console.error('[create-product] Medusa import error:', error)
           result.errors?.push(`Failed to import to Medusa: ${error.message}`)
         }
       }

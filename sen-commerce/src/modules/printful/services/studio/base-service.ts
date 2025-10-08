@@ -353,6 +353,7 @@ export abstract class PrintfulStudioBaseService {
     variantIds,
     artworkId,
     artworkUrl,
+    mockupStyleIds,
     maxMockups,
     waitForCompletion = true,
   }: PrintfulStudioMockupRequest): Promise<PrintfulStudioMockupResult> {
@@ -385,6 +386,7 @@ export abstract class PrintfulStudioBaseService {
       productId,
       variantCount: selectedVariantIds.length,
       variantIds: selectedVariantIds,
+      mockupStyleIds: mockupStyleIds || 'auto-select',
       artworkUrl: artwork.url,
       maxWaitTime,
       waitForCompletion
@@ -394,7 +396,11 @@ export abstract class PrintfulStudioBaseService {
       productId,
       selectedVariantIds,
       artwork.url,
-      maxWaitTime
+      maxWaitTime,
+      undefined, // placement
+      undefined, // technique
+      mockupStyleIds, // Pass mockup style IDs
+      undefined // product options - will be passed from UI
     )
 
     console.log('[PrintfulStudioService] Mockup generation complete:', {

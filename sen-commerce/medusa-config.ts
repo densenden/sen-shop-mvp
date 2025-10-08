@@ -25,9 +25,9 @@ export default defineConfig({
     // Only use Redis cache in production
     ...(!isDevelopment ? [{
       resolve: "@medusajs/medusa/cache-redis",
-      options: { 
+      options: {
         redisUrl: process.env.CACHE_REDIS_URL,
-        ttl: 30, 
+        ttl: 30,
         namespace: "medusa:"
       }
     }] : []),

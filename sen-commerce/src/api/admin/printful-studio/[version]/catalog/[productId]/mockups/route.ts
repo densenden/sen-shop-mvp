@@ -6,6 +6,8 @@ interface MockupRequestPayload {
   variant_ids?: string[]
   artwork_id?: string
   artwork_url?: string
+  mockup_style_ids?: (string | number)[]
+  product_options?: Record<string, string>
   max_mockups?: number
   wait_for_completion?: boolean
   upload_to_medusa?: boolean
@@ -26,7 +28,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       ? body.variant_ids.filter((id) => typeof id === "string" && id.trim().length > 0)
       : undefined
 
+    const mockupStyleIds = Array.isArray(body.mockup_style_ids)
+      ? body.mockup_style_ids.filter((id) => (typeof id === "string" && id.trim().length > 0) || typeof id === "number")
+      : undefined
+
     console.log('[mockups-route] Resolved variant IDs:', variantIds)
+    console.log('[mockups-route] Resolved mockup style IDs:', mockupStyleIds)
+    console.log('[mockups-route] Product options:', body.product_options)
 
     const service = resolvePrintfulStudioService(req, version)
     const mockupResult = await service.generateMockups({
@@ -34,6 +42,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       variantIds,
       artworkId: body.artwork_id,
       artworkUrl: body.artwork_url,
+      mockupStyleIds,
+      productOptions: body.product_options,
       maxMockups: body.max_mockups,
       waitForCompletion: body.wait_for_completion !== false,
     })

@@ -171,17 +171,31 @@ export class PrintfulPodProductService extends MedusaService({
   }
 
   // V2 API: Fetch catalog products (available for printing)
-  async fetchCatalogProducts(forceRefresh = false): Promise<PrintfulV2CatalogProduct[]> {
-    if (!forceRefresh && this.catalogProductsCache && Date.now() - this.catalogProductsCache.fetchedAt < this.cacheTTL) {
+  async fetchCatalogProducts(forceRefresh = false, options?: { category_id?: string, limit?: number, offset?: number }): Promise<PrintfulV2CatalogProduct[]> {
+    // Don't use cache if filtering by category or pagination
+    const useCache = !forceRefresh && !options?.category_id && !options?.offset
+
+    if (useCache && this.catalogProductsCache && Date.now() - this.catalogProductsCache.fetchedAt < this.cacheTTL) {
       return this.catalogProductsCache.data
     }
 
-    const res = await fetch(`${this.apiBaseUrlV2}/catalog-products`, {
-      headers: { 
+    // Build query parameters
+    const params = new URLSearchParams()
+    if (options?.category_id) params.append('category_id', options.category_id)
+    if (options?.limit) params.append('limit', options.limit.toString())
+    if (options?.offset) params.append('offset', options.offset.toString())
+
+    const url = `${this.apiBaseUrlV2}/catalog-products${params.toString() ? '?' + params.toString() : ''}`
+
+    console.log(`[PrintfulService] Fetching catalog products: ${url}`)
+
+    const res = await fetch(url, {
+      headers: {
         Authorization: `Bearer ${this.apiToken}`,
         'Content-Type': 'application/json'
       },
     })
+
     if (!res.ok) {
       if (res.status === 429) {
         const retryAfter = res.headers.get("Retry-After") || "15"
@@ -191,10 +205,66 @@ export class PrintfulPodProductService extends MedusaService({
       console.error("Printful V2 API error:", res.status, errorText)
       throw new Error("Failed to fetch catalog products from Printful V2")
     }
+
     const data = await res.json()
     const products = data.data || []
-    this.catalogProductsCache = { data: products, fetchedAt: Date.now() }
+    const total = data.total || products.length
+    const hasMore = data.paging?.has_more || false
+
+    console.log(`[PrintfulService] Fetched ${products.length}/${total} catalog products`)
+
+    // If there are more products and no pagination was requested, fetch all
+    if (hasMore && !options?.offset && !options?.limit) {
+      console.log(`[PrintfulService] Fetching remaining products (total: ${total})`)
+      const remainingProducts = await this.fetchAllCatalogProducts(products.length, total, options?.category_id)
+      const allProducts = [...products, ...remainingProducts]
+
+      // Only cache if fetching all products without filters
+      if (!options?.category_id) {
+        this.catalogProductsCache = { data: allProducts, fetchedAt: Date.now() }
+      }
+
+      return allProducts
+    }
+
+    // Cache if fetching all products without filters
+    if (!options?.category_id && !options?.offset) {
+      this.catalogProductsCache = { data: products, fetchedAt: Date.now() }
+    }
+
     return products
+  }
+
+  // Helper to fetch all remaining catalog products
+  private async fetchAllCatalogProducts(currentCount: number, total: number, categoryId?: string): Promise<PrintfulV2CatalogProduct[]> {
+    const allProducts: PrintfulV2CatalogProduct[] = []
+    const limit = 100 // Printful's max per request
+    let offset = currentCount
+
+    while (offset < total) {
+      try {
+        const batch = await this.fetchCatalogProducts(false, {
+          category_id: categoryId,
+          limit,
+          offset
+        })
+
+        if (batch.length === 0) break
+
+        allProducts.push(...batch)
+        offset += batch.length
+
+        console.log(`[PrintfulService] Progress: ${offset}/${total} products fetched`)
+
+        // Rate limiting: wait 200ms between requests
+        await new Promise(resolve => setTimeout(resolve, 200))
+      } catch (error) {
+        console.error(`[PrintfulService] Error fetching batch at offset ${offset}:`, error)
+        break
+      }
+    }
+
+    return allProducts
   }
 
   // V2 API: Get specific catalog product with variants
@@ -250,6 +320,9 @@ export class PrintfulPodProductService extends MedusaService({
       const placements = catalogProduct.placements || []
       const techniques = catalogProduct.techniques || []
 
+      // Extract available product options (e.g., stitch_color)
+      const productOptions = catalogProduct.options || []
+
       console.log(`[PrintfulService] V2 Catalog product details:`)
       console.log(`  - ID: ${catalogProduct.id}`)
       console.log(`  - Name: ${catalogProduct.name}`)
@@ -257,6 +330,7 @@ export class PrintfulPodProductService extends MedusaService({
       console.log(`  - Variants: ${catalogProduct.variants?.length || 0}`)
       console.log(`  - Placements: ${placements.length}`, placements.map((p: any) => p.placement || p.id || p))
       console.log(`  - Techniques: ${techniques.length}`, techniques.map((t: any) => t.id || t.technique || t))
+      console.log(`  - Product Options: ${productOptions.length}`, productOptions.map((o: any) => o.id || o.key))
 
       return catalogProduct
     } catch (error) {
@@ -502,6 +576,91 @@ export class PrintfulPodProductService extends MedusaService({
     return this.orderService.getOrders(params)
   }
 
+  // V2 API: Fetch catalog categories
+  async fetchCatalogCategories(): Promise<Array<{ id: string; name: string; parent_id?: string }>> {
+    try {
+      const res = await fetch(`${this.apiBaseUrlV2}/catalog-categories`, {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!res.ok) {
+        console.warn(`[PrintfulService] Failed to fetch catalog categories:`, res.status)
+        return []
+      }
+
+      const data = await res.json()
+      const categories = data.data || []
+
+      console.log(`[PrintfulService] Fetched ${categories.length} catalog categories`)
+
+      return categories
+    } catch (error) {
+      console.warn('[PrintfulService] Error fetching catalog categories:', error)
+      return []
+    }
+  }
+
+  // V2 API: Fetch user's saved templates
+  async fetchTemplates(): Promise<Array<{ id: string; name: string; preview_url?: string; product_id?: string }>> {
+    try {
+      const res = await fetch(`${this.apiBaseUrlV2}/templates`, {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!res.ok) {
+        console.warn(`[PrintfulService] Failed to fetch templates:`, res.status)
+        return []
+      }
+
+      const data = await res.json()
+      const templates = data.data || []
+
+      console.log(`[PrintfulService] Fetched ${templates.length} templates`)
+
+      return templates
+    } catch (error) {
+      console.warn('[PrintfulService] Error fetching templates:', error)
+      return []
+    }
+  }
+
+  // V1 API: Fetch detailed template information by ID
+  async fetchTemplateDetails(templateId: string): Promise<any | null> {
+    try {
+      const res = await fetch(`${this.apiBaseUrlV1}/store/products/${templateId}`, {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!res.ok) {
+        console.warn(`[PrintfulService] Failed to fetch template ${templateId}:`, res.status)
+        return null
+      }
+
+      const data = await res.json()
+      const template = data.result || data
+
+      console.log(`[PrintfulService] Fetched template ${templateId} details:`, {
+        id: template.id,
+        name: template.sync_product?.name,
+        variants: template.sync_variants?.length
+      })
+
+      return template
+    } catch (error) {
+      console.warn(`[PrintfulService] Error fetching template ${templateId}:`, error)
+      return null
+    }
+  }
+
   // V2 API: Get available mockup styles for a product
   async getMockupStyles(productId: string): Promise<any[]> {
     try {
@@ -518,14 +677,32 @@ export class PrintfulPodProductService extends MedusaService({
       }
 
       const data = await res.json()
-      const styles = data.data || []
+      const placements = data.data || []
 
-      // Log first style to see structure
-      if (styles.length > 0) {
-        console.log('[PrintfulService] Sample mockup style structure:', JSON.stringify(styles[0], null, 2))
+      // Return placements grouped by placement/technique to preserve relationship
+      // This is the proper structure for the frontend
+      const placementGroups = placements.map((placement: any) => ({
+        placement: placement.placement,
+        technique: placement.technique,
+        display_name: placement.display_name,
+        print_area_width: placement.print_area_width,
+        print_area_height: placement.print_area_height,
+        dpi: placement.dpi,
+        mockup_styles: placement.mockup_styles || []
+      }))
+
+      const totalStyles = placementGroups.reduce((sum: number, p: any) => sum + (p.mockup_styles?.length || 0), 0)
+      console.log(`[PrintfulService] Loaded ${placements.length} placement/technique groups with ${totalStyles} total mockup styles`)
+
+      if (placementGroups.length > 0 && placementGroups[0].mockup_styles?.length > 0) {
+        console.log('[PrintfulService] First placement group:', {
+          placement: placementGroups[0].placement,
+          technique: placementGroups[0].technique,
+          styles_count: placementGroups[0].mockup_styles.length
+        })
       }
 
-      return styles
+      return placementGroups
     } catch (error) {
       console.warn('[PrintfulService] Error fetching mockup styles:', error)
       return []
@@ -533,7 +710,7 @@ export class PrintfulPodProductService extends MedusaService({
   }
 
   // V2 API: Generate mockups for a product with artwork
-  async generateMockups(productId: string, variantIds: string[], artworkUrl: string, placement?: string, technique?: string): Promise<PrintfulV2MockupResponse> {
+  async generateMockups(productId: string, variantIds: string[], artworkUrl: string, placement?: string, technique?: string, mockupStyleIds?: string[], productOptions?: Record<string, string>): Promise<PrintfulV2MockupResponse> {
     // Fetch available mockup styles for this product
     const mockupStyles = await this.getMockupStyles(productId)
     console.log(`[PrintfulService] Found ${mockupStyles.length} mockup styles for product ${productId}`)
@@ -543,81 +720,83 @@ export class PrintfulPodProductService extends MedusaService({
       console.log('[PrintfulService] All mockup style keys:', Object.keys(mockupStyles[0]))
     }
 
-    // Get product details to find valid placements and techniques if not provided
-    // Ensure parameters are strings (not objects)
+    // mockupStyles is now an array of placement groups
+    // Each group has: { placement, technique, mockup_styles: [...] }
+
+    // Determine which placement/technique to use
     let finalPlacement = placement ? String(placement) : undefined
     let finalTechnique = technique ? String(technique) : undefined
+    let selectedPlacementGroup: any = null
 
-    if (!finalPlacement || !finalTechnique) {
-      try {
-        const product = await this.getCatalogProduct(productId)
-        if (product) {
-          // Use first available placement if not specified
-          if (!finalPlacement && product.placements && product.placements.length > 0) {
-            const p = product.placements[0]
-            finalPlacement = typeof p === 'string' ? p : (p.placement || p.id || String(p))
-            console.log(`[PrintfulService] Auto-selected placement: ${finalPlacement} (type: ${typeof finalPlacement})`)
-          }
-          // Use first available technique if not specified
-          if (!finalTechnique && product.techniques && product.techniques.length > 0) {
-            const t = product.techniques[0]
-            finalTechnique = typeof t === 'string' ? t : (t.id || t.technique || t.key || String(t))
-            console.log(`[PrintfulService] Auto-selected technique: ${finalTechnique} (type: ${typeof finalTechnique})`)
-          }
+    // If user selected specific mockup style IDs, find which placement group they belong to
+    if (mockupStyleIds && mockupStyleIds.length > 0 && mockupStyles.length > 0) {
+      for (const group of mockupStyles) {
+        const hasMatchingStyle = group.mockup_styles?.some((style: any) =>
+          mockupStyleIds.includes(String(style.id))
+        )
+        if (hasMatchingStyle) {
+          selectedPlacementGroup = group
+          finalPlacement = String(group.placement)
+          finalTechnique = String(group.technique)
+          console.log(`[PrintfulService] Using placement/technique from selected styles: ${finalPlacement}/${finalTechnique}`)
+          break
         }
-      } catch (error) {
-        console.warn('[PrintfulService] Could not fetch product details for mockup generation:', error)
       }
     }
 
-    // Ensure they are strings (not objects or arrays)
+    // Fall back to first placement group if not set
+    if (!selectedPlacementGroup && mockupStyles.length > 0) {
+      selectedPlacementGroup = mockupStyles[0]
+      finalPlacement = String(selectedPlacementGroup.placement)
+      finalTechnique = String(selectedPlacementGroup.technique)
+      console.log(`[PrintfulService] Auto-selected first placement/technique: ${finalPlacement}/${finalTechnique}`)
+    }
+
+    // Ensure they are strings
     finalPlacement = String(finalPlacement || 'default')
     finalTechnique = String(finalTechnique || 'DTG')
 
-    // Find compatible placement with mockup styles for the requested placement
-    const compatiblePlacements = mockupStyles.filter((placementObj: any) => {
-      const stylePlacement = placementObj.placement || placementObj.placement_identifier || 'default'
-      return stylePlacement === finalPlacement || stylePlacement === 'default'
-    })
-
-    // Extract style IDs from the nested mockup_styles array
-    // Each placement object has a mockup_styles array with {id, category_name, view_name, restricted_to_variants, ...}
-    const allMockupStyles: any[] = []
-    compatiblePlacements.forEach((placementObj: any) => {
-      if (placementObj.mockup_styles && Array.isArray(placementObj.mockup_styles)) {
-        allMockupStyles.push(...placementObj.mockup_styles)
-      }
-    })
-
-    // Don't specify mockup_style_ids - let Printful auto-select the best styles per variant
-    // The mockup styles API returns styles with variant restrictions, and different variants
-    // often need different styles. Printful's auto-selection handles this better than we can.
-    console.log('[PrintfulService] Mockup styles available:', {
-      total_placements: mockupStyles.length,
-      compatible_placements: compatiblePlacements.length,
-      total_mockup_styles: allMockupStyles.length,
-      note: 'Letting Printful auto-select styles per variant'
+    console.log('[PrintfulService] Mockup generation config:', {
+      total_placement_groups: mockupStyles.length,
+      selected_placement: finalPlacement,
+      selected_technique: finalTechnique,
+      user_selected_style_ids: mockupStyleIds?.length || 0,
+      mode: mockupStyleIds?.length ? 'user-selected styles' : 'auto-select per variant'
     })
 
     // V2 API uses /mockup-tasks endpoint
     // Create separate product entry for each variant to allow different mockup styles per variant
-    const products = variantIds.map(variantId => ({
-      source: 'catalog',
-      catalog_product_id: parseInt(productId, 10),
-      catalog_variant_ids: [parseInt(variantId, 10)],
-      placements: [{
-        placement: finalPlacement,
-        technique: finalTechnique,
-        layers: [{
-          type: 'file',
-          url: artworkUrl
+    const products = variantIds.map(variantId => {
+      const product: any = {
+        source: 'catalog',
+        catalog_product_id: parseInt(productId, 10),
+        catalog_variant_ids: [parseInt(variantId, 10)],
+        placements: [{
+          placement: finalPlacement,
+          technique: finalTechnique,
+          layers: [{
+            type: 'file',
+            url: artworkUrl
+          }]
         }]
-      }]
-    }))
+      }
+
+      // Add product options if provided (e.g., stitch_color)
+      if (productOptions && Object.keys(productOptions).length > 0) {
+        product.options = productOptions
+      }
+
+      return product
+    })
 
     const requestData: any = {
       format: 'jpg',
       products: products
+    }
+
+    // Add mockup_style_ids if provided by user
+    if (mockupStyleIds && mockupStyleIds.length > 0) {
+      requestData.mockup_style_ids = mockupStyleIds.map(id => parseInt(id, 10))
     }
 
     console.log('[PrintfulService] Generating mockups with V2 mockup-tasks API:', {
@@ -626,8 +805,11 @@ export class PrintfulPodProductService extends MedusaService({
       variant_ids: variantIds,
       artwork_url: artworkUrl,
       placement: finalPlacement,
-      technique: finalTechnique
+      technique: finalTechnique,
+      mockup_style_ids: requestData.mockup_style_ids || 'auto-select'
     })
+
+    console.log('[PrintfulService] Raw mockup task request payload:', JSON.stringify(requestData, null, 2))
 
     const res = await fetch(`${this.apiBaseUrlV2}/mockup-tasks`, {
       method: 'POST',
@@ -743,18 +925,20 @@ export class PrintfulPodProductService extends MedusaService({
   }
 
   // Helper method to wait for mockup generation and return URLs
-  async generateAndWaitForMockups(productId: string, variantIds: string[], artworkUrl: string, maxWaitTime: number = 30000, placement?: string, technique?: string): Promise<string[]> {
+  async generateAndWaitForMockups(productId: string, variantIds: string[], artworkUrl: string, maxWaitTime: number = 30000, placement?: string, technique?: string, mockupStyleIds?: string[], productOptions?: Record<string, string>): Promise<string[]> {
     console.log('[PrintfulService] generateAndWaitForMockups called with:', {
       productId,
       variantCount: variantIds.length,
       variantIds,
       maxWaitTime,
       placement,
-      technique
+      technique,
+      mockupStyleIds: mockupStyleIds || 'auto-select',
+      productOptions: productOptions || 'none'
     })
 
     // Start mockup generation (will auto-detect placement/technique if not provided)
-    const mockupTask = await this.generateMockups(productId, variantIds, artworkUrl, placement, technique)
+    const mockupTask = await this.generateMockups(productId, variantIds, artworkUrl, placement, technique, mockupStyleIds, productOptions)
 
     // Get task IDs (may be multiple tasks for multiple variants)
     const taskIds = (mockupTask as any).task_ids || [mockupTask.id]

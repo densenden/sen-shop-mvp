@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Badge, Button, Container, Heading, Table, Tabs, Input, Textarea, Select } from "@medusajs/ui"
 import {
@@ -84,12 +84,38 @@ interface ComposerSession {
     technique: string
     available_placements?: Array<{id: string, placement: string}>
     available_techniques?: Array<{id: string, technique: string}>
+    product_options?: Record<string, string>
+    available_product_options?: Array<{
+      id: string
+      key: string
+      title: string
+      type: string
+      values: Array<{id: string, title: string, value: string}>
+    }>
   } | null
   mockups: {
     mockup_urls: string[]
     mockup_status?: 'pending' | 'generating' | 'completed' | 'failed'
     mockup_progress?: string
-    selected_variant_ids_for_mockups?: string[] // Which variants to generate mockups for
+    available_placement_groups?: Array<{
+      placement: string
+      technique: string
+      display_name?: string
+      print_area_width?: number
+      print_area_height?: number
+      dpi?: number
+      mockup_styles: Array<{
+        id: string | number
+        category_name?: string
+        view_name?: string
+        thumbnail_url?: string
+        restricted_to_variants?: (string | number)[]
+      }>
+    }>
+    selected_placement_group?: {
+      placement: string
+      technique: string
+    }
   } | null
   details: {
     product_title: string
@@ -560,7 +586,12 @@ const ComposerUI = ({
   loading: boolean
 }) => {
   const [activeTab, setActiveTab] = useState(0)
+  const [selectedMockupStyleIds, setSelectedMockupStyleIds] = useState<string[]>([])
   const [catalogProducts, setCatalogProducts] = useState<StudioCatalogProduct[]>([])
+  const [allCatalogProducts, setAllCatalogProducts] = useState<StudioCatalogProduct[]>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; preview_url?: string }>>([])
   const [selectedProduct, setSelectedProduct] = useState<StudioCatalogProduct | null>(null)
   const [loadingCatalog, setLoadingCatalog] = useState(false)
   const [generatingMockups, setGeneratingMockups] = useState(false)
@@ -574,6 +605,26 @@ const ComposerUI = ({
     "Pricing"
   ]
 
+  // Auto-select universal mockup styles from selected placement group
+  useEffect(() => {
+    if (session.mockups?.selected_placement_group && session.mockups?.available_placement_groups && selectedMockupStyleIds.length === 0) {
+      const selectedGroup = session.mockups.available_placement_groups.find((g: any) =>
+        g.placement === session.mockups?.selected_placement_group?.placement &&
+        g.technique === session.mockups?.selected_placement_group?.technique
+      )
+
+      if (selectedGroup?.mockup_styles) {
+        const universalStyles = selectedGroup.mockup_styles
+          .filter((style: any) => !style.restricted_to_variants || style.restricted_to_variants.length === 0)
+          .map((style: any) => style.id)
+
+        if (universalStyles.length > 0) {
+          setSelectedMockupStyleIds(universalStyles)
+        }
+      }
+    }
+  }, [session.mockups?.selected_placement_group])
+
   // Fetch catalog when Product tab is opened
   useEffect(() => {
     if (activeTab === 1 && catalogProducts.length === 0) {
@@ -584,17 +635,46 @@ const ComposerUI = ({
   const fetchCatalog = async () => {
     setLoadingCatalog(true)
     try {
-      const res = await fetch(`/admin/printful-studio/v2/catalog`, {
-        credentials: "include"
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setCatalogProducts(data.catalog || [])
+      // Fetch catalog, categories, and templates in parallel
+      const [catalogRes, categoriesRes, templatesRes] = await Promise.all([
+        fetch(`/admin/printful-studio/v2/catalog`, { credentials: "include" }),
+        fetch(`/admin/printful-studio/v2/catalog-categories`, { credentials: "include" }),
+        fetch(`/admin/printful-studio/v2/templates`, { credentials: "include" })
+      ])
+
+      if (catalogRes.ok) {
+        const data = await catalogRes.json()
+        const products = data.catalog || []
+        setAllCatalogProducts(products)
+        setCatalogProducts(products)
+      }
+
+      if (categoriesRes.ok) {
+        const data = await categoriesRes.json()
+        setCategories(data.categories || [])
+      }
+
+      if (templatesRes.ok) {
+        const data = await templatesRes.json()
+        setTemplates(data.templates || [])
       }
     } catch (err) {
       console.error('Failed to fetch catalog:', err)
     } finally {
       setLoadingCatalog(false)
+    }
+  }
+
+  // Filter products by category
+  const filterProductsByCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId)
+    if (categoryId === 'all') {
+      setCatalogProducts(allCatalogProducts)
+    } else {
+      const filtered = allCatalogProducts.filter((p: any) =>
+        p.category_id === categoryId || p.category_ids?.includes(categoryId)
+      )
+      setCatalogProducts(filtered)
     }
   }
 
@@ -644,13 +724,52 @@ const ComposerUI = ({
         ? (availableTechniques[0].id || availableTechniques[0].technique || availableTechniques[0])
         : 'DTG'
 
+      // Fetch available mockup styles for this product (placement groups)
+      let placementGroups: any[] = []
+      try {
+        const stylesRes = await fetch(`/admin/printful-studio/v2/catalog/${product.id}/mockup-styles`, {
+          credentials: 'include'
+        })
+        if (stylesRes.ok) {
+          const stylesData = await stylesRes.json()
+          placementGroups = stylesData.styles || []
+          const totalStyles = placementGroups.reduce((sum: number, group: any) =>
+            sum + (group.mockup_styles?.length || 0), 0
+          )
+          console.log('[Product Selection] Loaded placement groups:', {
+            groups: placementGroups.length,
+            total_styles: totalStyles
+          })
+        }
+      } catch (error) {
+        console.warn('Failed to load mockup styles:', error)
+      }
+
+      // Extract and set default product options (e.g., stitch_color)
+      const availableProductOptions = fullProduct.options || []
+      const defaultProductOptions: Record<string, string> = {}
+
+      availableProductOptions.forEach((option: any) => {
+        // Auto-select first available value for required options
+        if (option.values && option.values.length > 0) {
+          defaultProductOptions[option.key || option.id] = option.values[0].value || option.values[0].id
+        }
+      })
+
+      // Select default placement group (first one available)
+      const defaultPlacementGroup = placementGroups.length > 0 ? placementGroups[0] : null
+
       console.log('[Product Selection] Loaded product details:', {
         product_id: product.id,
         variant_count: variantIds.length,
-        placements: availablePlacements,
-        techniques: availableTechniques,
-        selected_placement: defaultPlacement,
-        selected_technique: defaultTechnique
+        placement_groups: placementGroups.length,
+        default_group: defaultPlacementGroup ? {
+          placement: defaultPlacementGroup.placement,
+          technique: defaultPlacementGroup.technique,
+          styles_count: defaultPlacementGroup.mockup_styles?.length || 0
+        } : null,
+        product_options_count: availableProductOptions.length,
+        default_options: defaultProductOptions
       })
 
       onUpdate({
@@ -664,16 +783,26 @@ const ComposerUI = ({
           product_description: session.details?.product_description || product.description
         },
         design: {
-          placement: defaultPlacement,
-          technique: defaultTechnique,
+          placement: defaultPlacementGroup?.placement || defaultPlacement,
+          technique: defaultPlacementGroup?.technique || defaultTechnique,
           available_placements: availablePlacements,
-          available_techniques: availableTechniques
+          available_techniques: availableTechniques,
+          product_options: defaultProductOptions,
+          available_product_options: availableProductOptions
         },
         pricing: {
           markup_type: 'percentage',
           markup_value: 50,
           retail_prices: retailPrices,
           currency: 'USD'
+        },
+        mockups: {
+          mockup_urls: [],
+          available_placement_groups: placementGroups,
+          selected_placement_group: defaultPlacementGroup ? {
+            placement: defaultPlacementGroup.placement,
+            technique: defaultPlacementGroup.technique
+          } : undefined
         }
       })
     } catch (error) {
@@ -683,6 +812,189 @@ const ComposerUI = ({
       setLoadingCatalog(false)
     }
   }
+
+  const selectTemplate = async (template: any) => {
+    setLoadingCatalog(true)
+    try {
+      // Fetch template details from V1 API
+      const templateRes = await fetch(`/admin/printful-studio/v1/templates/${template.id}`, {
+        credentials: "include"
+      })
+
+      if (!templateRes.ok) {
+        throw new Error('Failed to fetch template details')
+      }
+
+      const templateData = await templateRes.json()
+      const templateDetails = templateData.template
+
+      console.log('[Template Selection] Template details:', templateDetails)
+
+      // Extract product ID and artwork from template
+      const catalogProductId = templateDetails.sync_product?.external_id || template.product_id
+      if (!catalogProductId) {
+        throw new Error('Template does not have a valid product ID')
+      }
+
+      // Extract artwork URL from first variant's files
+      let artworkUrl = ''
+      const firstVariant = templateDetails.sync_variants?.[0]
+      if (firstVariant?.files && firstVariant.files.length > 0) {
+        // Find the print file (usually type 'default' or 'front')
+        const printFile = firstVariant.files.find((f: any) => f.type === 'default' || f.type === 'front' || f.type === 'preview')
+        artworkUrl = printFile?.url || printFile?.preview_url || firstVariant.files[0].url
+      }
+
+      if (!artworkUrl) {
+        throw new Error('Template does not have artwork')
+      }
+
+      // Fetch the V2 catalog product to get full details
+      const productRes = await fetch(`/admin/printful-studio/v2/catalog/${catalogProductId}`, {
+        credentials: "include"
+      })
+
+      if (!productRes.ok) {
+        throw new Error('Failed to fetch catalog product for template')
+      }
+
+      const productData = await productRes.json()
+      const fullProduct = productData.product
+
+      // Create product object similar to selectProduct
+      const product = {
+        id: catalogProductId,
+        name: templateDetails.sync_product?.name || fullProduct.name,
+        description: fullProduct.description,
+        thumbnail_url: templateDetails.sync_product?.thumbnail_url || fullProduct.image,
+        variants: fullProduct.variants || [],
+        placements: fullProduct.placements || [],
+        techniques: fullProduct.techniques || []
+      }
+      setSelectedProduct(product as any)
+
+      // Auto-select all variants by default
+      const variantIds = (fullProduct.variants || []).map((v: any) => v.id)
+
+      // Calculate retail prices
+      const retailPrices: Record<string, number> = {}
+      ;(fullProduct.variants || []).forEach((variant: any) => {
+        const basePrice = variant.price || 20
+        retailPrices[variant.id] = basePrice * 1.5
+      })
+
+      // Extract placements and techniques
+      const availablePlacements = fullProduct.placements || []
+      const availableTechniques = fullProduct.techniques || []
+
+      // Use template's placement and technique if available, otherwise use defaults
+      const defaultPlacement = availablePlacements.length > 0
+        ? (availablePlacements[0].placement || availablePlacements[0].id || availablePlacements[0])
+        : 'front'
+      const defaultTechnique = availableTechniques.length > 0
+        ? (availableTechniques[0].id || availableTechniques[0].technique || availableTechniques[0])
+        : 'DTG'
+
+      // Fetch mockup styles (placement groups)
+      let placementGroups: any[] = []
+      try {
+        const stylesRes = await fetch(`/admin/printful-studio/v2/catalog/${catalogProductId}/mockup-styles`, {
+          credentials: 'include'
+        })
+        if (stylesRes.ok) {
+          const stylesData = await stylesRes.json()
+          placementGroups = stylesData.styles || []
+        }
+      } catch (error) {
+        console.warn('Failed to load mockup styles:', error)
+      }
+
+      // Extract product options
+      const availableProductOptions = fullProduct.options || []
+      const defaultProductOptions: Record<string, string> = {}
+      availableProductOptions.forEach((option: any) => {
+        if (option.values && option.values.length > 0) {
+          defaultProductOptions[option.key || option.id] = option.values[0].value || option.values[0].id
+        }
+      })
+
+      // Select default placement group
+      const defaultPlacementGroup = placementGroups.length > 0 ? placementGroups[0] : null
+
+      console.log('[Template Selection] Loaded template-based product:', {
+        template_id: template.id,
+        product_id: catalogProductId,
+        artwork_url: artworkUrl,
+        variant_count: variantIds.length,
+        placement_groups: placementGroups.length,
+        default_group: defaultPlacementGroup ? {
+          placement: defaultPlacementGroup.placement,
+          technique: defaultPlacementGroup.technique
+        } : null
+      })
+
+      // Update session with template data
+      onUpdate({
+        artwork: {
+          artwork_title: templateDetails.sync_product?.name || 'Template Design',
+          artwork_url: artworkUrl,
+          artwork_id: null
+        },
+        product: {
+          catalog_product_id: catalogProductId,
+          catalog_product_name: product.name,
+          selected_variant_ids: variantIds
+        },
+        details: {
+          product_title: templateDetails.sync_product?.name || product.name,
+          product_description: product.description
+        },
+        design: {
+          placement: defaultPlacementGroup?.placement || defaultPlacement,
+          technique: defaultPlacementGroup?.technique || defaultTechnique,
+          available_placements: availablePlacements,
+          available_techniques: availableTechniques,
+          product_options: defaultProductOptions,
+          available_product_options: availableProductOptions
+        },
+        pricing: {
+          markup_type: 'percentage',
+          markup_value: 50,
+          retail_prices: retailPrices,
+          currency: 'USD'
+        },
+        mockups: {
+          mockup_urls: [],
+          available_placement_groups: placementGroups,
+          selected_placement_group: defaultPlacementGroup ? {
+            placement: defaultPlacementGroup.placement,
+            technique: defaultPlacementGroup.technique
+          } : undefined
+        }
+      })
+
+      alert(`Template "${templateDetails.sync_product?.name}" loaded successfully!`)
+    } catch (error: any) {
+      console.error('Failed to load template:', error)
+      alert(`Failed to load template: ${error.message}`)
+    } finally {
+      setLoadingCatalog(false)
+    }
+  }
+
+  // Compute available mockup styles from selected placement group
+  const availableMockupStyles = useMemo(() => {
+    if (!session.mockups?.selected_placement_group || !session.mockups?.available_placement_groups) {
+      return []
+    }
+
+    const selectedGroup = session.mockups.available_placement_groups.find((g: any) =>
+      g.placement === session.mockups?.selected_placement_group?.placement &&
+      g.technique === session.mockups?.selected_placement_group?.technique
+    )
+
+    return selectedGroup?.mockup_styles || []
+  }, [session.mockups?.selected_placement_group, session.mockups?.available_placement_groups])
 
   const generateMockups = async () => {
     if (!session.product || !session.artwork.artwork_url) {
@@ -723,6 +1035,7 @@ const ComposerUI = ({
       // Show placeholder mockups first
       onUpdate({
         mockups: {
+          ...session.mockups,
           mockup_urls: mockupUrls,
           mockup_status: 'generating',
           mockup_progress: `Generating mockups for ${session.product.selected_variant_ids.length} variants...`
@@ -735,14 +1048,16 @@ const ComposerUI = ({
 
       onUpdate({
         mockups: {
+          ...session.mockups,
           mockup_urls: mockupUrls,
           mockup_status: 'generating',
           mockup_progress: `⏳ Generating ${variantCount} mockups (est. ${estimatedTime} min due to rate limits)...`
         }
       })
 
-      // Use selected variants for mockup generation (not all product variants)
-      const variantsForMockups = session.mockups?.selected_variant_ids_for_mockups || session.product.selected_variant_ids
+      // Generate mockups for ALL selected product variants, but with specific mockup styles
+      // Use local state selectedMockupStyleIds instead of session state
+      const mockupStyleIds = selectedMockupStyleIds.length > 0 ? selectedMockupStyleIds : undefined
 
       fetch(`/admin/printful-studio/v2/catalog/${session.product.catalog_product_id}/mockups`, {
         method: 'POST',
@@ -751,7 +1066,9 @@ const ComposerUI = ({
         body: JSON.stringify({
           artwork_url: session.artwork.artwork_url,
           artwork_id: session.artwork.artwork_id,
-          variant_ids: variantsForMockups,
+          variant_ids: session.product.selected_variant_ids, // Generate for ALL selected variants
+          mockup_style_ids: mockupStyleIds, // But use specific mockup styles/perspectives (from local state)
+          product_options: session.design?.product_options, // Include product options like stitch_color
           wait_for_completion: true
         })
       }).then(res => {
@@ -764,6 +1081,7 @@ const ComposerUI = ({
           // Update with all completed mockups at once
           onUpdate({
             mockups: {
+              ...session.mockups,
               mockup_urls: data.mockup_urls,
               mockup_status: 'completed',
               mockup_progress: `✅ Generated ${data.mockup_urls.length} mockups successfully!`
@@ -772,6 +1090,7 @@ const ComposerUI = ({
         } else {
           onUpdate({
             mockups: {
+              ...session.mockups,
               mockup_urls: mockupUrls,
               mockup_status: 'completed',
               mockup_progress: 'Using placeholder mockups'
@@ -782,6 +1101,7 @@ const ComposerUI = ({
         console.log('Mockup generation failed:', err)
         onUpdate({
           mockups: {
+            ...session.mockups,
             mockup_urls: mockupUrls,
             mockup_status: 'failed',
             mockup_progress: `⚠️ Mockup generation failed: ${err.message}`
@@ -1003,8 +1323,66 @@ const ComposerUI = ({
                   </div>
                 ) : (
                   <>
+                    {/* Category filters and templates */}
+                    <div className="mb-4 space-y-4">
+                      {categories.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium mb-2 text-ui-fg-base">Filter by Category</p>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => filterProductsByCategory('all')}
+                              className={`px-3 py-1 rounded text-sm transition ${
+                                selectedCategory === 'all'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-ui-bg-subtle text-ui-fg-base hover:bg-ui-bg-subtle-hover'
+                              }`}
+                            >
+                              All ({allCatalogProducts.length})
+                            </button>
+                            {categories.map((cat: any) => (
+                              <button
+                                key={cat.id}
+                                onClick={() => filterProductsByCategory(cat.id)}
+                                className={`px-3 py-1 rounded text-sm transition ${
+                                  selectedCategory === cat.id
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-ui-bg-subtle text-ui-fg-base hover:bg-ui-bg-subtle-hover'
+                                }`}
+                              >
+                                {cat.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {templates.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium mb-2 text-ui-fg-base">Your Templates ({templates.length})</p>
+                          <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+                            {templates.map((template: any) => (
+                              <div
+                                key={template.id}
+                                className="rounded border border-ui-border-base p-2 cursor-pointer hover:border-blue-500 hover:bg-ui-bg-highlight transition"
+                                onClick={() => selectTemplate(template)}
+                              >
+                                {template.preview_url && (
+                                  <img
+                                    src={template.preview_url}
+                                    alt={template.name}
+                                    className="w-full h-20 object-cover rounded mb-2"
+                                  />
+                                )}
+                                <p className="text-xs font-medium text-ui-fg-base truncate">{template.name}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <p className="text-sm text-ui-fg-subtle mb-4">
-                      Select a product from the Printful catalog to continue
+                      Select a product from the Printful catalog ({catalogProducts.length} products)
                     </p>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 max-h-[500px] overflow-y-auto">
                       {catalogProducts.map((product) => (
@@ -1286,6 +1664,48 @@ const ComposerUI = ({
                 </>
               )}
             </div>
+
+            {/* Product Options Selection (e.g., stitch_color) */}
+            {session.design?.available_product_options && session.design.available_product_options.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-ui-fg-base">Product Options</p>
+                {session.design.available_product_options.map((option: any) => (
+                  <div key={option.key || option.id}>
+                    <label className="text-sm font-medium block mb-2">{option.title}</label>
+                    <Select
+                      value={session.design.product_options?.[option.key || option.id] || option.values[0]?.value}
+                      onValueChange={(value) => {
+                        const newOptions = {
+                          ...(session.design?.product_options || {}),
+                          [option.key || option.id]: value
+                        }
+                        onUpdate({
+                          design: {
+                            ...session.design!,
+                            product_options: newOptions
+                          }
+                        })
+                      }}
+                    >
+                      <Select.Trigger>
+                        <Select.Value placeholder={`Select ${option.title}`} />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {option.values.map((val: any) => (
+                          <Select.Item key={val.id || val.value} value={val.value || val.id}>
+                            {val.title}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select>
+                    <p className="text-xs text-ui-fg-muted mt-1">
+                      Required option for this product
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {session.artwork.artwork_url && (
               <div>
                 <p className="text-sm font-medium mb-2">Design Preview</p>
@@ -1305,52 +1725,123 @@ const ComposerUI = ({
           <div className="space-y-4">
             <Heading level="h3">Mockup Generation</Heading>
 
-            {/* Variant selector for mockup generation */}
-            {!session.mockups && session.product && selectedProduct && (
+            {/* Placement/Technique Selector */}
+            {!session.mockups?.mockup_urls?.length && session.product && session.mockups?.available_placement_groups && session.mockups.available_placement_groups.length > 0 && (
               <div className="rounded-lg border border-ui-border-base bg-ui-bg-base p-4 mb-4">
-                <p className="text-sm font-medium mb-3">Select variants for mockup generation</p>
-                <p className="text-xs text-ui-fg-subtle mb-4">
-                  Choose which variants to generate mockups for. Fewer variants = faster generation.
-                  <br />
-                  <strong>Estimated time:</strong> ~30 seconds per variant due to rate limits.
+                <p className="text-sm font-medium mb-3 text-ui-fg-base">Select Print Method</p>
+                <p className="text-xs text-ui-fg-subtle mb-3">
+                  Different placement and technique combinations may have different mockup styles available.
                 </p>
-                <div className="grid gap-2 max-h-64 overflow-y-auto">
-                  {selectedProduct.variants?.map((variant: any) => {
-                    const variantId = String(variant.id)
-                    const isSelectedForProduct = session.product?.selected_variant_ids?.includes(variantId)
-                    const isSelectedForMockup = session.mockups?.selected_variant_ids_for_mockups?.includes(variantId) ?? false
-
-                    if (!isSelectedForProduct) return null
+                <div className="grid gap-2">
+                  {session.mockups.available_placement_groups.map((group: any, idx: number) => {
+                    const isSelected =
+                      session.mockups?.selected_placement_group?.placement === group.placement &&
+                      session.mockups?.selected_placement_group?.technique === group.technique
+                    const stylesCount = group.mockup_styles?.length || 0
 
                     return (
                       <label
-                        key={variantId}
+                        key={idx}
                         className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition ${
-                          isSelectedForMockup
+                          isSelected
+                            ? 'border-blue-500 bg-ui-bg-highlight'
+                            : 'border-ui-border-base hover:border-ui-border-strong'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          checked={isSelected}
+                          onChange={() => {
+                            onUpdate({
+                              design: {
+                                ...session.design,
+                                placement: group.placement,
+                                technique: group.technique
+                              },
+                              mockups: {
+                                ...session.mockups,
+                                selected_placement_group: {
+                                  placement: group.placement,
+                                  technique: group.technique
+                                }
+                              }
+                            })
+                            // Clear selected mockup style IDs when changing placement group
+                            setSelectedMockupStyleIds([])
+                          }}
+                          className="w-4 h-4 flex-shrink-0"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-ui-fg-base">
+                            {group.display_name || `${group.placement} - ${group.technique}`}
+                          </div>
+                          <div className="text-xs text-ui-fg-subtle mt-1">
+                            {stylesCount} mockup style{stylesCount !== 1 ? 's' : ''} available
+                            {group.print_area_width && group.print_area_height && (
+                              <span> • Print area: {group.print_area_width}" × {group.print_area_height}"</span>
+                            )}
+                          </div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Mockup style selector */}
+            {!session.mockups?.mockup_urls?.length && session.product && session.mockups?.selected_placement_group &&
+             availableMockupStyles.length > 0 && (
+              <div className="rounded-lg border border-ui-border-base bg-ui-bg-base p-4 mb-4">
+                <p className="text-sm font-medium mb-3 text-ui-fg-base">Select Mockup Styles</p>
+                <p className="text-xs text-ui-fg-subtle mb-3">
+                  Styles marked as "Universal" work with all variants. Others may only work with specific variants.
+                </p>
+                <div className="grid gap-3 max-h-96 overflow-y-auto">
+                  {availableMockupStyles.map((style: any) => {
+                    const isSelected = selectedMockupStyleIds.includes(style.id)
+                    const isUniversal = !style.restricted_to_variants || style.restricted_to_variants.length === 0
+
+                    return (
+                      <label
+                        key={style.id}
+                        className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition ${
+                          isSelected
                             ? 'border-blue-500 bg-ui-bg-highlight'
                             : 'border-ui-border-base hover:border-ui-border-strong'
                         }`}
                       >
                         <input
                           type="checkbox"
-                          checked={isSelectedForMockup}
+                          checked={isSelected}
                           onChange={(e) => {
-                            const currentSelected = session.mockups?.selected_variant_ids_for_mockups || []
-                            const newSelected = e.target.checked
-                              ? [...currentSelected, variantId]
-                              : currentSelected.filter(id => id !== variantId)
-
-                            onUpdate({
-                              mockups: {
-                                ...(session.mockups || { mockup_urls: [] }),
-                                selected_variant_ids_for_mockups: newSelected
-                              }
-                            })
+                            setSelectedMockupStyleIds(prev =>
+                              e.target.checked
+                                ? [...prev, style.id]
+                                : prev.filter(id => id !== style.id)
+                            )
                           }}
-                          className="w-4 h-4"
+                          className="w-4 h-4 flex-shrink-0"
                         />
+                        {style.thumbnail_url && (
+                          <img
+                            src={style.thumbnail_url}
+                            alt={`${style.category_name} - ${style.view_name}`}
+                            className="w-16 h-16 object-cover rounded border border-ui-border-base"
+                          />
+                        )}
                         <div className="flex-1">
-                          <div className="font-medium text-sm">{variant.name}</div>
+                          <div className="font-medium text-sm text-ui-fg-base flex items-center gap-2">
+                            <span>{style.category_name || style.view_name || `Style ${style.id}`}</span>
+                            {isUniversal && (
+                              <Badge color="green" size="small">Universal</Badge>
+                            )}
+                          </div>
+                          {style.view_name && style.category_name && (
+                            <div className="text-xs text-ui-fg-subtle mt-1">
+                              {style.view_name}
+                            </div>
+                          )}
                         </div>
                       </label>
                     )
@@ -1358,27 +1849,27 @@ const ComposerUI = ({
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-xs text-ui-fg-subtle">
-                    {session.mockups?.selected_variant_ids_for_mockups?.length || 0} variant(s) selected
-                    {session.mockups?.selected_variant_ids_for_mockups?.length && (
-                      <span className="ml-2">
-                        (est. {Math.ceil((session.mockups.selected_variant_ids_for_mockups.length * 30) / 60)} min)
-                      </span>
-                    )}
+                    {selectedMockupStyleIds.length} style(s) selected
                   </p>
-                  <Button
-                    variant="secondary"
-                    size="small"
-                    onClick={() => {
-                      onUpdate({
-                        mockups: {
-                          ...(session.mockups || { mockup_urls: [] }),
-                          selected_variant_ids_for_mockups: session.product?.selected_variant_ids || []
-                        }
-                      })
-                    }}
-                  >
-                    Select All ({session.product?.selected_variant_ids?.length || 0})
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => setSelectedMockupStyleIds([])}
+                    >
+                      Clear All
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => {
+                        const allStyleIds = availableMockupStyles.map((s: any) => s.id)
+                        setSelectedMockupStyleIds(allStyleIds)
+                      }}
+                    >
+                      Select All
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1439,7 +1930,7 @@ const ComposerUI = ({
                 </p>
                 <Button
                   variant="primary"
-                  disabled={!session.product || generatingMockups || !(session.mockups?.selected_variant_ids_for_mockups?.length)}
+                  disabled={!session.product || generatingMockups}
                   onClick={generateMockups}
                 >
                   {generatingMockups ? (
@@ -1450,7 +1941,8 @@ const ComposerUI = ({
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Generate Mockups ({session.mockups?.selected_variant_ids_for_mockups?.length || 0})
+                      Generate Mockups
+                      {selectedMockupStyleIds.length > 0 && ` (${selectedMockupStyleIds.length} styles)`}
                     </>
                   )}
                 </Button>
@@ -1459,9 +1951,9 @@ const ComposerUI = ({
                     Select a product first to generate mockups
                   </p>
                 )}
-                {session.product && !(session.mockups?.selected_variant_ids_for_mockups?.length) && (
-                  <p className="text-xs text-ui-fg-muted mt-2">
-                    Select at least one variant above to generate mockups
+                {session.product && selectedMockupStyleIds.length === 0 && (
+                  <p className="text-xs text-ui-fg-subtle mt-2">
+                    💡 No styles selected - will use Printful's auto-selected styles
                   </p>
                 )}
               </div>

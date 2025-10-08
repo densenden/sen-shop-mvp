@@ -53,19 +53,10 @@ export class ProductImageService {
         throw new Error(`Failed to fetch image: ${response.status}`)
       }
       
-      const buffer = await response.arrayBuffer()
-      const contentType = response.headers.get('content-type') || 'image/jpeg'
-      const fileName = `imported-${Date.now()}.${contentType.split('/')[1] || 'jpg'}`
-      
-      const file = new File([buffer], fileName, { type: contentType })
-      
-      const uploadResult = await this.fileModuleService.uploadFiles([{
-        file,
-        fileName
-      }])
-      
-      console.log(`[ImageService] Image uploaded successfully:`, uploadResult[0]?.url)
-      return uploadResult[0]?.url || imageUrl
+      // For now, use Printful URLs directly instead of uploading to Medusa
+      // TODO: Implement proper file upload to Medusa file storage
+      console.log(`[ImageService] Using Printful URL directly:`, imageUrl)
+      return imageUrl
       
     } catch (error) {
       console.error(`[ImageService] Failed to download/upload image ${imageUrl}:`, error)

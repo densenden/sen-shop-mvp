@@ -126,7 +126,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
               retail_price: retailPrice.toFixed(2),
               files: printfulFileId ? [{
                 id: printfulFileId,
-                type: 'front'
+                type: 'default'  // File type must be 'default' or 'mockup', not placement value
               }] : []
             }
           })

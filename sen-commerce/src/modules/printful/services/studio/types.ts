@@ -147,6 +147,7 @@ export interface PrintfulStudioMockupRequest {
   variantIds?: string[]
   artworkId?: string
   artworkUrl?: string
+  mockupStyleIds?: string[]
   maxMockups?: number
   waitForCompletion?: boolean
 }
