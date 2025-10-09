@@ -2,11 +2,11 @@ import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Button, Input, Textarea, Select, Badge, Label, Container, Heading, Switch, IconButton, Text, Tabs } from "@medusajs/ui"
-import {
-  Package,
-  Download,
-  ArrowLeft,
-  Save,
+import { 
+  Package, 
+  Download, 
+  ArrowLeft, 
+  Save, 
   Image as ImageIcon,
   X,
   Check,
@@ -17,9 +17,7 @@ import {
   DollarSign,
   Box,
   Tag,
-  ExternalLink,
-  Upload,
-  Loader2
+  ExternalLink
 } from "lucide-react"
 
 interface Artwork {
@@ -113,9 +111,6 @@ const ProductDetailPage = () => {
   // Variants state
   const [variants, setVariants] = useState<ProductVariant[]>([])
 
-  // Image upload state
-  const [uploading, setUploading] = useState(false)
-
   useEffect(() => {
     fetchData()
   }, [id])
@@ -204,49 +199,6 @@ const ProductDetailPage = () => {
     const updated = { ...metadata }
     delete updated[key]
     setMetadata(updated)
-  }
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    setUploading(true)
-    setError("")
-
-    try {
-      const formData = new FormData()
-      Array.from(files).forEach((file) => {
-        formData.append('files', file)
-      })
-
-      const response = await fetch(`/admin/products/${id}/upload-images`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to upload images')
-      }
-
-      const result = await response.json()
-      console.log('Upload result:', result)
-
-      // Refresh product data to get updated images
-      await fetchData()
-
-      console.log(`Successfully uploaded ${result.files_processed || files.length} images`)
-    } catch (error) {
-      console.error("Error uploading images:", error)
-      setError(`Failed to upload images: ${error.message}`)
-    } finally {
-      setUploading(false)
-      // Reset the file input
-      if (e.target) {
-        e.target.value = ''
-      }
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -754,39 +706,18 @@ const ProductDetailPage = () => {
                 </div>
               )}
               
-              {/* Upload new images */}
+              {/* Upload new images placeholder */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <Text className="text-lg font-medium text-gray-600 mb-2">
-                  Upload Images
+                  Advanced Image Management
                 </Text>
                 <Text className="text-sm text-gray-500 mb-4">
-                  Upload additional product images (JPG, PNG, WebP)
+                  Upload, reorder, and manage product images
                 </Text>
-                <div className="relative inline-block">
-                  <input
-                    id="image-upload"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    disabled={uploading}
-                  />
-                  <Button variant="secondary" disabled={uploading}>
-                    {uploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Choose Files
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Button variant="secondary" disabled>
+                  Coming Soon
+                </Button>
               </div>
             </div>
           </Container>
