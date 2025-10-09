@@ -271,6 +271,8 @@ export async function POST(
               const variantId = String(variant.id)
               const retailPrice = session.pricing?.retail_prices?.[variantId] || variant.retail_price || "25.00"
 
+              console.log(`[create-product] Variant ${idx}: id=${variantId}, retail_price=${retailPrice}, name=${variant.name}`)
+
               return {
                 title: variant.name || `Variant ${idx + 1}`,
                 sku: variant.sku || `printful-${variant.id}`,
@@ -278,13 +280,11 @@ export async function POST(
                   amount: Math.round(parseFloat(retailPrice) * 100), // Convert to cents
                   currency_code: session.pricing?.currency?.toLowerCase() || 'usd'
                 }],
-                options: {
-                  size: variant.size || undefined,
-                  color: variant.color || undefined
-                },
                 metadata: {
                   printful_variant_id: variant.id,
-                  printful_sync_variant_id: variant.sync_variant_id
+                  printful_sync_variant_id: variant.sync_variant_id,
+                  size: variant.size || undefined,
+                  color: variant.color || undefined
                 }
               }
             })

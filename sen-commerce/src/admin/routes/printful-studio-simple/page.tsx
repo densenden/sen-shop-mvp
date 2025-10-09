@@ -12,6 +12,9 @@ import { Sparkles, Loader2, ArrowRight, ArrowLeft, Check, ExternalLink, Edit } f
 const PrintfulStudioComplete = () => {
   const [step, setStep] = useState(1)
   const [artworks, setArtworks] = useState<any[]>([])
+  const [allArtworks, setAllArtworks] = useState<any[]>([])
+  const [collections, setCollections] = useState<any[]>([])
+  const [selectedCollection, setSelectedCollection] = useState<string>("all")
   const [products, setProducts] = useState<any[]>([])
   const [selectedArtwork, setSelectedArtwork] = useState<any>(null)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
@@ -27,16 +30,42 @@ const PrintfulStudioComplete = () => {
   const [creating, setCreating] = useState(false)
   const [createdProduct, setCreatedProduct] = useState<any>(null)
   const [recentProducts, setRecentProducts] = useState<any[]>([])
+  const [generatingProgress, setGeneratingProgress] = useState("")
+  const [rateLimitTimer, setRateLimitTimer] = useState(0)
 
   // EUR conversion rate
   const EUR_RATE = 0.92
 
-  // Load artworks
+  // Load artworks and collections
   useEffect(() => {
-    fetch("/admin/printful-studio/v2/artworks", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => setArtworks(d.artworks || []))
+    Promise.all([
+      fetch("/admin/printful-studio/v2/artworks", { credentials: "include" }).then(r => r.json()),
+      fetch("/admin/artwork-collections", { credentials: "include" }).then(r => r.json())
+    ]).then(([artworkData, collectionsData]) => {
+      const artworksList = artworkData.artworks || []
+      setAllArtworks(artworksList)
+      setArtworks(artworksList)
+      setCollections(collectionsData || [])
+    })
   }, [])
+
+  // Filter artworks by collection
+  useEffect(() => {
+    if (selectedCollection === "all") {
+      setArtworks(allArtworks)
+    } else if (selectedCollection === "uncategorized") {
+      setArtworks(allArtworks.filter(a => !a.collection_id))
+    } else {
+      setArtworks(allArtworks.filter(a => a.collection_id === selectedCollection))
+    }
+  }, [selectedCollection, allArtworks])
+
+  // Load recent products when reaching step 5
+  useEffect(() => {
+    if (step === 5) {
+      loadRecentProducts()
+    }
+  }, [step])
 
   // Load products
   const loadProducts = () => {
@@ -87,11 +116,27 @@ const PrintfulStudioComplete = () => {
     return allStyles
   }
 
-  // Generate mockups
+  // Generate mockups with progress tracking
   const generatePreview = async () => {
     if (!selectedProduct || !selectedArtwork || selectedSizes.length === 0) return
     setLoading(true)
+    setGeneratingProgress("Initializing mockup generation...")
+
     try {
+      // Start countdown timer
+      setRateLimitTimer(30)
+      const timerInterval = setInterval(() => {
+        setRateLimitTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(timerInterval)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      setGeneratingProgress("Sending mockup request to Printful...")
+
       const res = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
         method: "POST",
         credentials: "include",
@@ -104,19 +149,35 @@ const PrintfulStudioComplete = () => {
           wait_for_completion: true
         })
       })
+
+      setGeneratingProgress("Processing response...")
       const data = await res.json()
-      setMockups(data.mockup_urls || [selectedArtwork.image_url])
+
+      clearInterval(timerInterval)
+      setRateLimitTimer(0)
+
+      const mockupUrls = data.mockup_urls || []
+      setGeneratingProgress(`Generated ${mockupUrls.length} mockup${mockupUrls.length !== 1 ? 's' : ''}!`)
+      setMockups(mockupUrls.length > 0 ? mockupUrls : [selectedArtwork.image_url])
 
       // Auto-fill details
       setTitle(`${selectedArtwork.title} - ${selectedProduct.name}`)
       setDescription(`Beautiful ${selectedProduct.name} featuring "${selectedArtwork.title}". High-quality print-on-demand product created with Printful. Each piece is made to order, ensuring freshness and reducing waste.`)
-      setStep(4)
+
+      setTimeout(() => {
+        setGeneratingProgress("")
+        setStep(4)
+      }, 1500)
     } catch (err) {
       console.error(err)
+      setGeneratingProgress("Error generating mockups")
       setMockups([selectedArtwork.image_url])
       setTitle(`${selectedArtwork.title} - ${selectedProduct.name}`)
       setDescription(`Beautiful ${selectedProduct.name} featuring "${selectedArtwork.title}".`)
-      setStep(4)
+      setTimeout(() => {
+        setGeneratingProgress("")
+        setStep(4)
+      }, 2000)
     } finally {
       setLoading(false)
     }
@@ -145,7 +206,8 @@ const PrintfulStudioComplete = () => {
       const retailPrices: any = {}
       selectedSizes.forEach(id => {
         const variant = selectedProduct.variants.find((v: any) => v.id === id)
-        retailPrices[String(id)] = parseFloat(variant?.price || "20") * (1 + markup / 100)
+        const basePrice = variant?.retail_price || variant?.price || "20.00"
+        retailPrices[String(id)] = parseFloat(basePrice) * (1 + markup / 100)
       })
 
       await fetch(`/admin/printful-studio/composer/${session.session_id}`, {
@@ -205,11 +267,15 @@ const PrintfulStudioComplete = () => {
   // Load recent products
   const loadRecentProducts = async () => {
     try {
-      const res = await fetch("/admin/products?limit=5", { credentials: "include" })
+      const res = await fetch(`/admin/products?limit=5&_=${Date.now()}`, {
+        credentials: "include",
+        cache: "no-cache"
+      })
       const data = await res.json()
+      console.log('[Studio] Loaded recent products:', data.products?.length || 0)
       setRecentProducts(data.products || [])
     } catch (err) {
-      console.error(err)
+      console.error('[Studio] Failed to load recent products:', err)
     }
   }
 
@@ -251,7 +317,47 @@ const PrintfulStudioComplete = () => {
           {/* Step 1 */}
           {step === 1 && (
             <div>
-              <Heading level="h2" className="mb-6">Choose Your Design</Heading>
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Heading level="h2">Choose Your Design</Heading>
+                  <div className="text-sm text-gray-500">{artworks.length} artworks</div>
+                </div>
+
+                {/* Visual Collection Selector */}
+                <div className="grid grid-cols-6 gap-3 mb-6">
+                  <div
+                    onClick={() => setSelectedCollection("all")}
+                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "all" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                  >
+                    <div className="w-full h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded mb-2 flex items-center justify-center text-white font-bold text-lg">ALL</div>
+                    <div className="text-xs font-medium truncate">All Artworks</div>
+                    <div className="text-xs text-gray-500">{allArtworks.length}</div>
+                  </div>
+                  <div
+                    onClick={() => setSelectedCollection("uncategorized")}
+                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "uncategorized" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                  >
+                    <div className="w-full h-20 bg-gray-200 rounded mb-2 flex items-center justify-center text-gray-500 text-xl">?</div>
+                    <div className="text-xs font-medium truncate">Uncategorized</div>
+                    <div className="text-xs text-gray-500">{allArtworks.filter(a => !a.collection_id).length}</div>
+                  </div>
+                  {collections.map(col => (
+                    <div
+                      key={col.id}
+                      onClick={() => setSelectedCollection(col.id)}
+                      className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                    >
+                      {col.thumbnail_url ? (
+                        <img src={col.thumbnail_url} className="w-full h-20 object-cover rounded mb-2" />
+                      ) : (
+                        <div className="w-full h-20 bg-gray-100 rounded mb-2" />
+                      )}
+                      <div className="text-xs font-medium truncate" title={col.name}>{col.name}</div>
+                      <div className="text-xs text-gray-500">{allArtworks.filter(a => a.collection_id === col.id).length}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-4 gap-4">
                 {artworks.map(art => (
                   <div
@@ -268,6 +374,11 @@ const PrintfulStudioComplete = () => {
                   </div>
                 ))}
               </div>
+              {artworks.length === 0 && (
+                <div className="text-center py-20 text-gray-500">
+                  <p>No artworks in this collection</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -315,7 +426,6 @@ const PrintfulStudioComplete = () => {
                         className="mr-2"
                       />
                       <div className="font-medium text-sm">{v.size || v.name.split("(")[1]?.replace(")", "") || v.name}</div>
-                      <div className="text-xs text-gray-500">${v.price}</div>
                     </label>
                   ))}
                 </div>
@@ -343,9 +453,9 @@ const PrintfulStudioComplete = () => {
                         {style.thumbnail_url ? (
                           <img src={style.thumbnail_url} className="w-full h-16 object-cover rounded mb-1" />
                         ) : (
-                          <div className="w-full h-16 bg-gray-100 rounded mb-1" />
+                          <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center text-gray-400 text-xs">No preview</div>
                         )}
-                        <div className="text-xs truncate">{style.category_name}</div>
+                        <div className="text-xs truncate font-medium">{style.name || style.category_name || style.title || `Style ${style.id}`}</div>
                         {style.isUniversal && <div className="text-xs text-green-600">✓ All</div>}
                       </label>
                     ))}
@@ -353,9 +463,24 @@ const PrintfulStudioComplete = () => {
                 </div>
               )}
 
-              <Button className="mt-6" disabled={selectedSizes.length === 0 || loading} onClick={generatePreview}>
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Generating...</> : <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>}
-              </Button>
+              {loading && (
+                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                  <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500" />
+                  <p className="text-lg font-medium text-blue-900 mb-2">{generatingProgress}</p>
+                  {rateLimitTimer > 0 && (
+                    <div className="text-sm text-blue-600">
+                      <p>Printful rate limit protection</p>
+                      <p className="font-mono text-2xl mt-2">{rateLimitTimer}s</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!loading && (
+                <Button className="mt-6" disabled={selectedSizes.length === 0} onClick={generatePreview}>
+                  Continue <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
             </div>
           )}
 
@@ -386,17 +511,29 @@ const PrintfulStudioComplete = () => {
                   </div>
                   <div className="border-t pt-4">
                     <Label className="mb-2 block">Prices:</Label>
-                    {selectedProduct.variants?.filter((v: any) => selectedSizes.includes(v.id)).map((v: any) => (
-                      <div key={v.id} className="flex justify-between text-sm py-1">
-                        <span>{v.size || v.name}</span>
-                        <span className="font-medium">{currency === "EUR" ? "€" : "$"}{calculatePrice(v.price).toFixed(2)}</span>
-                      </div>
-                    ))}
+                    {selectedProduct.variants?.filter((v: any) => selectedSizes.includes(v.id)).map((v: any) => {
+                      const basePrice = v.retail_price || v.price || "20.00"
+                      return (
+                        <div key={v.id} className="flex justify-between text-sm py-1">
+                          <span>{v.size || v.name}</span>
+                          <span className="font-medium">{currency === "EUR" ? "€" : "$"}{calculatePrice(basePrice).toFixed(2)}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
                 <div>
-                  <Label className="mb-2 block">Preview</Label>
-                  {mockups[0] && <img src={mockups[0]} className="w-full rounded-lg border" />}
+                  <Label className="mb-2 block">Mockups ({mockups.length})</Label>
+                  <div className="grid grid-cols-2 gap-3 max-h-[600px] overflow-y-auto">
+                    {mockups.map((url, idx) => (
+                      <div key={idx} className="relative">
+                        <img src={url} className="w-full rounded-lg border" alt={`Mockup ${idx + 1}`} />
+                        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          {idx + 1}/{mockups.length}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4 mt-6">
