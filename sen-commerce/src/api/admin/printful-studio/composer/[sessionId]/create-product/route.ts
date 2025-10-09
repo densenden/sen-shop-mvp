@@ -291,8 +291,8 @@ export async function POST(
 
             console.log('[create-product] Creating with variants:', variantData.length)
 
-            // Create Medusa product with variants
-            const medusaProduct = await productModule.createProducts({
+            // Create Medusa product with variants (createProducts returns array)
+            const medusaProducts = await productModule.createProducts([{
               title: session.details.product_title,
               description: session.details.product_description || '',
               status: medusa_status,
@@ -313,7 +313,9 @@ export async function POST(
                   catalog: images.length - mockupCount - variantCount
                 }
               }
-            })
+            }])
+
+            const medusaProduct = medusaProducts[0]
 
             console.log('[create-product] Medusa product created:', {
               id: medusaProduct.id,

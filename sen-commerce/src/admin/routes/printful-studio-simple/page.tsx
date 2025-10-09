@@ -97,23 +97,33 @@ const PrintfulStudioComplete = () => {
     }
   }
 
-  // Get compatible mockup styles
+  // Get mockup styles - show universal styles first, then variant-specific ones
   const getCompatibleStyles = () => {
-    if (!placementGroups.length || selectedSizes.length === 0) return []
+    if (!placementGroups.length) return []
 
     const allStyles: any[] = []
+    const universalStyles: any[] = []
+    const variantSpecificStyles: any[] = []
+
     placementGroups.forEach(group => {
       group.mockup_styles?.forEach((style: any) => {
         const isUniversal = !style.restricted_to_variants || style.restricted_to_variants.length === 0
-        const isCompatible = isUniversal || style.restricted_to_variants?.some((v: any) => selectedSizes.includes(Number(v)))
 
-        if (isCompatible) {
-          allStyles.push({ ...style, isUniversal })
+        if (isUniversal) {
+          // Universal styles work with all variants
+          universalStyles.push({ ...style, isUniversal: true, group: group.display_name })
+        } else if (selectedSizes.length > 0) {
+          // Only show variant-specific styles if variants are selected AND they match
+          const isCompatible = style.restricted_to_variants?.some((v: any) => selectedSizes.includes(Number(v)))
+          if (isCompatible) {
+            variantSpecificStyles.push({ ...style, isUniversal: false, group: group.display_name })
+          }
         }
       })
     })
 
-    return allStyles
+    // Show universal styles first, then variant-specific
+    return [...universalStyles, ...variantSpecificStyles]
   }
 
   // Generate mockups with progress tracking
@@ -123,19 +133,22 @@ const PrintfulStudioComplete = () => {
     setGeneratingProgress("Initializing mockup generation...")
 
     try {
-      // Start countdown timer
-      setRateLimitTimer(30)
+      // Estimate time: ~40 seconds per variant (includes Printful rate limiting)
+      const estimatedSeconds = Math.max(40, selectedSizes.length * 40)
+      setRateLimitTimer(estimatedSeconds)
+
+      const startTime = Date.now()
       const timerInterval = setInterval(() => {
-        setRateLimitTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(timerInterval)
-            return 0
-          }
-          return prev - 1
-        })
+        const elapsed = Math.floor((Date.now() - startTime) / 1000)
+        const remaining = Math.max(0, estimatedSeconds - elapsed)
+        setRateLimitTimer(remaining)
+
+        if (remaining === 0) {
+          clearInterval(timerInterval)
+        }
       }, 1000)
 
-      setGeneratingProgress("Sending mockup request to Printful...")
+      setGeneratingProgress(`Generating mockups for ${selectedSizes.length} variant${selectedSizes.length > 1 ? 's' : ''}...`)
 
       const res = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
         method: "POST",
@@ -150,7 +163,7 @@ const PrintfulStudioComplete = () => {
         })
       })
 
-      setGeneratingProgress("Processing response...")
+      setGeneratingProgress("Processing mockups...")
       const data = await res.json()
 
       clearInterval(timerInterval)
@@ -432,12 +445,17 @@ const PrintfulStudioComplete = () => {
                 <p className="mt-3 text-sm text-gray-600">{selectedSizes.length} selected</p>
               </div>
 
-              {selectedSizes.length > 0 && (
-                <div>
-                  <Label className="mb-3 block">Mockup Styles (Optional)</Label>
+              <div>
+                <Label className="mb-3 block">
+                  Mockup Styles (Optional)
+                  <span className="ml-2 text-xs text-gray-500">
+                    {compatibleStyles.length} available
+                  </span>
+                </Label>
+                {compatibleStyles.length > 0 ? (
                   <div className="grid grid-cols-6 gap-3 max-h-96 overflow-y-auto">
                     {compatibleStyles.map((style: any) => (
-                      <label key={style.id} className={`border-2 rounded-lg p-2 cursor-pointer ${selectedMockupStyles.includes(style.id) ? "border-blue-500" : "border-gray-200"}`}>
+                      <label key={style.id} className={`border-2 rounded-lg p-2 cursor-pointer ${selectedMockupStyles.includes(style.id) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
                         <input
                           type="checkbox"
                           checked={selectedMockupStyles.includes(style.id)}
@@ -451,17 +469,31 @@ const PrintfulStudioComplete = () => {
                           className="mb-2"
                         />
                         {style.thumbnail_url ? (
-                          <img src={style.thumbnail_url} className="w-full h-16 object-cover rounded mb-1" />
+                          <img src={style.thumbnail_url} className="w-full h-16 object-cover rounded mb-1" alt={style.view_name || style.category_name} />
                         ) : (
                           <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center text-gray-400 text-xs">No preview</div>
                         )}
-                        <div className="text-xs truncate font-medium">{style.name || style.category_name || style.title || `Style ${style.id}`}</div>
-                        {style.isUniversal && <div className="text-xs text-green-600">✓ All</div>}
+                        <div className="text-xs truncate font-medium" title={`${style.category_name || ''} - ${style.view_name || ''}`}>
+                          {style.view_name || style.category_name || style.name || `Style ${style.id}`}
+                        </div>
+                        {style.isUniversal && <div className="text-xs text-green-600 font-medium">✓ All variants</div>}
+                        {!style.isUniversal && selectedSizes.length > 0 && <div className="text-xs text-blue-600">Specific</div>}
                       </label>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+                    {selectedSizes.length === 0 ? (
+                      <p>Select sizes above to see compatible mockup styles</p>
+                    ) : (
+                      <p>No mockup styles available for this product</p>
+                    )}
+                  </div>
+                )}
+                {selectedMockupStyles.length > 0 && (
+                  <p className="mt-3 text-sm text-blue-600">{selectedMockupStyles.length} style{selectedMockupStyles.length > 1 ? 's' : ''} selected</p>
+                )}
+              </div>
 
               {loading && (
                 <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
