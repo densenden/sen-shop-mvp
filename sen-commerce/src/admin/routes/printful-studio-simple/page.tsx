@@ -470,28 +470,39 @@ const PrintfulStudioComplete = () => {
             <div>
               <Heading level="h2" className="mb-6">Select Sizes & Mockup Styles</Heading>
               <div className="mb-8">
-                <Label className="mb-3 block">Available Sizes</Label>
-                <div className="grid grid-cols-5 gap-3">
-                  {selectedProduct.variants?.map((v: any) => (
-                    <label key={v.id} className={`border-2 rounded-lg p-3 cursor-pointer ${selectedSizes.includes(v.id) ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
-                      <input
-                        type="checkbox"
-                        checked={selectedSizes.includes(v.id)}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setSelectedSizes([...selectedSizes, v.id])
-                          } else {
-                            setSelectedSizes(selectedSizes.filter(id => id !== v.id))
-                            setSelectedMockupStyles([])
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <div className="font-medium text-sm">{v.size || v.name.split("(")[1]?.replace(")", "") || v.name}</div>
-                    </label>
-                  ))}
+                <Label className="mb-3 block">Available Variants</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {selectedProduct.variants?.map((v: any) => {
+                    // Build variant display name from size and color
+                    const variantParts = []
+                    if (v.size) variantParts.push(v.size)
+                    if (v.color) variantParts.push(v.color)
+                    const displayName = variantParts.length > 0 ? variantParts.join(" - ") : (v.name || `Variant ${v.id}`)
+
+                    return (
+                      <label key={v.id} className={`border-2 rounded-lg p-3 cursor-pointer transition-colors ${selectedSizes.includes(v.id) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedSizes.includes(v.id)}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setSelectedSizes([...selectedSizes, v.id])
+                            } else {
+                              setSelectedSizes(selectedSizes.filter(id => id !== v.id))
+                              setSelectedMockupStyles([])
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <div className="font-medium text-sm">{displayName}</div>
+                        {v.color && (
+                          <div className="text-xs text-gray-500 mt-1">{v.color}</div>
+                        )}
+                      </label>
+                    )
+                  })}
                 </div>
-                <p className="mt-3 text-sm text-gray-600">{selectedSizes.length} selected</p>
+                <p className="mt-3 text-sm text-gray-600">{selectedSizes.length} variant{selectedSizes.length !== 1 ? 's' : ''} selected</p>
               </div>
 
               <div>
