@@ -197,18 +197,29 @@ const PrintfulStudioComplete = () => {
 
       setGeneratingProgress(`Generating mockups for ${selectedSizes.length} variant${selectedSizes.length > 1 ? 's' : ''}...`)
 
+      const requestBody = {
+        artwork_url: selectedArtwork.image_url,
+        artwork_id: selectedArtwork.id,
+        variant_ids: selectedSizes,
+        mockup_style_ids: selectedMockupStyles.length > 0 ? selectedMockupStyles : undefined,
+        product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
+        wait_for_completion: true
+      }
+
+      console.log('[Studio] Sending mockup generation request:', {
+        product_id: selectedProduct.id,
+        variant_count: selectedSizes.length,
+        has_mockup_styles: selectedMockupStyles.length > 0,
+        product_options: productOptions,
+        product_options_count: Object.keys(productOptions).length,
+        sending_options: requestBody.product_options
+      })
+
       const res = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          artwork_url: selectedArtwork.image_url,
-          artwork_id: selectedArtwork.id,
-          variant_ids: selectedSizes,
-          mockup_style_ids: selectedMockupStyles.length > 0 ? selectedMockupStyles : undefined,
-          product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
-          wait_for_completion: true
-        })
+        body: JSON.stringify(requestBody)
       })
 
       setGeneratingProgress("Processing mockups...")
