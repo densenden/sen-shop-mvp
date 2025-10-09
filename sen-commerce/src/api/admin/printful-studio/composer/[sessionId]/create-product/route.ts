@@ -326,27 +326,47 @@ export async function POST(
             result.medusa_product = medusaProduct
 
             // Link artwork to product by updating product_ids array
-            if (session.artwork.artwork_id && medusaProduct.id) {
+            const artworkId = session.artwork?.artwork_id
+
+            console.log('[create-product] Artwork linking check:', {
+              artwork_id: artworkId,
+              artwork_id_type: typeof artworkId,
+              artwork_id_truthy: !!artworkId,
+              medusa_product_id: medusaProduct.id,
+              session_artwork: session.artwork
+            })
+
+            if (artworkId && artworkId !== '' && medusaProduct.id) {
               try {
                 const artworkService = req.scope.resolve("artworkModuleService")
 
                 // Get current artwork to read existing product_ids
-                const artwork = await artworkService.retrieveArtwork(session.artwork.artwork_id)
+                const artwork = await artworkService.retrieveArtwork(artworkId)
                 const currentProductIds = Array.isArray(artwork.product_ids) ? artwork.product_ids : []
+
+                console.log('[create-product] Current artwork product_ids:', currentProductIds)
 
                 // Add new Medusa product ID if not already present
                 if (!currentProductIds.includes(medusaProduct.id)) {
-                  await artworkService.updateArtworks(session.artwork.artwork_id, {
+                  await artworkService.updateArtworks(artworkId, {
                     product_ids: [...currentProductIds, medusaProduct.id]
                   })
-                  console.log('[create-product] Linked artwork to Medusa product:', {
-                    artwork_id: session.artwork.artwork_id,
-                    product_id: medusaProduct.id
+                  console.log('[create-product] ✅ Linked artwork to Medusa product:', {
+                    artwork_id: artworkId,
+                    product_id: medusaProduct.id,
+                    new_product_ids: [...currentProductIds, medusaProduct.id]
                   })
+                } else {
+                  console.log('[create-product] Product already linked to artwork')
                 }
               } catch (error) {
-                console.warn('[create-product] Failed to link artwork to product:', error)
+                console.error('[create-product] ❌ Failed to link artwork to product:', error)
               }
+            } else {
+              console.warn('[create-product] ⚠️  Skipping artwork linking - artwork_id is missing or empty:', {
+                artwork_id: artworkId,
+                has_medusa_product: !!medusaProduct.id
+              })
             }
           }
         } catch (error: any) {

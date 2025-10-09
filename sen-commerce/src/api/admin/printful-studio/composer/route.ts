@@ -44,6 +44,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       catalog_product_id?: string
     }
 
+    console.log('[composer] Creating session with:', {
+      artwork_id,
+      artwork_id_type: typeof artwork_id,
+      catalog_product_id
+    })
+
     const sessionId = randomUUID()
     const now = new Date().toISOString()
 
