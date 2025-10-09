@@ -111,7 +111,7 @@ const ArtworksList = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Artworks",
+  label: "02 Artworks",
   icon: Photo,
 })
 

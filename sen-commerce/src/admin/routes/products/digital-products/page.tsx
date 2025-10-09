@@ -326,7 +326,7 @@ const DigitalProductsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Digital Files",
+  label: "04 Digital Products",
   icon: CloudArrowUp,
 })
 

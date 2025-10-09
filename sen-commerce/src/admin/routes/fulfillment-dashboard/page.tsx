@@ -377,7 +377,7 @@ const FulfillmentDashboardPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Fulfillment",
+  label: "05 POD Fulfillment",
   icon: Truck,
 })
 

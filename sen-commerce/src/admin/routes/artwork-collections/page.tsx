@@ -163,7 +163,7 @@ const ArtworkCollectionsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Artwork Collections",
+  label: "01 Artwork Collections",
   icon: Swatch,
 })
 

@@ -1998,6 +1998,7 @@ const ComposerUI = ({
 export const config = defineRouteConfig({
   label: "Printful Studio",
   icon: BookOpen,
+  hidden: true, // Deprecated - use printful-studio-simple instead
 })
 
 export default PrintfulStudioPage

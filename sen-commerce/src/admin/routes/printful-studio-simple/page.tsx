@@ -673,7 +673,7 @@ const PrintfulStudioComplete = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Printful Studio"
+  label: "03 POD Studio"
 })
 
 export default PrintfulStudioComplete

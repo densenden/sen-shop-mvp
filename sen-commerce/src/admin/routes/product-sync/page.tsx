@@ -656,6 +656,7 @@ const ProductSyncPage = () => {
 export const config = defineRouteConfig({
   label: "Product Sync",
   icon: Database,
+  hidden: true, // Deprecated - hidden from menu
 })
 
 export default ProductSyncPage
