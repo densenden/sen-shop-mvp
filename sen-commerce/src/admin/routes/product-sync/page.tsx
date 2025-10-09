@@ -653,10 +653,11 @@ const ProductSyncPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Product Sync",
-  icon: Database,
-  hidden: true, // Deprecated - hidden from menu
-})
+// Removed from sidebar - deprecated feature
+// To hide from sidebar, don't export config
+// export const config = defineRouteConfig({
+//   label: "Product Sync",
+//   icon: Database,
+// })
 
 export default ProductSyncPage

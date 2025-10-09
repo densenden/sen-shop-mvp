@@ -1995,10 +1995,11 @@ const ComposerUI = ({
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Printful Studio",
-  icon: BookOpen,
-  hidden: true, // Deprecated - use printful-studio-simple instead
-})
+// Removed from sidebar - use printful-studio-simple instead
+// To hide from sidebar, don't export config
+// export const config = defineRouteConfig({
+//   label: "Printful Studio",
+//   icon: BookOpen,
+// })
 
 export default PrintfulStudioPage
