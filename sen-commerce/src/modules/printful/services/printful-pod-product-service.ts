@@ -1002,13 +1002,24 @@ export class PrintfulPodProductService extends MedusaService({
           // Collect all mockup URLs from all tasks
           const allMockups = statuses.flatMap(s => s.mockups || [])
           const urls = allMockups.map(m => m.mockup_url)
+
           console.log('[PrintfulService] ✅ All mockups completed:', {
             task_count: taskIds.length,
             total_mockups: urls.length,
             expected_variants: variantIds.length,
+            mockup_style_ids_requested: mockupStyleIds?.length || 'auto-select',
+            expected_with_styles: mockupStyleIds?.length ? variantIds.length * mockupStyleIds.length : variantIds.length,
             poll_count: pollCount,
             total_time_s: Math.round((Date.now() - startTime) / 1000)
           })
+
+          console.log('[PrintfulService] Mockup details:', allMockups.map((m, idx) => ({
+            index: idx + 1,
+            variant_id: m.variant_id,
+            mockup_style_id: m.mockup_style_id || 'not provided',
+            url: m.mockup_url
+          })))
+
           return urls
         }
 
