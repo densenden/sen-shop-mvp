@@ -269,9 +269,17 @@ export async function POST(
             // Create variants data from Printful product
             const variantData = (fullProduct.variants || []).map((variant: any, idx: number) => {
               const variantId = String(variant.id)
-              const retailPrice = session.pricing?.retail_prices?.[variantId] || variant.retail_price || "25.00"
+              const sessionPrice = session.pricing?.retail_prices?.[variantId]
+              const retailPrice = sessionPrice || variant.retail_price || "25.00"
+              const priceInCents = Math.round(parseFloat(String(retailPrice)) * 100)
 
-              console.log(`[create-product] Variant ${idx}: id=${variantId}, retail_price=${retailPrice}, name=${variant.name}`)
+              console.log(`[create-product] Variant ${idx}:`, {
+                id: variantId,
+                session_price: sessionPrice,
+                retail_price: retailPrice,
+                price_in_cents: priceInCents,
+                name: variant.name
+              })
 
               return {
                 title: variant.name || `Variant ${idx + 1}`,
@@ -326,18 +334,27 @@ export async function POST(
             result.medusa_product_id = medusaProduct.id
             result.medusa_product = medusaProduct
 
-            // Link artwork to product
-            if (session.artwork.artwork_id) {
+            // Link artwork to product by updating product_ids array
+            if (session.artwork.artwork_id && medusaProduct.id) {
               try {
                 const artworkService = req.scope.resolve("artworkModuleService")
-                await artworkService.createArtworkProductRelation({
-                  artwork_id: session.artwork.artwork_id,
-                  product_id: result.printful_product_id,
-                  product_type: 'printful_pod',
-                  is_primary: true
-                })
+
+                // Get current artwork to read existing product_ids
+                const artwork = await artworkService.retrieveArtwork(session.artwork.artwork_id)
+                const currentProductIds = Array.isArray(artwork.product_ids) ? artwork.product_ids : []
+
+                // Add new Medusa product ID if not already present
+                if (!currentProductIds.includes(medusaProduct.id)) {
+                  await artworkService.updateArtworks(session.artwork.artwork_id, {
+                    product_ids: [...currentProductIds, medusaProduct.id]
+                  })
+                  console.log('[create-product] Linked artwork to Medusa product:', {
+                    artwork_id: session.artwork.artwork_id,
+                    product_id: medusaProduct.id
+                  })
+                }
               } catch (error) {
-                console.warn('Failed to link artwork to product:', error)
+                console.warn('[create-product] Failed to link artwork to product:', error)
               }
             }
           }
