@@ -352,8 +352,6 @@ const PrintfulStudioComplete = () => {
     setCreatedProduct(null)
   }
 
-  const compatibleStyles = getCompatibleStyles()
-
   return (
     <Container>
       <div className="max-w-7xl mx-auto py-8 space-y-6">
