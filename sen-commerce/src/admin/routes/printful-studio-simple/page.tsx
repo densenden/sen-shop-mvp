@@ -76,6 +76,49 @@ const PrintfulStudioComplete = () => {
     })
   }, [placementGroups])
 
+  // Calculate compatible styles whenever relevant state changes
+  const compatibleStyles = (() => {
+    if (!placementGroups.length) {
+      console.log('[Studio] No placement groups available')
+      return []
+    }
+
+    const universalStyles: any[] = []
+    const variantSpecificStyles: any[] = []
+
+    console.log('[Studio] Calculating compatible styles:', {
+      placement_groups: placementGroups.length,
+      selected_sizes: selectedSizes.length,
+      first_group_has_styles: placementGroups[0]?.mockup_styles?.length || 0
+    })
+
+    placementGroups.forEach(group => {
+      group.mockup_styles?.forEach((style: any) => {
+        const isUniversal = !style.restricted_to_variants || style.restricted_to_variants.length === 0
+
+        if (isUniversal) {
+          // Universal styles work with all variants
+          universalStyles.push({ ...style, isUniversal: true, group: group.display_name })
+        } else if (selectedSizes.length > 0) {
+          // Only show variant-specific styles if variants are selected AND they match
+          const isCompatible = style.restricted_to_variants?.some((v: any) => selectedSizes.includes(Number(v)))
+          if (isCompatible) {
+            variantSpecificStyles.push({ ...style, isUniversal: false, group: group.display_name })
+          }
+        }
+      })
+    })
+
+    console.log('[Studio] Compatible styles calculated:', {
+      universal: universalStyles.length,
+      variant_specific: variantSpecificStyles.length,
+      total: universalStyles.length + variantSpecificStyles.length
+    })
+
+    // Show universal styles first, then variant-specific
+    return [...universalStyles, ...variantSpecificStyles]
+  })()
+
   // Load products
   const loadProducts = () => {
     setLoading(true)
@@ -128,50 +171,6 @@ const PrintfulStudioComplete = () => {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Get mockup styles - show universal styles first, then variant-specific ones
-  const getCompatibleStyles = () => {
-    if (!placementGroups.length) {
-      console.log('[Studio] No placement groups available')
-      return []
-    }
-
-    const allStyles: any[] = []
-    const universalStyles: any[] = []
-    const variantSpecificStyles: any[] = []
-
-    console.log('[Studio] Getting compatible styles:', {
-      placement_groups: placementGroups.length,
-      selected_sizes: selectedSizes.length,
-      first_group_has_styles: placementGroups[0]?.mockup_styles?.length || 0
-    })
-
-    placementGroups.forEach(group => {
-      group.mockup_styles?.forEach((style: any) => {
-        const isUniversal = !style.restricted_to_variants || style.restricted_to_variants.length === 0
-
-        if (isUniversal) {
-          // Universal styles work with all variants
-          universalStyles.push({ ...style, isUniversal: true, group: group.display_name })
-        } else if (selectedSizes.length > 0) {
-          // Only show variant-specific styles if variants are selected AND they match
-          const isCompatible = style.restricted_to_variants?.some((v: any) => selectedSizes.includes(Number(v)))
-          if (isCompatible) {
-            variantSpecificStyles.push({ ...style, isUniversal: false, group: group.display_name })
-          }
-        }
-      })
-    })
-
-    console.log('[Studio] Compatible styles found:', {
-      universal: universalStyles.length,
-      variant_specific: variantSpecificStyles.length,
-      total: universalStyles.length + variantSpecificStyles.length
-    })
-
-    // Show universal styles first, then variant-specific
-    return [...universalStyles, ...variantSpecificStyles]
   }
 
   // Generate mockups with progress tracking
