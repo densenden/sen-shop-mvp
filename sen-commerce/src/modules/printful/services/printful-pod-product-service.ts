@@ -817,9 +817,11 @@ export class PrintfulPodProductService extends MedusaService({
       products: products
     }
 
-    // Add mockup_style_ids if provided by user
+    // Add mockup_style_ids at root level (Printful V2 API accepts both locations)
+    // When set at root, it applies to all products
     if (mockupStyleIds && mockupStyleIds.length > 0) {
       requestData.mockup_style_ids = mockupStyleIds.map(id => parseInt(id, 10))
+      console.log('[PrintfulService] Setting mockup_style_ids at root level:', requestData.mockup_style_ids)
     }
 
     console.log('[PrintfulService] Generating mockups with V2 mockup-tasks API:', {
