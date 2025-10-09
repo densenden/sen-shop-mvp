@@ -21,6 +21,7 @@ const PrintfulStudioComplete = () => {
   const [selectedSizes, setSelectedSizes] = useState<number[]>([])
   const [selectedMockupStyles, setSelectedMockupStyles] = useState<number[]>([])
   const [placementGroups, setPlacementGroups] = useState<any[]>([])
+  const [productOptions, setProductOptions] = useState<Record<string, any>>({})
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [markup, setMarkup] = useState(50)
@@ -101,8 +102,23 @@ const PrintfulStudioComplete = () => {
         first_group: stylesData.styles?.[0]
       })
 
+      console.log('[Studio] Product options:', data.product.product_options)
+
       setSelectedProduct(data.product)
       setPlacementGroups(stylesData.styles || [])
+
+      // Initialize product options with defaults if they exist
+      if (data.product.product_options && Array.isArray(data.product.product_options)) {
+        const defaultOptions: Record<string, any> = {}
+        data.product.product_options.forEach((option: any) => {
+          if (option.values && option.values.length > 0) {
+            // Set first value as default
+            defaultOptions[option.key] = option.values[0].id || option.values[0]
+          }
+        })
+        setProductOptions(defaultOptions)
+        console.log('[Studio] Initialized product options:', defaultOptions)
+      }
 
       console.log('[Studio] Set placement groups:', stylesData.styles?.length || 0)
 
@@ -191,6 +207,7 @@ const PrintfulStudioComplete = () => {
           artwork_id: selectedArtwork.id,
           variant_ids: selectedSizes,
           mockup_style_ids: selectedMockupStyles.length > 0 ? selectedMockupStyles : undefined,
+          product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
           wait_for_completion: true
         })
       })
