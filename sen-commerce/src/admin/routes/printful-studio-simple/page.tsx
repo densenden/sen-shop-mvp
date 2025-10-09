@@ -67,6 +67,14 @@ const PrintfulStudioComplete = () => {
     }
   }, [step])
 
+  // Debug: Log when placementGroups changes
+  useEffect(() => {
+    console.log('[Studio] placementGroups changed:', {
+      count: placementGroups.length,
+      first: placementGroups[0]
+    })
+  }, [placementGroups])
+
   // Load products
   const loadProducts = () => {
     setLoading(true)
@@ -87,11 +95,20 @@ const PrintfulStudioComplete = () => {
       const stylesRes = await fetch(`/admin/printful-studio/v2/catalog/${product.id}/mockup-styles`, { credentials: "include" })
       const stylesData = await stylesRes.json()
 
+      console.log('[Studio] Fetched mockup styles:', {
+        product_id: product.id,
+        styles_count: stylesData.styles?.length || 0,
+        first_group: stylesData.styles?.[0]
+      })
+
       setSelectedProduct(data.product)
       setPlacementGroups(stylesData.styles || [])
+
+      console.log('[Studio] Set placement groups:', stylesData.styles?.length || 0)
+
       setStep(3)
     } catch (err) {
-      console.error(err)
+      console.error('[Studio] Error loading product:', err)
     } finally {
       setLoading(false)
     }
@@ -99,11 +116,20 @@ const PrintfulStudioComplete = () => {
 
   // Get mockup styles - show universal styles first, then variant-specific ones
   const getCompatibleStyles = () => {
-    if (!placementGroups.length) return []
+    if (!placementGroups.length) {
+      console.log('[Studio] No placement groups available')
+      return []
+    }
 
     const allStyles: any[] = []
     const universalStyles: any[] = []
     const variantSpecificStyles: any[] = []
+
+    console.log('[Studio] Getting compatible styles:', {
+      placement_groups: placementGroups.length,
+      selected_sizes: selectedSizes.length,
+      first_group_has_styles: placementGroups[0]?.mockup_styles?.length || 0
+    })
 
     placementGroups.forEach(group => {
       group.mockup_styles?.forEach((style: any) => {
@@ -120,6 +146,12 @@ const PrintfulStudioComplete = () => {
           }
         }
       })
+    })
+
+    console.log('[Studio] Compatible styles found:', {
+      universal: universalStyles.length,
+      variant_specific: variantSpecificStyles.length,
+      total: universalStyles.length + variantSpecificStyles.length
     })
 
     // Show universal styles first, then variant-specific
@@ -454,8 +486,8 @@ const PrintfulStudioComplete = () => {
                 </Label>
                 {compatibleStyles.length > 0 ? (
                   <div className="grid grid-cols-6 gap-3 max-h-96 overflow-y-auto">
-                    {compatibleStyles.map((style: any) => (
-                      <label key={style.id} className={`border-2 rounded-lg p-2 cursor-pointer ${selectedMockupStyles.includes(style.id) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+                    {compatibleStyles.map((style: any, idx: number) => (
+                      <label key={`${style.id}-${style.group || ''}-${idx}`} className={`border-2 rounded-lg p-2 cursor-pointer ${selectedMockupStyles.includes(style.id) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
                         <input
                           type="checkbox"
                           checked={selectedMockupStyles.includes(style.id)}
