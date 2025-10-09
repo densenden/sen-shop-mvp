@@ -103,11 +103,14 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     }
 
     // Format response - only use fields that exist in the artwork model
+    // Use watermarked image URL for storefront
+    const baseUrl = `${req.protocol}://${req.get('host')}`
     const response = {
       id: artwork.id,
       title: artwork.title,
       description: artwork.description,
-      image_url: artwork.image_url,
+      image_url: `${baseUrl}/store/artworks/${artwork.id}/image`, // Watermarked version
+      image_url_original: artwork.image_url, // Keep original for reference
       artwork_collection_id: artwork.artwork_collection_id,
       products: relatedProducts
     }

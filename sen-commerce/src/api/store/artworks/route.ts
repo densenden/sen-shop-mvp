@@ -58,8 +58,12 @@ export const GET = async (
             }
           }
 
+          // Generate watermarked image URL
+          const baseUrl = `${req.protocol}://${req.get('host')}`
           return {
             ...artwork,
+            image_url: `${baseUrl}/store/artworks/${artwork.id}/image`, // Watermarked version
+            image_url_original: artwork.image_url, // Keep original for reference
             products,
           }
         })
