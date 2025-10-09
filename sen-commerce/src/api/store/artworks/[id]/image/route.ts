@@ -5,6 +5,9 @@ import fetch from "node-fetch"
 import path from "path"
 import fs from "fs"
 
+// Disable authentication for this public image endpoint
+export const AUTHENTICATE = false
+
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
     const { id } = req.params
