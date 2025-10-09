@@ -321,7 +321,30 @@ export class PrintfulPodProductService extends MedusaService({
       const techniques = catalogProduct.techniques || []
 
       // Extract available product options (e.g., stitch_color)
-      const productOptions = catalogProduct.options || []
+      let productOptions = catalogProduct.options || []
+
+      // Printful V2 catalog API doesn't always return product options
+      // Add hardcoded defaults for products that require specific options
+      const PRODUCT_OPTION_DEFAULTS: Record<string, Array<{ key: string; values: Array<{ id: string; name: string }> }>> = {
+        '83': [ // All-Over Print Basic Pillow
+          {
+            key: 'stitch_color',
+            values: [
+              { id: 'white', name: 'White' },
+              { id: 'black', name: 'Black' }
+            ]
+          }
+        ]
+      }
+
+      // If no options returned but we have defaults for this product, use them
+      if (productOptions.length === 0 && PRODUCT_OPTION_DEFAULTS[productId]) {
+        productOptions = PRODUCT_OPTION_DEFAULTS[productId]
+        console.log(`[PrintfulService] Applied default product options for product ${productId}:`, productOptions)
+      }
+
+      // Attach product_options to catalogProduct for frontend access
+      catalogProduct.product_options = productOptions
 
       console.log(`[PrintfulService] V2 Catalog product details:`)
       console.log(`  - ID: ${catalogProduct.id}`)
@@ -330,7 +353,7 @@ export class PrintfulPodProductService extends MedusaService({
       console.log(`  - Variants: ${catalogProduct.variants?.length || 0}`)
       console.log(`  - Placements: ${placements.length}`, placements.map((p: any) => p.placement || p.id || p))
       console.log(`  - Techniques: ${techniques.length}`, techniques.map((t: any) => t.id || t.technique || t))
-      console.log(`  - Product Options: ${productOptions.length}`, productOptions.map((o: any) => o.id || o.key))
+      console.log(`  - Product Options: ${productOptions.length}`, productOptions.map((o: any) => o.key || o.id))
 
       return catalogProduct
     } catch (error) {
