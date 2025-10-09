@@ -89,11 +89,24 @@ const PrintfulStudioComplete = () => {
     console.log('[Studio] Calculating compatible styles:', {
       placement_groups: placementGroups.length,
       selected_sizes: selectedSizes.length,
-      first_group_has_styles: placementGroups[0]?.mockup_styles?.length || 0
+      first_group_has_styles: placementGroups[0]?.mockup_styles?.length || 0,
+      first_style_sample: placementGroups[0]?.mockup_styles?.[0]
     })
 
-    placementGroups.forEach(group => {
-      group.mockup_styles?.forEach((style: any) => {
+    placementGroups.forEach((group, groupIdx) => {
+      group.mockup_styles?.forEach((style: any, styleIdx: number) => {
+        // Debug first few styles
+        if (groupIdx === 0 && styleIdx < 3) {
+          console.log(`[Studio] Style ${styleIdx}:`, {
+            id: style.id,
+            view_name: style.view_name,
+            has_restricted: 'restricted_to_variants' in style,
+            restricted_to_variants: style.restricted_to_variants,
+            restricted_length: style.restricted_to_variants?.length,
+            selected_sizes: selectedSizes
+          })
+        }
+
         const isUniversal = !style.restricted_to_variants || style.restricted_to_variants.length === 0
 
         if (isUniversal) {
