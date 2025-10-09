@@ -224,45 +224,36 @@ export async function POST(
             const { Modules } = await import("@medusajs/framework/utils")
             const productModule = req.scope.resolve(Modules.PRODUCT)
 
-            // Collect all images
+            // Collect all images: mockups + watermarked artwork (no original print files)
             const images: string[] = []
             let mockupCount = 0
-            let variantCount = 0
 
-            // Add mockups first (primary images)
+            // Add mockups first (all selected mockups)
             if (mockupUrls.length > 0) {
               images.push(...mockupUrls)
               mockupCount = mockupUrls.length
+              console.log('[create-product] Added mockups to images:', mockupCount)
             }
 
-            // Add product thumbnail
-            if (fullProduct.thumbnail_url && !images.includes(fullProduct.thumbnail_url)) {
-              images.push(fullProduct.thumbnail_url)
+            // Add watermarked artwork URL (NOT original print file)
+            if (session.artwork.artwork_id) {
+              const baseUrl = `${req.protocol}://${req.get('host')}`
+              const watermarkedArtworkUrl = `${baseUrl}/store/artworks/${session.artwork.artwork_id}/image`
+              images.push(watermarkedArtworkUrl)
+              console.log('[create-product] Added watermarked artwork:', watermarkedArtworkUrl)
             }
 
-            // Add variant images
-            if (Array.isArray(fullProduct.variants)) {
-              fullProduct.variants.forEach((variant: any) => {
-                if (variant.image && !images.includes(variant.image)) {
-                  images.push(variant.image)
-                  variantCount++
-                }
-                if (Array.isArray(variant.files)) {
-                  variant.files.forEach((file: any) => {
-                    const url = file.preview_url || file.thumbnail_url || file.url
-                    if (url && !images.includes(url)) {
-                      images.push(url)
-                      variantCount++
-                    }
-                  })
-                }
-              })
-            }
+            console.log('[create-product] Final images collection:', {
+              total: images.length,
+              mockups: mockupCount,
+              watermarked_artwork: session.artwork.artwork_id ? 1 : 0
+            })
 
             console.log('[create-product] Creating Medusa product with:', {
               title: session.details.product_title,
               images_count: images.length,
               mockups: mockupCount,
+              watermarked_artwork: session.artwork.artwork_id ? 1 : 0,
               variant_count: fullProduct.variants?.length || 0
             })
 
@@ -317,8 +308,8 @@ export async function POST(
                 created_via: 'printful_studio_composer',
                 image_sources: {
                   mockups: mockupCount,
-                  variants: variantCount,
-                  catalog: images.length - mockupCount - variantCount
+                  watermarked_artwork: session.artwork.artwork_id ? 1 : 0,
+                  original_print_file: 0  // Never included
                 }
               }
             }])

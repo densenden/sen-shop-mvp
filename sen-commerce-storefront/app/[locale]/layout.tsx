@@ -1,13 +1,6 @@
 import {NextIntlClientProvider} from 'next-intl'
 import {getMessages} from 'next-intl/server'
-import dynamicImport from 'next/dynamic'
 import '../globals.css'
-
-// Dynamic import of GTProvider to avoid SSR issues
-const GTProvider = dynamicImport(() => import('gt-react').then(mod => ({ default: mod.GTProvider })), {
-  ssr: false,
-  loading: () => null
-})
 
 export const dynamic = 'force-dynamic'
 

@@ -4,6 +4,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'SenCommerce - Digital Art & Print on Demand',
   description: 'Discover unique artworks available as digital downloads and premium prints',
+  icons: {
+    icon: '/logo.svg',
+  },
 }
 
 export default function RootLayout({
