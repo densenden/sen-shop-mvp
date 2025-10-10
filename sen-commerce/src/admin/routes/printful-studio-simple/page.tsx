@@ -20,6 +20,7 @@ const PrintfulStudioComplete = () => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [selectedSizes, setSelectedSizes] = useState<number[]>([])
   const [selectedMockupStyles, setSelectedMockupStyles] = useState<number[]>([])
+  const [selectedCombinations, setSelectedCombinations] = useState<Set<string>>(new Set()) // "variantId-styleId"
   const [placementGroups, setPlacementGroups] = useState<any[]>([])
   const [productOptions, setProductOptions] = useState<Record<string, any>>({})
   const [title, setTitle] = useState("")
@@ -639,9 +640,16 @@ const PrintfulStudioComplete = () => {
           {/* Step 3 */}
           {step === 3 && selectedProduct && (
             <div>
-              <Heading level="h2" className="mb-6">Select Sizes & Mockup Styles</Heading>
-              <div className="mb-8">
-                <Label className="mb-3 block">Available Variants</Label>
+              <Heading level="h2" className="mb-6">Select Mockups</Heading>
+
+              {/* Unified variant × style selection */}
+              <div className="mb-4">
+                <Label className="mb-2 block">
+                  Available Variants & Mockup Styles
+                  <span className="ml-2 text-xs text-gray-500">
+                    {selectedProduct.variants?.length || 0} variants × {compatibleStyles.length} styles
+                  </span>
+                </Label>
                 <div className="grid grid-cols-3 gap-3">
                   {selectedProduct.variants?.map((v: any) => {
                     // Build variant display name from size and color
