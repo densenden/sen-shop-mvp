@@ -42,7 +42,8 @@ const PrintfulStudioComplete = () => {
     startTime: number | null
     elapsedSeconds: number
     waitCountdown: number
-  }>({ total: 0, completed: 0, completedUrls: [], currentIndex: 0, failed: 0, mockupNames: [], startTime: null, elapsedSeconds: 0, waitCountdown: 0 })
+    mockupsByStyleVariant: Record<string, string> // key: "variantId-styleId", value: mockup URL
+  }>({ total: 0, completed: 0, completedUrls: [], currentIndex: 0, failed: 0, mockupNames: [], startTime: null, elapsedSeconds: 0, waitCountdown: 0, mockupsByStyleVariant: {} })
 
   // EUR conversion rate
   const EUR_RATE = 0.92
@@ -236,7 +237,8 @@ const PrintfulStudioComplete = () => {
       mockupNames: [],
       startTime,
       elapsedSeconds: 0,
-      waitCountdown: 0
+      waitCountdown: 0,
+      mockupsByStyleVariant: {}
     })
 
     // Timer to update elapsed time every second
@@ -312,11 +314,18 @@ const PrintfulStudioComplete = () => {
           const mockupName = `${variantName} - ${styleName}`
           generatedNames.push(mockupName)
 
+          // Map mockup URL to specific style+variant combination
+          const styleVariantKey = `${combo.variantId}-${combo.styleId || 'default'}`
+
           setMockupGenerationStatus(prev => ({
             ...prev,
             completed: generatedMockups.length,
             completedUrls: [...generatedMockups],
-            mockupNames: [...generatedNames]
+            mockupNames: [...generatedNames],
+            mockupsByStyleVariant: {
+              ...prev.mockupsByStyleVariant,
+              [styleVariantKey]: data.mockup_urls[0]
+            }
           }))
 
           console.log(`[Studio] Mockup ${i + 1}/${totalExpected} generated:`, mockupName, data.mockup_urls[0])
@@ -697,53 +706,95 @@ const PrintfulStudioComplete = () => {
                 </div>
                 {compatibleStyles.length > 0 ? (
                   <div className="grid grid-cols-6 gap-3 max-h-96 overflow-y-auto">
-                    {compatibleStyles.map((style: any, idx: number) => (
-                      <label key={`${style.id}-${style.group || ''}-${idx}`} className={`border-2 rounded-lg p-2 cursor-pointer ${selectedMockupStyles.includes(style.id) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
-                        <input
-                          type="checkbox"
-                          checked={selectedMockupStyles.includes(style.id)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedMockupStyles([...selectedMockupStyles, style.id])
-                            } else {
-                              setSelectedMockupStyles(selectedMockupStyles.filter(id => id !== style.id))
-                            }
-                          }}
-                          className="mb-2"
-                        />
-                        {style.thumbnail_url ? (
-                          <img src={style.thumbnail_url} className="w-full h-16 object-cover rounded mb-1" alt={style.view_name || style.category_name} />
-                        ) : (
-                          <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center text-gray-400 text-xs">No preview</div>
-                        )}
-                        <div className="text-xs truncate font-medium" title={`${style.category_name || ''} - ${style.view_name || ''}`}>
-                          {style.view_name || style.category_name || style.name || `Style ${style.id}`}
-                        </div>
-                        {style.isUniversal && (
-                          <div className="text-xs text-green-600 font-bold mt-1">★</div>
-                        )}
-                      </label>
-                    ))}
+                    {compatibleStyles.map((style: any, idx: number) => {
+                      const isSelected = selectedMockupStyles.includes(style.id)
+                      const isDimmed = loading && !isSelected
+
+                      // Check if this style has generated mockups for any variant
+                      const hasAnyMockup = selectedSizes.some(variantId => {
+                        const key = `${variantId}-${style.id}`
+                        return mockupGenerationStatus.mockupsByStyleVariant[key]
+                      })
+
+                      // Get first available mockup for this style (any variant)
+                      const firstMockup = selectedSizes.map(variantId => {
+                        const key = `${variantId}-${style.id}`
+                        return mockupGenerationStatus.mockupsByStyleVariant[key]
+                      }).find(url => url)
+
+                      return (
+                        <label
+                          key={`${style.id}-${style.group || ''}-${idx}`}
+                          className={`relative border-2 rounded-lg p-2 transition-all ${
+                            isDimmed ? 'opacity-30 blur-sm cursor-not-allowed' :
+                            isSelected && loading ? 'border-blue-500 bg-blue-50' :
+                            isSelected ? 'border-blue-500 bg-blue-50 cursor-pointer' :
+                            'border-gray-200 hover:border-gray-300 cursor-pointer'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={e => {
+                              if (loading) return // Don't allow changes during generation
+                              if (e.target.checked) {
+                                setSelectedMockupStyles([...selectedMockupStyles, style.id])
+                              } else {
+                                setSelectedMockupStyles(selectedMockupStyles.filter(id => id !== style.id))
+                              }
+                            }}
+                            disabled={loading}
+                            className="mb-2"
+                          />
+
+                          {/* Show generated mockup if available, otherwise show thumbnail */}
+                          {hasAnyMockup && firstMockup ? (
+                            <div className="relative">
+                              <img src={firstMockup} className="w-full h-16 object-cover rounded mb-1" alt={style.view_name || style.category_name} />
+                              <div className="absolute top-0 right-0 bg-green-500 rounded-full p-1">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            </div>
+                          ) : isSelected && loading ? (
+                            <div className="w-full h-16 bg-blue-100 rounded mb-1 flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                            </div>
+                          ) : style.thumbnail_url ? (
+                            <img src={style.thumbnail_url} className="w-full h-16 object-cover rounded mb-1" alt={style.view_name || style.category_name} />
+                          ) : (
+                            <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center text-gray-400 text-xs">No preview</div>
+                          )}
+
+                          <div className="text-xs truncate font-medium" title={`${style.category_name || ''} - ${style.view_name || ''}`}>
+                            {style.view_name || style.category_name || style.name || `Style ${style.id}`}
+                          </div>
+                          {style.isUniversal && (
+                            <div className="text-xs text-green-600 font-bold mt-1">★</div>
+                          )}
+                        </label>
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
                     <p>No mockup styles available for this product</p>
                   </div>
                 )}
-                {selectedMockupStyles.length > 0 && (
+                {selectedMockupStyles.length > 0 && !loading && (
                   <p className="mt-3 text-sm text-blue-600">{selectedMockupStyles.length} style{selectedMockupStyles.length > 1 ? 's' : ''} selected</p>
                 )}
-              </div>
-
-              {loading && (
-                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    <div className="flex-1">
-                      <p className="font-medium text-blue-900">{generatingProgress}</p>
-                      <p className="text-sm text-blue-600 mt-1">
-                        {mockupGenerationStatus.completed} of {mockupGenerationStatus.total} mockups completed
-                      </p>
+                {loading && (
+                  <div className="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded p-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">{generatingProgress}</p>
+                        <p className="text-xs text-blue-600">
+                          {mockupGenerationStatus.completed} of {mockupGenerationStatus.total} mockups completed
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">Elapsed</p>
@@ -751,74 +802,12 @@ const PrintfulStudioComplete = () => {
                         {Math.floor(mockupGenerationStatus.elapsedSeconds / 60)}:{String(mockupGenerationStatus.elapsedSeconds % 60).padStart(2, '0')}
                       </p>
                       {mockupGenerationStatus.waitCountdown > 0 && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          Next: {mockupGenerationStatus.waitCountdown}s
-                        </p>
+                        <p className="text-xs text-amber-600">Next: {mockupGenerationStatus.waitCountdown}s</p>
                       )}
                     </div>
                   </div>
-
-                  {/* Visual mockup generation stepper - shows real-time progress */}
-                  <div className="grid grid-cols-8 gap-2">
-                    {Array.from({ length: mockupGenerationStatus.total }).map((_, idx) => {
-                      // Check if this mockup was successfully generated
-                      const hasSuccessfulMockup = idx < mockupGenerationStatus.completedUrls.length
-                      // Check if we're currently processing this index
-                      const isCurrentlyProcessing = idx === mockupGenerationStatus.currentIndex - 1 && !hasSuccessfulMockup
-                      // Check if this attempt failed (we've moved past it but no mockup exists)
-                      const hasFailed = idx < mockupGenerationStatus.currentIndex && !hasSuccessfulMockup
-                      const mockupUrl = mockupGenerationStatus.completedUrls[idx]
-                      const mockupName = mockupGenerationStatus.mockupNames[idx] || ''
-
-                      return (
-                        <div
-                          key={idx}
-                          title={mockupName}
-                          className={`relative aspect-square rounded-lg border-2 overflow-hidden ${
-                            hasSuccessfulMockup ? 'border-green-500 bg-green-50' :
-                            isCurrentlyProcessing ? 'border-blue-500 bg-blue-50' :
-                            hasFailed ? 'border-amber-400 bg-amber-50' :
-                            'border-gray-300 bg-gray-100'
-                          }`}
-                        >
-                          {hasSuccessfulMockup && mockupUrl ? (
-                            <img src={mockupUrl} alt={`Mockup ${idx + 1}`} className="w-full h-full object-cover" />
-                          ) : isCurrentlyProcessing ? (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                            </div>
-                          ) : hasFailed ? (
-                            <div className="w-full h-full flex items-center justify-center text-amber-600 text-xs font-medium">
-                              <div className="text-center">
-                                <div className="text-lg">✗</div>
-                                <div className="text-[8px]">skip</div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-medium">
-                              {idx + 1}
-                            </div>
-                          )}
-                          {hasSuccessfulMockup && (
-                            <>
-                              <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
-                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                              {mockupName && (
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] px-1 py-0.5 truncate">
-                                  {mockupName}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {!loading && (
                 <Button className="mt-6" disabled={selectedSizes.length === 0} onClick={generatePreview}>
