@@ -130,11 +130,23 @@ export async function POST(
         }
       })
 
+      // Create a map of catalog_variant_id -> retail_price for later lookup
+      const catalogVariantPriceMap = new Map<string, number>()
+      session.product.selected_variant_ids.forEach((variantId) => {
+        const price = session.pricing!.retail_prices[variantId]
+        if (price) {
+          catalogVariantPriceMap.set(String(variantId), price)
+        }
+      })
+
       console.log('[create-product] Creating sync product with:', {
         name: session.details.product_title,
         variant_count: variantsData.length,
         variants: variantsData,
-        printful_file_id: printfulFileId
+        printful_file_id: printfulFileId,
+        price_map: Object.fromEntries(catalogVariantPriceMap),
+        session_pricing: session.pricing,
+        selected_variant_ids: session.product.selected_variant_ids
       })
 
       if (variantsData.length === 0) {
@@ -162,22 +174,29 @@ export async function POST(
       result.printful_product_id = syncProduct.sync_product?.id?.toString() || syncProduct.id?.toString()
       result.sync_product = syncProduct
 
-      // Step 3: Generate mockups for ALL selected variants
+      // Step 3: Use mockups generated during preview step
       let mockupUrls: string[] = []
+
+      // ALWAYS use the mockups from the preview step - they were generated progressively
       if (session.mockups?.mockup_urls && session.mockups.mockup_urls.length > 0) {
         mockupUrls = session.mockups.mockup_urls
-        console.log('[create-product] Using pre-generated mockups:', mockupUrls.length)
+        console.log('[create-product] Using pre-generated mockups from preview:', mockupUrls.length)
       } else if (session.artwork.artwork_url && session.product.selected_variant_ids.length > 0) {
+        // Fallback: Only generate if no mockups were created in preview
+        console.log('[create-product] No preview mockups found, generating new ones...')
         try {
           const placement = session.design?.placement
           const technique = session.design?.technique
+          const mockupStyleIds = session.design?.mockup_style_ids
 
           console.log('[create-product] Generating mockups for:', {
             catalog_product_id: session.product.catalog_product_id,
             variant_count: session.product.selected_variant_ids.length,
             variant_ids: session.product.selected_variant_ids,
             placement,
-            technique
+            technique,
+            mockup_style_ids: mockupStyleIds || 'auto-select',
+            style_count: mockupStyleIds?.length || 'auto'
           })
 
           mockupUrls = await printfulService.generateAndWaitForMockups(
@@ -186,7 +205,9 @@ export async function POST(
             session.artwork.artwork_url,
             90000, // 90 second timeout for multiple variants
             placement,
-            technique
+            technique,
+            mockupStyleIds ? mockupStyleIds.map(String) : undefined,
+            undefined // productOptions
           )
 
           console.log('[create-product] Generated mockups:', {
@@ -238,7 +259,7 @@ export async function POST(
             // Add watermarked artwork URL (NOT original print file)
             if (session.artwork.artwork_id) {
               const baseUrl = `${req.protocol}://${req.get('host')}`
-              const watermarkedArtworkUrl = `${baseUrl}/store/artworks/${session.artwork.artwork_id}/image`
+              const watermarkedArtworkUrl = `${baseUrl}/admin/artworks/${session.artwork.artwork_id}/watermark`
               images.push(watermarkedArtworkUrl)
               console.log('[create-product] Added watermarked artwork:', watermarkedArtworkUrl)
             }
@@ -259,15 +280,30 @@ export async function POST(
 
             // Create variants data from Printful product
             const variantData = (fullProduct.variants || []).map((variant: any, idx: number) => {
-              const variantId = String(variant.id)
-              const sessionPrice = session.pricing?.retail_prices?.[variantId]
-              const retailPrice = sessionPrice || variant.retail_price || "25.00"
-              const priceInCents = Math.round(parseFloat(String(retailPrice)) * 100)
+              // Printful sync variants have a variant_id field that references the catalog variant
+              const catalogVariantId = String(variant.variant_id || variant.id)
+              const syncVariantId = String(variant.id)
+
+              // Look up price by catalog variant ID
+              let retailPrice = "25.00"
+
+              if (catalogVariantPriceMap.has(catalogVariantId)) {
+                retailPrice = String(catalogVariantPriceMap.get(catalogVariantId))
+              } else if (variant.retail_price) {
+                retailPrice = String(variant.retail_price)
+              } else if (variant.price) {
+                retailPrice = String(variant.price)
+              }
+
+              const priceInCents = Math.round(parseFloat(retailPrice) * 100)
 
               console.log(`[create-product] Variant ${idx}:`, {
-                id: variantId,
-                session_price: sessionPrice,
-                retail_price: retailPrice,
+                sync_variant_id: syncVariantId,
+                catalog_variant_id: catalogVariantId,
+                price_from_map: catalogVariantPriceMap.get(catalogVariantId),
+                variant_retail_price: variant.retail_price,
+                variant_price: variant.price,
+                final_retail_price: retailPrice,
                 price_in_cents: priceInCents,
                 name: variant.name
               })
@@ -276,7 +312,7 @@ export async function POST(
                 title: variant.name || `Variant ${idx + 1}`,
                 sku: variant.sku || `printful-${variant.id}`,
                 prices: [{
-                  amount: Math.round(parseFloat(retailPrice) * 100), // Convert to cents
+                  amount: priceInCents,
                   currency_code: session.pricing?.currency?.toLowerCase() || 'usd'
                 }],
                 metadata: {
@@ -348,16 +384,24 @@ export async function POST(
 
                 // Add new Medusa product ID if not already present
                 if (!currentProductIds.includes(medusaProduct.id)) {
-                  await artworkService.updateArtworks(artworkId, {
-                    product_ids: [...currentProductIds, medusaProduct.id]
+                  await artworkService.updateArtworks({
+                    id: artworkId,
+                    product_ids: [...currentProductIds, medusaProduct.id],
+                    product_name: medusaProduct.title // Store product name in artwork
                   })
                   console.log('[create-product] ✅ Linked artwork to Medusa product:', {
                     artwork_id: artworkId,
                     product_id: medusaProduct.id,
+                    product_name: medusaProduct.title,
                     new_product_ids: [...currentProductIds, medusaProduct.id]
                   })
                 } else {
-                  console.log('[create-product] Product already linked to artwork')
+                  // Update product_name even if already linked
+                  await artworkService.updateArtworks({
+                    id: artworkId,
+                    product_name: medusaProduct.title
+                  })
+                  console.log('[create-product] Product already linked to artwork, updated product_name')
                 }
               } catch (error) {
                 console.error('[create-product] ❌ Failed to link artwork to product:', error)

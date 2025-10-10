@@ -32,7 +32,13 @@ const PrintfulStudioComplete = () => {
   const [createdProduct, setCreatedProduct] = useState<any>(null)
   const [recentProducts, setRecentProducts] = useState<any[]>([])
   const [generatingProgress, setGeneratingProgress] = useState("")
-  const [rateLimitTimer, setRateLimitTimer] = useState(0)
+  const [mockupGenerationStatus, setMockupGenerationStatus] = useState<{
+    total: number
+    completed: number
+    completedUrls: string[]
+    currentIndex: number
+    failed: number
+  }>({ total: 0, completed: 0, completedUrls: [], currentIndex: 0, failed: 0 })
 
   // EUR conversion rate
   const EUR_RATE = 0.92
@@ -76,61 +82,59 @@ const PrintfulStudioComplete = () => {
     })
   }, [placementGroups])
 
-  // Calculate compatible styles whenever relevant state changes
+  // Mockup style loader - shows ALL available styles, Printful will handle compatibility
   const compatibleStyles = (() => {
     if (!placementGroups.length) {
       console.log('[Studio] No placement groups available')
       return []
     }
 
-    const universalStyles: any[] = []
-    const variantSpecificStyles: any[] = []
+    const allStyles: any[] = []
 
-    console.log('[Studio] Calculating compatible styles:', {
-      placement_groups: placementGroups.length,
-      selected_sizes: selectedSizes.length,
-      first_group_has_styles: placementGroups[0]?.mockup_styles?.length || 0,
-      first_style_sample: placementGroups[0]?.mockup_styles?.[0]
+    console.log('[Studio] Loading all mockup styles:', {
+      placement_groups: placementGroups.length
     })
 
-    placementGroups.forEach((group, groupIdx) => {
-      group.mockup_styles?.forEach((style: any, styleIdx: number) => {
-        // Debug first few styles
-        if (groupIdx === 0 && styleIdx < 3) {
-          console.log(`[Studio] Style ${styleIdx}:`, {
-            id: style.id,
-            view_name: style.view_name,
-            has_restricted: 'restricted_to_variants' in style,
-            restricted_to_variants: style.restricted_to_variants,
-            restricted_length: style.restricted_to_variants?.length,
-            selected_sizes: selectedSizes
-          })
-        }
-
+    placementGroups.forEach((group) => {
+      group.mockup_styles?.forEach((style: any) => {
+        // Mark universal vs restricted styles for UI display
         const isUniversal = !style.restricted_to_variants || style.restricted_to_variants.length === 0
 
-        if (isUniversal) {
-          // Universal styles work with all variants
-          universalStyles.push({ ...style, isUniversal: true, group: group.display_name })
-        } else if (selectedSizes.length > 0) {
-          // Only show variant-specific styles if variants are selected AND they match
-          const isCompatible = style.restricted_to_variants?.some((v: any) => selectedSizes.includes(Number(v)))
-          if (isCompatible) {
-            variantSpecificStyles.push({ ...style, isUniversal: false, group: group.display_name })
-          }
-        }
+        allStyles.push({
+          ...style,
+          isUniversal,
+          group: group.display_name
+        })
       })
     })
 
-    console.log('[Studio] Compatible styles calculated:', {
-      universal: universalStyles.length,
-      variant_specific: variantSpecificStyles.length,
-      total: universalStyles.length + variantSpecificStyles.length
+    console.log('[Studio] All mockup styles loaded:', {
+      total: allStyles.length,
+      universal_count: allStyles.filter(s => s.isUniversal).length,
+      restricted_count: allStyles.filter(s => !s.isUniversal).length
     })
 
-    // Show universal styles first, then variant-specific
-    return [...universalStyles, ...variantSpecificStyles]
+    return allStyles
   })()
+
+  // Auto-select universal mockup styles when variants or compatible styles change
+  useEffect(() => {
+    if (selectedSizes.length > 0 && compatibleStyles.length > 0) {
+      // Find universal styles (work with all variants)
+      const universalStyles = compatibleStyles.filter(s => s.isUniversal)
+
+      if (universalStyles.length > 0) {
+        // Auto-select up to 3 universal styles
+        const autoSelectedIds = universalStyles.slice(0, 3).map(s => s.id)
+
+        // Only auto-select if user hasn't manually selected anything yet
+        if (selectedMockupStyles.length === 0) {
+          setSelectedMockupStyles(autoSelectedIds)
+          console.log('[Studio] Auto-selected universal mockup styles:', autoSelectedIds)
+        }
+      }
+    }
+  }, [selectedSizes, compatibleStyles.length]) // Use .length to avoid infinite loop
 
   // Load products
   const loadProducts = () => {
@@ -186,86 +190,160 @@ const PrintfulStudioComplete = () => {
     }
   }
 
-  // Generate mockups with progress tracking
+  // Generate mockups PROGRESSIVELY - one request at a time to respect rate limits
   const generatePreview = async () => {
     if (!selectedProduct || !selectedArtwork || selectedSizes.length === 0) return
     setLoading(true)
-    setGeneratingProgress("Initializing mockup generation...")
 
-    try {
-      // Estimate time: ~40 seconds per variant (includes Printful rate limiting)
-      const estimatedSeconds = Math.max(40, selectedSizes.length * 40)
-      setRateLimitTimer(estimatedSeconds)
+    // Build list of all variant+style combinations to generate
+    const combinations: Array<{ variantId: number, styleId: number | null }> = []
 
-      const startTime = Date.now()
-      const timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000)
-        const remaining = Math.max(0, estimatedSeconds - elapsed)
-        setRateLimitTimer(remaining)
-
-        if (remaining === 0) {
-          clearInterval(timerInterval)
-        }
-      }, 1000)
-
-      setGeneratingProgress(`Generating mockups for ${selectedSizes.length} variant${selectedSizes.length > 1 ? 's' : ''}...`)
-
-      const requestBody = {
-        artwork_url: selectedArtwork.image_url,
-        artwork_id: selectedArtwork.id,
-        variant_ids: selectedSizes,
-        mockup_style_ids: selectedMockupStyles.length > 0 ? selectedMockupStyles : undefined,
-        product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
-        wait_for_completion: true
-      }
-
-      console.log('[Studio] Sending mockup generation request:', {
-        product_id: selectedProduct.id,
-        variant_count: selectedSizes.length,
-        has_mockup_styles: selectedMockupStyles.length > 0,
-        product_options: productOptions,
-        product_options_count: Object.keys(productOptions).length,
-        sending_options: requestBody.product_options
+    if (selectedMockupStyles.length > 0) {
+      // User selected specific styles - generate for each variant+style combo
+      selectedSizes.forEach(variantId => {
+        selectedMockupStyles.forEach(styleId => {
+          combinations.push({ variantId, styleId })
+        })
       })
-
-      const res = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody)
+    } else {
+      // No specific styles - generate default mockups (one per variant)
+      selectedSizes.forEach(variantId => {
+        combinations.push({ variantId, styleId: null })
       })
-
-      setGeneratingProgress("Processing mockups...")
-      const data = await res.json()
-
-      clearInterval(timerInterval)
-      setRateLimitTimer(0)
-
-      const mockupUrls = data.mockup_urls || []
-      setGeneratingProgress(`Generated ${mockupUrls.length} mockup${mockupUrls.length !== 1 ? 's' : ''}!`)
-      setMockups(mockupUrls.length > 0 ? mockupUrls : [selectedArtwork.image_url])
-
-      // Auto-fill details
-      setTitle(`${selectedArtwork.title} - ${selectedProduct.name}`)
-      setDescription(`Beautiful ${selectedProduct.name} featuring "${selectedArtwork.title}". High-quality print-on-demand product created with Printful. Each piece is made to order, ensuring freshness and reducing waste.`)
-
-      setTimeout(() => {
-        setGeneratingProgress("")
-        setStep(4)
-      }, 1500)
-    } catch (err) {
-      console.error(err)
-      setGeneratingProgress("Error generating mockups")
-      setMockups([selectedArtwork.image_url])
-      setTitle(`${selectedArtwork.title} - ${selectedProduct.name}`)
-      setDescription(`Beautiful ${selectedProduct.name} featuring "${selectedArtwork.title}".`)
-      setTimeout(() => {
-        setGeneratingProgress("")
-        setStep(4)
-      }, 2000)
-    } finally {
-      setLoading(false)
     }
+
+    const totalExpected = combinations.length
+
+    console.log('[Studio] Starting progressive mockup generation:', {
+      product_id: selectedProduct.id,
+      total_combinations: totalExpected,
+      variant_count: selectedSizes.length,
+      style_count: selectedMockupStyles.length || 'auto'
+    })
+
+    // Initialize status
+    setMockupGenerationStatus({
+      total: totalExpected,
+      completed: 0,
+      completedUrls: [],
+      currentIndex: 0,
+      failed: 0
+    })
+
+    setGeneratingProgress(`Preparing to generate ${totalExpected} mockup${totalExpected !== 1 ? 's' : ''}...`)
+
+    const generatedMockups: string[] = []
+    let failedCount = 0
+
+    // Generate mockups ONE AT A TIME with delay to respect rate limits
+    for (let i = 0; i < combinations.length; i++) {
+      const combo = combinations[i]
+
+      setMockupGenerationStatus(prev => ({
+        ...prev,
+        currentIndex: i + 1
+      }))
+
+      setGeneratingProgress(`Generating mockup ${i + 1}/${totalExpected}...`)
+
+      try {
+        const requestBody: any = {
+          artwork_url: selectedArtwork.image_url,
+          artwork_id: selectedArtwork.id,
+          variant_ids: [combo.variantId],
+          product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
+          wait_for_completion: true
+        }
+
+        // Add style ID if specified
+        if (combo.styleId) {
+          requestBody.mockup_style_ids = [combo.styleId]
+        }
+
+        const res = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody)
+        })
+
+        if (res.status === 429) {
+          // Rate limit - wait and retry
+          const data = await res.json()
+          const waitSeconds = data.wait_seconds || 60
+          setGeneratingProgress(`⏳ Rate limit - waiting ${waitSeconds}s before retry...`)
+          await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000))
+
+          // Retry this request (decrement i so we try again)
+          i--
+          continue
+        }
+
+        const data = await res.json()
+
+        if (data.mockup_urls && data.mockup_urls.length > 0) {
+          // Success - add mockup
+          generatedMockups.push(data.mockup_urls[0])
+
+          setMockupGenerationStatus(prev => ({
+            ...prev,
+            completed: generatedMockups.length,
+            completedUrls: [...generatedMockups]
+          }))
+
+          console.log(`[Studio] Mockup ${i + 1}/${totalExpected} generated:`, data.mockup_urls[0])
+        } else {
+          // Style incompatible - skip
+          failedCount++
+          console.log(`[Studio] Mockup ${i + 1}/${totalExpected} failed - incompatible style`)
+
+          setMockupGenerationStatus(prev => ({
+            ...prev,
+            failed: failedCount
+          }))
+        }
+
+        // Wait 3 seconds between requests to respect rate limits (2 req/min = 30s minimum, but we'll be conservative)
+        if (i < combinations.length - 1) {
+          setGeneratingProgress(`Waiting 3s before next mockup... (${i + 1}/${totalExpected} done)`)
+          await new Promise(resolve => setTimeout(resolve, 3000))
+        }
+
+      } catch (err: any) {
+        console.error(`[Studio] Error generating mockup ${i + 1}:`, err)
+        failedCount++
+
+        setMockupGenerationStatus(prev => ({
+          ...prev,
+          failed: failedCount
+        }))
+      }
+    }
+
+    // All mockups attempted
+    console.log('[Studio] Mockup generation complete:', {
+      total_expected: totalExpected,
+      generated: generatedMockups.length,
+      failed: failedCount
+    })
+
+    setMockups(generatedMockups.length > 0 ? generatedMockups : [selectedArtwork.image_url])
+
+    if (generatedMockups.length < totalExpected) {
+      setGeneratingProgress(`✅ Generated ${generatedMockups.length}/${totalExpected} mockups (${failedCount} incompatible)`)
+    } else {
+      setGeneratingProgress(`✅ All ${generatedMockups.length} mockups generated!`)
+    }
+
+    // Auto-fill details
+    setTitle(`${selectedArtwork.title} - ${selectedProduct.name}`)
+    setDescription(`Beautiful ${selectedProduct.name} featuring "${selectedArtwork.title}". High-quality print-on-demand product created with Printful. Each piece is made to order, ensuring freshness and reducing waste.`)
+
+    setTimeout(() => {
+      setGeneratingProgress("")
+      setStep(4)
+      setLoading(false)
+    }, 2000)
   }
 
   // Calculate price
@@ -307,7 +385,8 @@ const PrintfulStudioComplete = () => {
           },
           design: {
             placement: placementGroups[0]?.placement || "default",
-            technique: placementGroups[0]?.technique || "digital"
+            technique: placementGroups[0]?.technique || "digital",
+            mockup_style_ids: selectedMockupStyles.length > 0 ? selectedMockupStyles : undefined
           },
           mockups: { mockup_urls: mockups },
           details: {
@@ -424,21 +503,25 @@ const PrintfulStudioComplete = () => {
                     <div className="text-xs font-medium truncate">Uncategorized</div>
                     <div className="text-xs text-gray-500">{allArtworks.filter(a => !a.collection_id).length}</div>
                   </div>
-                  {collections.map(col => (
-                    <div
-                      key={col.id}
-                      onClick={() => setSelectedCollection(col.id)}
-                      className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
-                    >
-                      {col.thumbnail_url ? (
-                        <img src={col.thumbnail_url} className="w-full h-20 object-cover rounded mb-2" />
-                      ) : (
-                        <div className="w-full h-20 bg-gray-100 rounded mb-2" />
-                      )}
-                      <div className="text-xs font-medium truncate" title={col.name}>{col.name}</div>
-                      <div className="text-xs text-gray-500">{allArtworks.filter(a => a.collection_id === col.id).length}</div>
-                    </div>
-                  ))}
+                  {collections.map(col => {
+                    const firstArtwork = allArtworks.find(a => a.collection_id === col.id)
+                    const thumbnailUrl = col.thumbnail_url || (firstArtwork ? `/admin/artworks/${firstArtwork.id}/preview` : null)
+                    return (
+                      <div
+                        key={col.id}
+                        onClick={() => setSelectedCollection(col.id)}
+                        className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                      >
+                        {thumbnailUrl ? (
+                          <img src={thumbnailUrl} className="w-full h-20 object-cover rounded mb-2" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-20 bg-gray-100 rounded mb-2" />
+                        )}
+                        <div className="text-xs font-medium truncate" title={col.name}>{col.name}</div>
+                        <div className="text-xs text-gray-500">{allArtworks.filter(a => a.collection_id === col.id).length}</div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-4">
@@ -452,7 +535,11 @@ const PrintfulStudioComplete = () => {
                     }}
                     className={`cursor-pointer border-2 rounded-lg p-3 ${selectedArtwork?.id === art.id ? "border-blue-500" : "border-gray-200 hover:border-blue-300"}`}
                   >
-                    <img src={art.image_url} className="w-full h-32 object-cover rounded mb-2" />
+                    <img
+                      src={`/admin/artworks/${art.id}/preview`}
+                      className="w-full h-32 object-cover rounded mb-2"
+                      loading="lazy"
+                    />
                     <p className="text-sm font-medium truncate">{art.title}</p>
                   </div>
                 ))}
@@ -510,6 +597,7 @@ const PrintfulStudioComplete = () => {
                               setSelectedSizes([...selectedSizes, v.id])
                             } else {
                               setSelectedSizes(selectedSizes.filter(id => id !== v.id))
+                              // Clear mockup styles when variants change - they'll be auto-selected
                               setSelectedMockupStyles([])
                             }
                           }}
@@ -533,6 +621,26 @@ const PrintfulStudioComplete = () => {
                     {compatibleStyles.length} available
                   </span>
                 </Label>
+                <div className="mb-3 space-y-1 bg-blue-50 border border-blue-200 rounded p-3">
+                  <p className="text-xs text-blue-800 font-medium">
+                    ℹ️ How mockup generation works:
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    • We'll generate mockups ONE AT A TIME (3s delay between each) to respect rate limits
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    • Incompatible styles will be skipped automatically
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    • You'll see mockups appear in real-time as they complete
+                  </p>
+                  <p className="text-xs text-gray-600 mt-2">
+                    ★ = Universal (works with most products)
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Water bottles: ~1-2 mockups, T-shirts: ~5-10, Hoodies: ~8-12
+                  </p>
+                </div>
                 {compatibleStyles.length > 0 ? (
                   <div className="grid grid-cols-6 gap-3 max-h-96 overflow-y-auto">
                     {compatibleStyles.map((style: any, idx: number) => (
@@ -557,18 +665,15 @@ const PrintfulStudioComplete = () => {
                         <div className="text-xs truncate font-medium" title={`${style.category_name || ''} - ${style.view_name || ''}`}>
                           {style.view_name || style.category_name || style.name || `Style ${style.id}`}
                         </div>
-                        {style.isUniversal && <div className="text-xs text-green-600 font-medium">✓ All variants</div>}
-                        {!style.isUniversal && selectedSizes.length > 0 && <div className="text-xs text-blue-600">Specific</div>}
+                        {style.isUniversal && (
+                          <div className="text-xs text-green-600 font-bold mt-1">★</div>
+                        )}
                       </label>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
-                    {selectedSizes.length === 0 ? (
-                      <p>Select sizes above to see compatible mockup styles</p>
-                    ) : (
-                      <p>No mockup styles available for this product</p>
-                    )}
+                    <p>No mockup styles available for this product</p>
                   </div>
                 )}
                 {selectedMockupStyles.length > 0 && (
@@ -577,15 +682,67 @@ const PrintfulStudioComplete = () => {
               </div>
 
               {loading && (
-                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                  <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500" />
-                  <p className="text-lg font-medium text-blue-900 mb-2">{generatingProgress}</p>
-                  {rateLimitTimer > 0 && (
-                    <div className="text-sm text-blue-600">
-                      <p>Printful rate limit protection</p>
-                      <p className="font-mono text-2xl mt-2">{rateLimitTimer}s</p>
+                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <div>
+                      <p className="font-medium text-blue-900">{generatingProgress}</p>
+                      <p className="text-sm text-blue-600 mt-1">
+                        {mockupGenerationStatus.completed} of {mockupGenerationStatus.total} mockups completed
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Visual mockup generation stepper - shows real-time progress */}
+                  <div className="grid grid-cols-8 gap-2">
+                    {Array.from({ length: mockupGenerationStatus.total }).map((_, idx) => {
+                      // Check if this mockup was successfully generated
+                      const hasSuccessfulMockup = idx < mockupGenerationStatus.completedUrls.length
+                      // Check if we're currently processing this index
+                      const isCurrentlyProcessing = idx === mockupGenerationStatus.currentIndex - 1 && !hasSuccessfulMockup
+                      // Check if this attempt failed (we've moved past it but no mockup exists)
+                      const hasFailed = idx < mockupGenerationStatus.currentIndex && !hasSuccessfulMockup
+                      const mockupUrl = mockupGenerationStatus.completedUrls[idx]
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`relative aspect-square rounded-lg border-2 overflow-hidden ${
+                            hasSuccessfulMockup ? 'border-green-500 bg-green-50' :
+                            isCurrentlyProcessing ? 'border-blue-500 bg-blue-50' :
+                            hasFailed ? 'border-amber-400 bg-amber-50' :
+                            'border-gray-300 bg-gray-100'
+                          }`}
+                        >
+                          {hasSuccessfulMockup && mockupUrl ? (
+                            <img src={mockupUrl} alt={`Mockup ${idx + 1}`} className="w-full h-full object-cover" />
+                          ) : isCurrentlyProcessing ? (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                            </div>
+                          ) : hasFailed ? (
+                            <div className="w-full h-full flex items-center justify-center text-amber-600 text-xs font-medium">
+                              <div className="text-center">
+                                <div className="text-lg">✗</div>
+                                <div className="text-[8px]">skip</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-medium">
+                              {idx + 1}
+                            </div>
+                          )}
+                          {hasSuccessfulMockup && (
+                            <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 

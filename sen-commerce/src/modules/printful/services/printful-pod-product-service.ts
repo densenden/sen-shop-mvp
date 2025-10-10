@@ -321,27 +321,9 @@ export class PrintfulPodProductService extends MedusaService({
       const techniques = catalogProduct.techniques || []
 
       // Extract available product options (e.g., stitch_color)
-      let productOptions = catalogProduct.options || []
-
-      // Printful V2 catalog API doesn't always return product options
-      // Add hardcoded defaults for products that require specific options
-      const PRODUCT_OPTION_DEFAULTS: Record<string, Array<{ key: string; values: Array<{ id: string; name: string }> }>> = {
-        '83': [ // All-Over Print Basic Pillow
-          {
-            key: 'stitch_color',
-            values: [
-              { id: 'white', name: 'White' },
-              { id: 'black', name: 'Black' }
-            ]
-          }
-        ]
-      }
-
-      // If no options returned but we have defaults for this product, use them
-      if (productOptions.length === 0 && PRODUCT_OPTION_DEFAULTS[productId]) {
-        productOptions = PRODUCT_OPTION_DEFAULTS[productId]
-        console.log(`[PrintfulService] Applied default product options for product ${productId}:`, productOptions)
-      }
+      // Note: Printful V2 catalog API often doesn't return product options
+      // They're typically only required/validated during mockup generation
+      const productOptions = catalogProduct.options || []
 
       // Attach product_options to catalogProduct for frontend access
       catalogProduct.product_options = productOptions
@@ -788,7 +770,9 @@ export class PrintfulPodProductService extends MedusaService({
     })
 
     // V2 API uses /mockup-tasks endpoint
-    // Create separate product entry for each variant to allow different mockup styles per variant
+    // Strategy: Create ONE request per variant with ALL style IDs
+    // Printful will generate mockups for compatible styles only
+    // This respects rate limits better than multiple requests
     const products = variantIds.map(variantId => {
       const product: any = {
         source: 'catalog',
@@ -804,6 +788,14 @@ export class PrintfulPodProductService extends MedusaService({
         }]
       }
 
+      // Add mockup_style_ids per placement if provided
+      // NOTE: Printful will only generate mockups for COMPATIBLE styles
+      // A water bottle might only support 1-2 styles even if you request 25
+      if (mockupStyleIds && mockupStyleIds.length > 0) {
+        product.placements[0].style_ids = mockupStyleIds.map(id => parseInt(id, 10))
+        console.log(`[PrintfulService] Requesting ${mockupStyleIds.length} styles for variant ${variantId}`)
+      }
+
       // Add product options if provided (e.g., stitch_color)
       if (productOptions && Object.keys(productOptions).length > 0) {
         product.options = productOptions
@@ -817,11 +809,14 @@ export class PrintfulPodProductService extends MedusaService({
       products: products
     }
 
-    // Add mockup_style_ids at root level (Printful V2 API accepts both locations)
-    // When set at root, it applies to all products
+    // Also add at root level for backwards compatibility
     if (mockupStyleIds && mockupStyleIds.length > 0) {
       requestData.mockup_style_ids = mockupStyleIds.map(id => parseInt(id, 10))
-      console.log('[PrintfulService] Setting mockup_style_ids at root level:', requestData.mockup_style_ids)
+      console.log('[PrintfulService] Setting mockup_style_ids:', {
+        root_level: requestData.mockup_style_ids,
+        per_placement: true,
+        count: mockupStyleIds.length
+      })
     }
 
     console.log('[PrintfulService] Generating mockups with V2 mockup-tasks API:', {
@@ -852,6 +847,14 @@ export class PrintfulPodProductService extends MedusaService({
         statusText: res.statusText,
         body: errorText
       })
+
+      // Handle rate limit specifically
+      if (res.status === 429) {
+        const errorData = JSON.parse(errorText)
+        const waitSeconds = errorData.error?.message?.match(/(\d+) seconds/)?.[1] || '60'
+        throw new Error(`Rate limit exceeded. Please wait ${waitSeconds} seconds before trying again.`)
+      }
+
       throw new Error(`Failed to generate mockups: ${res.status} ${errorText}`)
     }
 
@@ -862,9 +865,20 @@ export class PrintfulPodProductService extends MedusaService({
     const tasks = data.data || data
     const tasksArray = Array.isArray(tasks) ? tasks : [tasks]
 
+    // Log any warnings or errors from Printful
+    if (data.warnings) {
+      console.warn('[PrintfulService] ⚠️  Printful API warnings:', data.warnings)
+    }
+    if (data.errors) {
+      console.error('[PrintfulService] ❌ Printful API errors:', data.errors)
+    }
+
     console.log('[PrintfulService] Mockup tasks created:', {
       task_count: tasksArray.length,
-      task_ids: tasksArray.map((t: any) => t.id)
+      task_ids: tasksArray.map((t: any) => t.id),
+      requested_styles: mockupStyleIds?.length || 'auto',
+      requested_variants: variantIds.length,
+      expected_mockups: mockupStyleIds?.length ? variantIds.length * mockupStyleIds.length : variantIds.length
     })
 
     // Return array of task IDs for polling
@@ -932,6 +946,7 @@ export class PrintfulPodProductService extends MedusaService({
     // Each catalog_variant_mockups entry has a nested mockups array
     const flattenedMockups = mockups.flatMap((variantMockup: any) => {
       const innerMockups = variantMockup.mockups || []
+      console.log(`[PrintfulService] Variant ${variantMockup.catalog_variant_id} has ${innerMockups.length} mockups`)
       return innerMockups.map((m: any) => ({
         mockup_url: m.mockup_url,
         variant_id: variantMockup.catalog_variant_id,
@@ -941,6 +956,8 @@ export class PrintfulPodProductService extends MedusaService({
         view: m.view
       }))
     })
+
+    console.log('[PrintfulService] Total mockups across all variants:', flattenedMockups.length)
 
     return {
       id: task.id,
