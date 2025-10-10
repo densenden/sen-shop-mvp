@@ -303,10 +303,10 @@ const PrintfulStudioComplete = () => {
           }))
         }
 
-        // Wait 3 seconds between requests to respect rate limits (2 req/min = 30s minimum, but we'll be conservative)
+        // Wait 35 seconds between requests to respect rate limits (Printful: 2 req/min = 30s minimum + 5s buffer)
         if (i < combinations.length - 1) {
-          setGeneratingProgress(`Waiting 3s before next mockup... (${i + 1}/${totalExpected} done)`)
-          await new Promise(resolve => setTimeout(resolve, 3000))
+          setGeneratingProgress(`Waiting 35s before next mockup... (${i + 1}/${totalExpected} done)`)
+          await new Promise(resolve => setTimeout(resolve, 35000))
         }
 
       } catch (err: any) {
@@ -626,7 +626,7 @@ const PrintfulStudioComplete = () => {
                     ℹ️ How mockup generation works:
                   </p>
                   <p className="text-xs text-blue-700">
-                    • We'll generate mockups ONE AT A TIME (3s delay between each) to respect rate limits
+                    • We'll generate mockups ONE AT A TIME (35s delay between each) to respect Printful's rate limits
                   </p>
                   <p className="text-xs text-blue-700">
                     • Incompatible styles will be skipped automatically
@@ -639,6 +639,9 @@ const PrintfulStudioComplete = () => {
                   </p>
                   <p className="text-xs text-amber-600">
                     ⚠️ Water bottles: ~1-2 mockups, T-shirts: ~5-10, Hoodies: ~8-12
+                  </p>
+                  <p className="text-xs text-red-600 mt-2">
+                    ⏱️ Estimated time: {selectedMockupStyles.length > 0 ? selectedSizes.length * selectedMockupStyles.length : selectedSizes.length} mockups × 35s = ~{Math.ceil((selectedMockupStyles.length > 0 ? selectedSizes.length * selectedMockupStyles.length : selectedSizes.length) * 35 / 60)} minutes
                   </p>
                 </div>
                 {compatibleStyles.length > 0 ? (
