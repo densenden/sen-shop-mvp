@@ -527,7 +527,7 @@ const PrintfulStudioComplete = () => {
         <div className="flex items-center justify-center gap-4">
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${step > i ? "bg-green-500 text-white" : step === i ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${step > i ? "bg-black text-white" : step === i ? "bg-black text-white" : "bg-gray-200 text-gray-500"}`}>
                 {step > i ? <Check size={20} /> : i}
               </div>
               {i < 5 && <div className={`w-12 h-1 ${step > i ? "bg-green-500" : "bg-gray-200"}`} />}
@@ -549,7 +549,7 @@ const PrintfulStudioComplete = () => {
                 <div className="grid grid-cols-6 gap-3 mb-6">
                   <div
                     onClick={() => setSelectedCollection("all")}
-                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "all" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "all" ? "border-black bg-gray-100" : "border-gray-200 hover:border-gray-400"}`}
                   >
                     <div className="w-full h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded mb-2 flex items-center justify-center text-white font-bold text-lg">ALL</div>
                     <div className="text-xs font-medium truncate">All Artworks</div>
@@ -557,7 +557,7 @@ const PrintfulStudioComplete = () => {
                   </div>
                   <div
                     onClick={() => setSelectedCollection("uncategorized")}
-                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "uncategorized" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "uncategorized" ? "border-black bg-gray-100" : "border-gray-200 hover:border-gray-400"}`}
                   >
                     <div className="w-full h-20 bg-gray-200 rounded mb-2 flex items-center justify-center text-gray-500 text-xl">?</div>
                     <div className="text-xs font-medium truncate">Uncategorized</div>
@@ -570,7 +570,7 @@ const PrintfulStudioComplete = () => {
                       <div
                         key={col.id}
                         onClick={() => setSelectedCollection(col.id)}
-                        className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                        className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-black bg-gray-100" : "border-gray-200 hover:border-gray-400"}`}
                       >
                         {thumbnailUrl ? (
                           <img src={thumbnailUrl} className="w-full h-20 object-cover rounded mb-2" loading="lazy" />
@@ -593,7 +593,7 @@ const PrintfulStudioComplete = () => {
                       setStep(2)
                       if (products.length === 0) loadProducts()
                     }}
-                    className={`cursor-pointer border-2 rounded-lg p-3 ${selectedArtwork?.id === art.id ? "border-blue-500" : "border-gray-200 hover:border-blue-300"}`}
+                    className={`cursor-pointer border-2 rounded-lg p-3 ${selectedArtwork?.id === art.id ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-400"}`}
                   >
                     <img
                       src={`/admin/artworks/${art.id}/preview`}
@@ -623,7 +623,7 @@ const PrintfulStudioComplete = () => {
               ) : (
                 <div className="grid grid-cols-3 gap-4">
                   {products.map(prod => (
-                    <div key={prod.id} onClick={() => selectProduct(prod)} className="cursor-pointer border rounded-lg p-4 hover:border-blue-500">
+                    <div key={prod.id} onClick={() => selectProduct(prod)} className="cursor-pointer border rounded-lg p-4 hover:border-black">
                       <img src={prod.thumbnail_url || prod.image} className="w-full h-48 object-cover rounded mb-3" />
                       <p className="font-medium text-center">{prod.name}</p>
                     </div>
@@ -648,7 +648,7 @@ const PrintfulStudioComplete = () => {
                     const displayName = variantParts.length > 0 ? variantParts.join(" - ") : (v.name || `Variant ${v.id}`)
 
                     return (
-                      <label key={v.id} className={`border-2 rounded-lg p-3 cursor-pointer transition-colors ${selectedSizes.includes(v.id) ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+                      <label key={v.id} className={`border-2 rounded-lg p-3 cursor-pointer transition-colors ${selectedSizes.includes(v.id) ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-300"}`}>
                         <input
                           type="checkbox"
                           checked={selectedSizes.includes(v.id)}
@@ -681,17 +681,17 @@ const PrintfulStudioComplete = () => {
                     {compatibleStyles.length} available
                   </span>
                 </Label>
-                <div className="mb-3 space-y-1 bg-blue-50 border border-blue-200 rounded p-3">
-                  <p className="text-xs text-blue-800 font-medium">
+                <div className="mb-3 space-y-1 bg-gray-100 border border-gray-300 rounded p-3">
+                  <p className="text-xs text-black font-bold">
                     ℹ️ How mockup generation works:
                   </p>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-gray-700">
                     • We'll generate mockups ONE AT A TIME (35s delay between each) to respect Printful's rate limits
                   </p>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-gray-700">
                     • Incompatible styles will be skipped automatically
                   </p>
-                  <p className="text-xs text-blue-700">
+                  <p className="text-xs text-gray-700">
                     • You'll see mockups appear in real-time as they complete
                   </p>
                   <p className="text-xs text-gray-600 mt-2">
@@ -727,8 +727,8 @@ const PrintfulStudioComplete = () => {
                           key={`${style.id}-${style.group || ''}-${idx}`}
                           className={`relative border-2 rounded-lg p-2 transition-all ${
                             isDimmed ? 'opacity-30 blur-sm cursor-not-allowed' :
-                            isSelected && loading ? 'border-blue-500 bg-blue-50' :
-                            isSelected ? 'border-blue-500 bg-blue-50 cursor-pointer' :
+                            isSelected && loading ? 'border-black bg-gray-50' :
+                            isSelected ? 'border-black bg-gray-50 cursor-pointer' :
                             'border-gray-200 hover:border-gray-300 cursor-pointer'
                           }`}
                         >
@@ -758,8 +758,8 @@ const PrintfulStudioComplete = () => {
                               </div>
                             </div>
                           ) : isSelected && loading ? (
-                            <div className="w-full h-16 bg-blue-100 rounded mb-1 flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                            <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black" />
                             </div>
                           ) : style.thumbnail_url ? (
                             <img src={style.thumbnail_url} className="w-full h-16 object-cover rounded mb-1" alt={style.view_name || style.category_name} />
@@ -783,26 +783,26 @@ const PrintfulStudioComplete = () => {
                   </div>
                 )}
                 {selectedMockupStyles.length > 0 && !loading && (
-                  <p className="mt-3 text-sm text-blue-600">{selectedMockupStyles.length} style{selectedMockupStyles.length > 1 ? 's' : ''} selected</p>
+                  <p className="mt-3 text-sm font-medium text-black">{selectedMockupStyles.length} style{selectedMockupStyles.length > 1 ? 's' : ''} selected</p>
                 )}
                 {loading && (
-                  <div className="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded p-3">
+                  <div className="mt-3 flex items-center justify-between bg-white border-2 border-black rounded p-3">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                      <Loader2 className="w-5 h-5 animate-spin text-black" />
                       <div>
-                        <p className="text-sm font-medium text-blue-900">{generatingProgress}</p>
-                        <p className="text-xs text-blue-600">
+                        <p className="text-sm font-bold text-black">{generatingProgress}</p>
+                        <p className="text-xs text-gray-600">
                           {mockupGenerationStatus.completed} of {mockupGenerationStatus.total} mockups completed
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">Elapsed</p>
-                      <p className="text-lg font-mono font-bold text-blue-700">
+                      <p className="text-lg font-mono font-bold text-black">
                         {Math.floor(mockupGenerationStatus.elapsedSeconds / 60)}:{String(mockupGenerationStatus.elapsedSeconds % 60).padStart(2, '0')}
                       </p>
                       {mockupGenerationStatus.waitCountdown > 0 && (
-                        <p className="text-xs text-amber-600">Next: {mockupGenerationStatus.waitCountdown}s</p>
+                        <p className="text-xs text-gray-600">Next: {mockupGenerationStatus.waitCountdown}s</p>
                       )}
                     </div>
                   </div>
