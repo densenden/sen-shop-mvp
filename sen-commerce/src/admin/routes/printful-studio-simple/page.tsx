@@ -38,7 +38,11 @@ const PrintfulStudioComplete = () => {
     completedUrls: string[]
     currentIndex: number
     failed: number
-  }>({ total: 0, completed: 0, completedUrls: [], currentIndex: 0, failed: 0 })
+    mockupNames: string[]
+    startTime: number | null
+    elapsedSeconds: number
+    waitCountdown: number
+  }>({ total: 0, completed: 0, completedUrls: [], currentIndex: 0, failed: 0, mockupNames: [], startTime: null, elapsedSeconds: 0, waitCountdown: 0 })
 
   // EUR conversion rate
   const EUR_RATE = 0.92
@@ -221,18 +225,33 @@ const PrintfulStudioComplete = () => {
       style_count: selectedMockupStyles.length || 'auto'
     })
 
-    // Initialize status
+    // Initialize status with start time
+    const startTime = Date.now()
     setMockupGenerationStatus({
       total: totalExpected,
       completed: 0,
       completedUrls: [],
       currentIndex: 0,
-      failed: 0
+      failed: 0,
+      mockupNames: [],
+      startTime,
+      elapsedSeconds: 0,
+      waitCountdown: 0
     })
+
+    // Timer to update elapsed time every second
+    const elapsedTimer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      setMockupGenerationStatus(prev => ({
+        ...prev,
+        elapsedSeconds: elapsed
+      }))
+    }, 1000)
 
     setGeneratingProgress(`Preparing to generate ${totalExpected} mockup${totalExpected !== 1 ? 's' : ''}...`)
 
     const generatedMockups: string[] = []
+    const generatedNames: string[] = []
     let failedCount = 0
 
     // Generate mockups ONE AT A TIME with delay to respect rate limits
@@ -285,28 +304,53 @@ const PrintfulStudioComplete = () => {
           // Success - add mockup
           generatedMockups.push(data.mockup_urls[0])
 
+          // Build mockup name from variant + style
+          const variant = selectedProduct.variants.find((v: any) => v.id === combo.variantId)
+          const variantName = variant?.size || variant?.name || `Variant ${combo.variantId}`
+          const style = combo.styleId ? compatibleStyles.find(s => s.id === combo.styleId) : null
+          const styleName = style?.view_name || style?.category_name || 'Default'
+          const mockupName = `${variantName} - ${styleName}`
+          generatedNames.push(mockupName)
+
           setMockupGenerationStatus(prev => ({
             ...prev,
             completed: generatedMockups.length,
-            completedUrls: [...generatedMockups]
+            completedUrls: [...generatedMockups],
+            mockupNames: [...generatedNames]
           }))
 
-          console.log(`[Studio] Mockup ${i + 1}/${totalExpected} generated:`, data.mockup_urls[0])
+          console.log(`[Studio] Mockup ${i + 1}/${totalExpected} generated:`, mockupName, data.mockup_urls[0])
         } else {
           // Style incompatible - skip
           failedCount++
+          generatedNames.push('Incompatible')
           console.log(`[Studio] Mockup ${i + 1}/${totalExpected} failed - incompatible style`)
 
           setMockupGenerationStatus(prev => ({
             ...prev,
-            failed: failedCount
+            failed: failedCount,
+            mockupNames: [...generatedNames]
           }))
         }
 
         // Wait 35 seconds between requests to respect rate limits (Printful: 2 req/min = 30s minimum + 5s buffer)
         if (i < combinations.length - 1) {
-          setGeneratingProgress(`Waiting 35s before next mockup... (${i + 1}/${totalExpected} done)`)
-          await new Promise(resolve => setTimeout(resolve, 35000))
+          const waitTime = 35
+          setGeneratingProgress(`Waiting ${waitTime}s before next mockup... (${i + 1}/${totalExpected} done)`)
+
+          // Countdown timer for wait period
+          for (let countdown = waitTime; countdown > 0; countdown--) {
+            setMockupGenerationStatus(prev => ({
+              ...prev,
+              waitCountdown: countdown
+            }))
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
+
+          setMockupGenerationStatus(prev => ({
+            ...prev,
+            waitCountdown: 0
+          }))
         }
 
       } catch (err: any) {
@@ -320,19 +364,26 @@ const PrintfulStudioComplete = () => {
       }
     }
 
-    // All mockups attempted
+    // All mockups attempted - clear timer
+    clearInterval(elapsedTimer)
+
+    const totalTime = Math.floor((Date.now() - startTime) / 1000)
+    const minutes = Math.floor(totalTime / 60)
+    const seconds = totalTime % 60
+
     console.log('[Studio] Mockup generation complete:', {
       total_expected: totalExpected,
       generated: generatedMockups.length,
-      failed: failedCount
+      failed: failedCount,
+      total_time: `${minutes}m ${seconds}s`
     })
 
     setMockups(generatedMockups.length > 0 ? generatedMockups : [selectedArtwork.image_url])
 
     if (generatedMockups.length < totalExpected) {
-      setGeneratingProgress(`✅ Generated ${generatedMockups.length}/${totalExpected} mockups (${failedCount} incompatible)`)
+      setGeneratingProgress(`✅ Generated ${generatedMockups.length}/${totalExpected} mockups (${failedCount} incompatible) in ${minutes}m ${seconds}s`)
     } else {
-      setGeneratingProgress(`✅ All ${generatedMockups.length} mockups generated!`)
+      setGeneratingProgress(`✅ All ${generatedMockups.length} mockups generated in ${minutes}m ${seconds}s!`)
     }
 
     // Auto-fill details
@@ -688,11 +739,22 @@ const PrintfulStudioComplete = () => {
                 <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-blue-900">{generatingProgress}</p>
                       <p className="text-sm text-blue-600 mt-1">
                         {mockupGenerationStatus.completed} of {mockupGenerationStatus.total} mockups completed
                       </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Elapsed</p>
+                      <p className="text-lg font-mono font-bold text-blue-700">
+                        {Math.floor(mockupGenerationStatus.elapsedSeconds / 60)}:{String(mockupGenerationStatus.elapsedSeconds % 60).padStart(2, '0')}
+                      </p>
+                      {mockupGenerationStatus.waitCountdown > 0 && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          Next: {mockupGenerationStatus.waitCountdown}s
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -706,10 +768,12 @@ const PrintfulStudioComplete = () => {
                       // Check if this attempt failed (we've moved past it but no mockup exists)
                       const hasFailed = idx < mockupGenerationStatus.currentIndex && !hasSuccessfulMockup
                       const mockupUrl = mockupGenerationStatus.completedUrls[idx]
+                      const mockupName = mockupGenerationStatus.mockupNames[idx] || ''
 
                       return (
                         <div
                           key={idx}
+                          title={mockupName}
                           className={`relative aspect-square rounded-lg border-2 overflow-hidden ${
                             hasSuccessfulMockup ? 'border-green-500 bg-green-50' :
                             isCurrentlyProcessing ? 'border-blue-500 bg-blue-50' :
@@ -736,11 +800,18 @@ const PrintfulStudioComplete = () => {
                             </div>
                           )}
                           {hasSuccessfulMockup && (
-                            <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
+                            <>
+                              <div className="absolute top-1 right-1 bg-green-500 rounded-full p-0.5">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                              {mockupName && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] px-1 py-0.5 truncate">
+                                  {mockupName}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )
