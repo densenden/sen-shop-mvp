@@ -182,7 +182,9 @@ export class PrintfulPodProductService extends MedusaService({
     // Build query parameters
     const params = new URLSearchParams()
     if (options?.category_id) params.append('category_id', options.category_id)
+    // V2 API returns max 37 products total - always request limit=100 to get all available
     if (options?.limit) params.append('limit', options.limit.toString())
+    else if (!options?.offset) params.append('limit', '100') // Get all on first request
     if (options?.offset) params.append('offset', options.offset.toString())
 
     const url = `${this.apiBaseUrlV2}/catalog-products${params.toString() ? '?' + params.toString() : ''}`
