@@ -170,6 +170,122 @@ export class PrintfulPodProductService extends MedusaService({
     return data.result || null
   }
 
+  // V1 API: Fetch ALL catalog products (200+ products including frames, posters, home decor)
+  private v1CatalogCache: { data: any[], fetchedAt: number } | null = null
+
+  async fetchV1CatalogProducts(forceRefresh = false): Promise<any[]> {
+    if (!forceRefresh && this.v1CatalogCache && Date.now() - this.v1CatalogCache.fetchedAt < this.cacheTTL) {
+      console.log('[PrintfulService] Using cached V1 catalog products')
+      return this.v1CatalogCache.data
+    }
+
+    console.log('[PrintfulService] Fetching V1 catalog products: /products')
+    const res = await fetch(`${this.apiBaseUrlV1}/products`, {
+      headers: { Authorization: `Bearer ${this.apiToken}` },
+    })
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After") || "15"
+        throw new Error(`Printful rate limit reached. Try again after ${retryAfter} seconds.`)
+      }
+      const errorText = await res.text()
+      console.error("Printful V1 catalog products error:", res.status, errorText)
+      throw new Error("Failed to fetch V1 catalog products from Printful")
+    }
+
+    const data = await res.json()
+    const products = Array.isArray(data.result) ? data.result : []
+    console.log(`[PrintfulService] Fetched ${products.length} V1 catalog products`)
+
+    this.v1CatalogCache = { data: products, fetchedAt: Date.now() }
+    return products
+  }
+
+  // V1 API: Get single product details with variants
+  async getV1Product(productId: string): Promise<any> {
+    console.log(`[PrintfulService] Fetching V1 product: ${productId}`)
+    const res = await fetch(`${this.apiBaseUrlV1}/products/${productId}`, {
+      headers: { Authorization: `Bearer ${this.apiToken}` }
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful V1 product fetch error:", res.status, errorText)
+      throw new Error(`Failed to fetch V1 product ${productId}`)
+    }
+
+    const data = await res.json()
+    return data.result
+  }
+
+  // V1 API: Generate mockup
+  async generateV1Mockup(taskKey: string, params: {
+    variant_ids: number[]
+    format: string
+    files: Array<{
+      placement: string
+      image_url: string
+      position?: { area_width: number, area_height: number, width: number, height: number, top: number, left: number }
+    }>
+  }): Promise<any> {
+    console.log(`[PrintfulService] Creating V1 mockup task: ${taskKey}`, params)
+
+    const res = await fetch(`${this.apiBaseUrlV1}/mockup-generator/create-task/${taskKey}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful V1 mockup generation error:", res.status, errorText)
+      throw new Error(`Failed to generate V1 mockup: ${res.status}`)
+    }
+
+    const data = await res.json()
+    console.log('[PrintfulService] V1 mockup task created:', data.result?.task_key)
+    return data.result
+  }
+
+  // V1 API: Get mockup task result (polling)
+  async getV1MockupTask(taskKey: string): Promise<any> {
+    const res = await fetch(`${this.apiBaseUrlV1}/mockup-generator/task?task_key=${taskKey}`, {
+      headers: { Authorization: `Bearer ${this.apiToken}` }
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful V1 mockup task fetch error:", res.status, errorText)
+      throw new Error(`Failed to fetch V1 mockup task`)
+    }
+
+    const data = await res.json()
+    return data.result
+  }
+
+  // V1 API: Fetch product templates (saved designs)
+  async fetchV1ProductTemplates(): Promise<any[]> {
+    console.log('[PrintfulService] Fetching V1 product templates')
+    const res = await fetch(`${this.apiBaseUrlV1}/product-templates`, {
+      headers: { Authorization: `Bearer ${this.apiToken}` }
+    })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error("Printful V1 product templates error:", res.status, errorText)
+      throw new Error("Failed to fetch V1 product templates")
+    }
+
+    const data = await res.json()
+    const templates = Array.isArray(data.result) ? data.result : []
+    console.log(`[PrintfulService] Fetched ${templates.length} V1 product templates`)
+    return templates
+  }
+
   // V2 API: Fetch catalog products (available for printing)
   async fetchCatalogProducts(forceRefresh = false, options?: { category_id?: string, limit?: number, offset?: number }): Promise<PrintfulV2CatalogProduct[]> {
     // Don't use cache if filtering by category or pagination

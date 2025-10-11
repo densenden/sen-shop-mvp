@@ -11,6 +11,7 @@ import { Sparkles, Loader2, ArrowRight, ArrowLeft, Check, ExternalLink, Edit } f
 
 const PrintfulStudioComplete = () => {
   const [step, setStep] = useState(1)
+  const [provider, setProvider] = useState<'printful-v1' | 'printful-v2' | 'gelato'>('printful-v2')
   const [artworks, setArtworks] = useState<any[]>([])
   const [allArtworks, setAllArtworks] = useState<any[]>([])
   const [collections, setCollections] = useState<any[]>([])
@@ -203,41 +204,87 @@ const PrintfulStudioComplete = () => {
     }
   }, [selectedSizes, placementGroups]) // Depend on selectedSizes and placementGroups
 
-  // Load products
+  // Load products based on provider
   const loadProducts = () => {
     setLoading(true)
-    fetch("/admin/printful-studio/v2/catalog", { credentials: "include" })
+
+    let endpoint = '/admin/printful-studio/v2/catalog'
+    if (provider === 'printful-v1') {
+      endpoint = '/admin/printful-studio/v1/catalog'
+    } else if (provider === 'gelato') {
+      endpoint = '/admin/printful-studio/gelato/templates' // Gelato uses templates
+    }
+
+    console.log('[Studio] Loading products from:', endpoint, 'provider:', provider)
+
+    fetch(endpoint, { credentials: "include" })
       .then(r => r.json())
-      .then(d => setProducts(d.catalog || []))
+      .then(d => {
+        console.log('[Studio] Received data:', d)
+        // Different providers return different formats
+        let productsList = []
+        if (provider === 'printful-v1') {
+          productsList = d.products || []
+        } else if (provider === 'printful-v2') {
+          productsList = d.catalog || []
+        } else if (provider === 'gelato') {
+          productsList = d.products || [] // Gelato returns products array
+        }
+        console.log('[Studio] Parsed products list:', productsList.length, 'products')
+        setProducts(productsList)
+      })
       .finally(() => setLoading(false))
   }
+
+  // Reload products when provider changes
+  useEffect(() => {
+    if (step === 2) {
+      loadProducts()
+    }
+  }, [provider])
 
   // Load product details with placement groups
   const selectProduct = async (product: any) => {
     setLoading(true)
     try {
-      const res = await fetch(`/admin/printful-studio/v2/catalog/${product.id}`, { credentials: "include" })
-      const data = await res.json()
+      let fullProduct: any
+      let mockupStyles: any[] = []
 
-      // Fetch mockup styles
-      const stylesRes = await fetch(`/admin/printful-studio/v2/catalog/${product.id}/mockup-styles`, { credentials: "include" })
-      const stylesData = await stylesRes.json()
+      if (provider === 'printful-v1' || provider === 'printful-v2') {
+        // Printful: fetch full product details and mockup styles
+        const catalogPath = provider === 'printful-v1' ? 'v1' : 'v2'
+        const res = await fetch(`/admin/printful-studio/${catalogPath}/catalog/${product.id}`, { credentials: "include" })
+        const data = await res.json()
+
+        // Fetch mockup styles (V2 only)
+        if (provider === 'printful-v2') {
+          const stylesRes = await fetch(`/admin/printful-studio/v2/catalog/${product.id}/mockup-styles`, { credentials: "include" })
+          const stylesData = await stylesRes.json()
+          mockupStyles = stylesData.styles || []
+        }
+
+        fullProduct = data.product
+      } else if (provider === 'gelato') {
+        // Gelato: product from templates endpoint already has all needed data
+        fullProduct = product
+        mockupStyles = [] // Gelato uses templates, no mockup styles selection
+      }
 
       console.log('[Studio] Fetched mockup styles:', {
         product_id: product.id,
-        styles_count: stylesData.styles?.length || 0,
-        first_group: stylesData.styles?.[0]
+        styles_count: mockupStyles.length,
+        first_group: mockupStyles[0]
       })
 
-      console.log('[Studio] Product options:', data.product.product_options)
+      console.log('[Studio] Product options:', fullProduct.product_options)
 
-      setSelectedProduct(data.product)
-      setPlacementGroups(stylesData.styles || [])
+      setSelectedProduct(fullProduct)
+      setPlacementGroups(mockupStyles)
 
       // Initialize product options with defaults if they exist
-      if (data.product.product_options && Array.isArray(data.product.product_options)) {
+      if (fullProduct.product_options && Array.isArray(fullProduct.product_options)) {
         const defaultOptions: Record<string, any> = {}
-        data.product.product_options.forEach((option: any) => {
+        fullProduct.product_options.forEach((option: any) => {
           if (option.values && option.values.length > 0) {
             // Set first value as default
             defaultOptions[option.key] = option.values[0].id || option.values[0]
@@ -247,7 +294,7 @@ const PrintfulStudioComplete = () => {
         console.log('[Studio] Initialized product options:', defaultOptions)
       }
 
-      console.log('[Studio] Set placement groups:', stylesData.styles?.length || 0)
+      console.log('[Studio] Set placement groups:', mockupStyles.length)
 
       setStep(3)
     } catch (err) {
@@ -645,9 +692,48 @@ const PrintfulStudioComplete = () => {
   return (
     <Container>
       <div className="max-w-7xl mx-auto py-8 space-y-6">
-        <div className="text-center">
-          <Heading level="h1" className="text-3xl mb-2 text-white">Create POD Product</Heading>
-          <p className="text-ui-fg-subtle">Professional 5-step process</p>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 text-center">
+            <Heading level="h1" className="text-3xl mb-2 text-white">Create POD Product</Heading>
+            <p className="text-ui-fg-subtle">Professional 5-step process</p>
+          </div>
+          {step > 1 && (
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => {
+                if (confirm('Start over? This will clear all your current selections.')) {
+                  setStep(1)
+                  setSelectedArtwork(null)
+                  setSelectedProduct(null)
+                  setSelectedSizes([])
+                  setSelectedMockupStyles([])
+                  setSelectedCombinations(new Set())
+                  setPlacementGroups([])
+                  setMockups([])
+                  setTitle("")
+                  setDescription("")
+                  setCreatedProduct(null)
+                  setMockupGenerationStatus({
+                    total: 0,
+                    completed: 0,
+                    completedUrls: [],
+                    currentIndex: 0,
+                    failed: 0,
+                    mockupNames: [],
+                    startTime: null,
+                    elapsedSeconds: 0,
+                    waitCountdown: 0,
+                    mockupsByStyleVariant: {},
+                    currentComboKey: null,
+                    timelineEvents: []
+                  })
+                }
+              }}
+            >
+              Start Over
+            </Button>
+          )}
         </div>
 
         {/* Progress */}
@@ -742,7 +828,32 @@ const PrintfulStudioComplete = () => {
           {/* Step 2 */}
           {step === 2 && (
             <div>
-              <Heading level="h2" className="mb-6 text-white">Choose Product Type</Heading>
+              <div className="flex items-center justify-between mb-6">
+                <Heading level="h2" className="text-white">Choose Provider & Product</Heading>
+                <div className="flex gap-2">
+                  <Button
+                    variant={provider === 'printful-v2' ? 'primary' : 'secondary'}
+                    size="small"
+                    onClick={() => setProvider('printful-v2')}
+                  >
+                    Printful V2 (37)
+                  </Button>
+                  <Button
+                    variant={provider === 'printful-v1' ? 'primary' : 'secondary'}
+                    size="small"
+                    onClick={() => setProvider('printful-v1')}
+                  >
+                    Printful V1 (200+)
+                  </Button>
+                  <Button
+                    variant={provider === 'gelato' ? 'primary' : 'secondary'}
+                    size="small"
+                    onClick={() => setProvider('gelato')}
+                  >
+                    Gelato Templates
+                  </Button>
+                </div>
+              </div>
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="w-12 h-12 animate-spin" />
@@ -760,22 +871,148 @@ const PrintfulStudioComplete = () => {
             </div>
           )}
 
-          {/* Step 3 - Unified Variant × Style Grid */}
+          {/* Step 3 - Unified Variant × Style Grid with Smart Selection */}
           {step === 3 && selectedProduct && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <Heading level="h2" className="text-white">Select Mockups</Heading>
+                <Heading level="h2" className="text-white">
+                  {provider === 'gelato' ? 'Select Variants' : 'Select Mockups'}
+                </Heading>
                 <div className="text-xs text-gray-600">
-                  {selectedCombinations.size} selected • ~{Math.ceil(selectedCombinations.size * 35 / 60)} min
+                  {provider === 'gelato'
+                    ? `${selectedSizes.length} variants selected`
+                    : `${selectedCombinations.size} selected • ~${Math.ceil(selectedCombinations.size * 35 / 60)} min`
+                  }
                 </div>
               </div>
 
               {/* Info panel */}
-              <div className="mb-4 bg-gray-800 border border-gray-600 rounded p-2 text-xs text-gray-300">
-                <span className="font-medium text-white">Progressive generation:</span> 35s delay between mockups • Incompatible styles auto-skipped • Click tiles to select
-              </div>
+              {provider !== 'gelato' && (
+                <div className="mb-4 bg-gray-800 border border-gray-600 rounded p-2 text-xs text-gray-300">
+                  <span className="font-medium text-white">Variant-specific mockups</span> - Select individual variant×style combinations • Each variant gets unique image
+                </div>
+              )}
 
-              {/* Unified variant×style combination grid */}
+              {/* Gelato: Simple variant selection (no styles) */}
+              {provider === 'gelato' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3 text-sm text-blue-200">
+                    ℹ️ Gelato templates already include mockup configuration. Just select which product variants you want to offer.
+                  </div>
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => {
+                        const allIds = selectedProduct.variants?.map((v: any) => v.id) || []
+                        setSelectedSizes(allIds)
+                      }}
+                    >
+                      Select All Variants
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      onClick={() => setSelectedSizes([])}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedProduct.variants?.map((variant: any) => {
+                      const isSelected = selectedSizes.includes(variant.id)
+                      return (
+                        <div
+                          key={variant.id}
+                          onClick={() => {
+                            setSelectedSizes(prev =>
+                              isSelected
+                                ? prev.filter(id => id !== variant.id)
+                                : [...prev, variant.id]
+                            )
+                          }}
+                          className={`cursor-pointer border rounded p-3 transition ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-900/20'
+                              : 'border-gray-700 bg-gray-900 hover:border-gray-500'
+                          }`}
+                        >
+                          <p className="text-sm font-medium text-white">{variant.title || variant.name || `Variant ${variant.id}`}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Printful: Quick selection buttons */}
+              {provider !== 'gelato' && (
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    // Select all variants with first style (first column - usually "Front")
+                    if (compatibleStyles.length === 0) return
+                    const firstStyle = compatibleStyles[0]
+                    const newCombinations = new Set<string>()
+                    selectedProduct.variants?.forEach((variant: any) => {
+                      if (firstStyle.isUniversal || firstStyle.compatibleVariantIds?.includes(variant.id)) {
+                        newCombinations.add(`${variant.id}-${firstStyle.id}`)
+                      }
+                    })
+                    setSelectedCombinations(newCombinations)
+                  }}
+                >
+                  All Variants × First Style
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    // Select first variant with all compatible styles (first row)
+                    if (!selectedProduct.variants || selectedProduct.variants.length === 0) return
+                    const firstVariant = selectedProduct.variants[0]
+                    const newCombinations = new Set<string>()
+                    compatibleStyles.forEach((style: any) => {
+                      if (style.isUniversal || style.compatibleVariantIds?.includes(firstVariant.id)) {
+                        newCombinations.add(`${firstVariant.id}-${style.id}`)
+                      }
+                    })
+                    setSelectedCombinations(newCombinations)
+                  }}
+                >
+                  First Variant × All Styles
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    // Select top 3 universal styles for all variants
+                    const universalStyles = compatibleStyles.filter(s => s.isUniversal).slice(0, 3)
+                    const newCombinations = new Set<string>()
+                    selectedProduct.variants?.forEach((v: any) => {
+                      universalStyles.forEach(style => {
+                        newCombinations.add(`${v.id}-${style.id}`)
+                      })
+                    })
+                    setSelectedCombinations(newCombinations)
+                  }}
+                >
+                  All × Top 3
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => setSelectedCombinations(new Set())}
+                >
+                  Clear
+                </Button>
+              </div>
+              )}
+
+              {/* Printful: Unified variant×style combination grid */}
+              {provider !== 'gelato' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm">
@@ -788,23 +1025,6 @@ const PrintfulStudioComplete = () => {
                       )} tiles)
                     </span>
                   </Label>
-                  <Button
-                    variant="secondary"
-                    size="small"
-                    onClick={() => {
-                      // Auto-select first 3 universal styles for all variants
-                      const universalStyles = compatibleStyles.filter(s => s.isUniversal).slice(0, 3)
-                      const newCombinations = new Set<string>()
-                      selectedProduct.variants?.forEach((v: any) => {
-                        universalStyles.forEach(style => {
-                          newCombinations.add(`${v.id}-${style.id}`)
-                        })
-                      })
-                      setSelectedCombinations(newCombinations)
-                    }}
-                  >
-                    Auto-select (Top 3)
-                  </Button>
                 </div>
 
                 {/* Build all variant×style combination tiles */}
@@ -825,11 +1045,8 @@ const PrintfulStudioComplete = () => {
                         const isCurrentlyGenerating = loading && mockupGenerationStatus.currentComboKey === comboKey && !mockupUrl
                         const isDimmed = loading && !isSelected
 
-                        // Build tile name: "M - Front"
-                        const variantParts = []
-                        if (variant.size) variantParts.push(variant.size)
-                        if (variant.color) variantParts.push(variant.color)
-                        const variantName = variantParts.length > 0 ? variantParts[0] : `V${variant.id}` // Use first part only (size)
+                        // Build tile name
+                        const variantName = variant.size || variant.name || `V${variant.id}`
                         const styleName = style.view_name || style.category_name || `S${style.id}`
 
                         // Calculate queue position
@@ -844,10 +1061,8 @@ const PrintfulStudioComplete = () => {
                               const newSet = new Set(selectedCombinations)
                               if (isSelected) {
                                 newSet.delete(comboKey)
-                                console.log('[Studio] Deselected combo:', comboKey, 'Total selected:', newSet.size)
                               } else {
                                 newSet.add(comboKey)
-                                console.log('[Studio] Selected combo:', comboKey, 'Total selected:', newSet.size)
                               }
                               setSelectedCombinations(newSet)
                             }}
@@ -882,10 +1097,13 @@ const PrintfulStudioComplete = () => {
                               <div className="w-full h-24 bg-gray-800 rounded" />
                             )}
 
-                            {/* Label */}
+                            {/* Label with variant info */}
                             <div className="text-[9px] mt-0.5 truncate font-medium text-center text-gray-300">
-                              {variantName} - {styleName.substring(0, 10)}{style.isUniversal ? '★' : ''}
+                              {variantName} - {styleName.substring(0, 8)}{style.isUniversal ? '★' : ''}
                             </div>
+                            {variant.color && (
+                              <div className="text-[7px] text-center text-gray-500 truncate">{variant.color}</div>
+                            )}
                           </div>
                         )
                       })
@@ -1031,24 +1249,73 @@ const PrintfulStudioComplete = () => {
                       return
                     }
 
-                    console.log('[Studio] Button clicked - starting generation for', combinations.length, 'combinations:', combinations)
+                    console.log('[Studio] Generating variant-specific mockups:', combinations.length, 'combinations')
 
-                    // Extract unique variant and style IDs for backward compatibility
-                    const variantIds = new Set<number>()
-                    const styleIds = new Set<number>()
-                    combinations.forEach(c => {
-                      variantIds.add(c.variantId)
-                      styleIds.add(c.styleId!)
-                    })
-                    setSelectedSizes(Array.from(variantIds))
-                    setSelectedMockupStyles(Array.from(styleIds))
-
-                    // Call generatePreview with the combinations we built
+                    // Call generatePreview with the combinations
                     await generatePreview(combinations)
                   }}
                 >
                   Generate {selectedCombinations.size} Mockup{selectedCombinations.size !== 1 ? 's' : ''} <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
+              )}
+              )}
+
+              {/* Gelato: Create product from template to get mockups */}
+              {provider === 'gelato' && selectedSizes.length > 0 && (
+                <div className="flex justify-end mt-4">
+                  <Button
+                    onClick={async () => {
+                      if (!selectedProduct || !selectedArtwork) return
+
+                      setLoading(true)
+                      try {
+                        // Create Gelato product from template with artwork
+                        const res = await fetch('/admin/printful-studio/gelato/create-product', {
+                          method: 'POST',
+                          credentials: 'include',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            template_id: selectedProduct.id,
+                            artwork_url: selectedArtwork.image_url,
+                            variant_ids: selectedSizes
+                          })
+                        })
+
+                        if (!res.ok) {
+                          const error = await res.json()
+                          throw new Error(error.message || 'Failed to create Gelato product')
+                        }
+
+                        const data = await res.json()
+                        console.log('[Studio] Gelato product created:', data)
+
+                        // Extract mockup URLs from the response
+                        const mockupUrls = data.mockup_urls || []
+                        setMockups(mockupUrls)
+
+                        // Move to details step
+                        setStep(4)
+                      } catch (error: any) {
+                        console.error('[Studio] Error creating Gelato product:', error)
+                        alert(`Failed to create product: ${error.message}`)
+                      } finally {
+                        setLoading(false)
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Creating Product...
+                      </>
+                    ) : (
+                      <>
+                        Generate Mockups <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           )}

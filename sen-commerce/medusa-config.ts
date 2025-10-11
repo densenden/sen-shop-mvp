@@ -86,5 +86,12 @@ export default defineConfig({
         isQueryable: true
       }
     },
+    {
+      resolve: "./src/modules/gelato",
+      alias: "gelatoModule",
+      definition: {
+        isQueryable: true
+      }
+    },
   ]
 });
