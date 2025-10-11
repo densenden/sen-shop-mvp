@@ -770,9 +770,8 @@ export class PrintfulPodProductService extends MedusaService({
     })
 
     // V2 API uses /mockup-tasks endpoint
-    // Strategy: Create ONE request per variant with ALL style IDs
-    // Printful will generate mockups for compatible styles only
-    // This respects rate limits better than multiple requests
+    // Strategy: Create ONE request per variant with style IDs at PRODUCT level
+    // Per official docs: mockup_style_ids goes at product level, NOT placement level
     const products = variantIds.map(variantId => {
       const product: any = {
         source: 'catalog',
@@ -788,12 +787,10 @@ export class PrintfulPodProductService extends MedusaService({
         }]
       }
 
-      // Add mockup_style_ids per placement if provided
-      // NOTE: Printful will only generate mockups for COMPATIBLE styles
-      // A water bottle might only support 1-2 styles even if you request 25
+      // Add mockup_style_ids at PRODUCT level (per official API docs)
       if (mockupStyleIds && mockupStyleIds.length > 0) {
-        product.placements[0].style_ids = mockupStyleIds.map(id => parseInt(id, 10))
-        console.log(`[PrintfulService] Requesting ${mockupStyleIds.length} styles for variant ${variantId}`)
+        product.mockup_style_ids = [parseInt(mockupStyleIds[0], 10)]
+        console.log(`[PrintfulService] *** Setting mockup_style_ids=[${mockupStyleIds[0]}] at PRODUCT level for variant ${variantId} ***`)
       }
 
       // Add product options if provided (e.g., stitch_color)
@@ -809,15 +806,8 @@ export class PrintfulPodProductService extends MedusaService({
       products: products
     }
 
-    // Also add at root level for backwards compatibility
-    if (mockupStyleIds && mockupStyleIds.length > 0) {
-      requestData.mockup_style_ids = mockupStyleIds.map(id => parseInt(id, 10))
-      console.log('[PrintfulService] Setting mockup_style_ids:', {
-        root_level: requestData.mockup_style_ids,
-        per_placement: true,
-        count: mockupStyleIds.length
-      })
-    }
+    // NOTE: mockup_style_id is set per placement (in products array above)
+    // DO NOT set mockup_style_ids at root level - it causes all requests to return the same mockup
 
     console.log('[PrintfulService] Generating mockups with V2 mockup-tasks API:', {
       product_id: productId,
@@ -826,10 +816,17 @@ export class PrintfulPodProductService extends MedusaService({
       artwork_url: artworkUrl,
       placement: finalPlacement,
       technique: finalTechnique,
-      mockup_style_ids: requestData.mockup_style_ids || 'auto-select'
+      mockup_style_id: mockupStyleIds?.[0] || 'auto-select'
     })
 
     console.log('[PrintfulService] Raw mockup task request payload:', JSON.stringify(requestData, null, 2))
+
+    // CRITICAL DEBUG: Log the exact mockup_style_ids being sent at product level
+    if (requestData.products?.[0]?.mockup_style_ids) {
+      console.log(`[PrintfulService] *** CONFIRMED: Sending mockup_style_ids=${JSON.stringify(requestData.products[0].mockup_style_ids)} at PRODUCT level ***`)
+    } else {
+      console.log(`[PrintfulService] *** WARNING: No mockup_style_ids at product level - Printful will auto-select ***`)
+    }
 
     const res = await fetch(`${this.apiBaseUrlV2}/mockup-tasks`, {
       method: 'POST',
