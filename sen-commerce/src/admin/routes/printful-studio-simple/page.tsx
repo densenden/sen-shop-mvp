@@ -357,20 +357,50 @@ const PrintfulStudioComplete = () => {
           combo_key: comboKey
         })
 
-        const response = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            variant_ids: [String(combo.variantId)],
-            mockup_style_ids: combo.styleId ? [combo.styleId] : undefined,
-            artwork_url: selectedArtwork.image_url,
-            artwork_id: selectedArtwork.id,
-            product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
-            max_mockups: 1,
-            wait_for_completion: true
+        // Retry logic for rate limits (429)
+        let response
+        let retryCount = 0
+        const MAX_RETRIES = 3
+
+        while (retryCount <= MAX_RETRIES) {
+          response = await fetch(`/admin/printful-studio/v2/catalog/${selectedProduct.id}/mockups`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              variant_ids: [String(combo.variantId)],
+              mockup_style_ids: combo.styleId ? [combo.styleId] : undefined,
+              artwork_url: selectedArtwork.image_url,
+              artwork_id: selectedArtwork.id,
+              product_options: Object.keys(productOptions).length > 0 ? productOptions : undefined,
+              max_mockups: 1,
+              wait_for_completion: true
+            })
           })
-        })
+
+          // Check for rate limit (429 or 400 with rate limit message)
+          let isRateLimit = response.status === 429
+          if ((response.status === 400 || response.status === 429) && retryCount < MAX_RETRIES) {
+            try {
+              const errorText = await response.clone().text()
+              if (errorText.includes('rate limit') || errorText.includes('too many requests') || errorText.includes('TooManyRequests')) {
+                isRateLimit = true
+              }
+            } catch {}
+          }
+
+          if (isRateLimit && retryCount < MAX_RETRIES) {
+            const retryWait = Math.min(60000, 10000 * Math.pow(2, retryCount)) // Exponential: 10s, 20s, 40s (max 60s)
+            console.log(`[Studio] ⏸️  Rate limit hit (${response.status}), waiting ${retryWait/1000}s before retry ${retryCount + 1}/${MAX_RETRIES}`)
+            setGeneratingProgress(`Rate limit: retrying in ${retryWait/1000}s (${retryCount + 1}/${MAX_RETRIES})...`)
+
+            await new Promise(resolve => setTimeout(resolve, retryWait))
+            retryCount++
+            continue
+          }
+
+          break // Success or non-rate-limit error
+        }
 
         const requestEndTime = Date.now()
         const requestDuration = requestEndTime - requestStartTime
@@ -382,9 +412,9 @@ const PrintfulStudioComplete = () => {
           currentComboKey: null
         }))
 
-        console.log(`[Studio] Fetch completed for mockup ${i + 1}, took ${Math.round(requestDuration / 1000)}s`)
+        console.log(`[Studio] Fetch completed for mockup ${i + 1}, took ${Math.round(requestDuration / 1000)}s${retryCount > 0 ? ` (${retryCount} retries)` : ''}`)
 
-        if (response.ok) {
+        if (response!.ok) {
           const data = await response.json()
 
           if (data.mockup_urls && data.mockup_urls.length > 0) {
@@ -875,7 +905,7 @@ const PrintfulStudioComplete = () => {
                           {Math.floor(mockupGenerationStatus.elapsedSeconds / 60)}:{String(mockupGenerationStatus.elapsedSeconds % 60).padStart(2, '0')}
                         </span>
                         {mockupGenerationStatus.waitCountdown > 0 && (
-                          <span className="ml-2 text-[10px] text-gray-600">Next: {mockupGenerationStatus.waitCountdown}s</span>
+                          <span className="ml-2 text-[10px] text-gray-400">Next: {mockupGenerationStatus.waitCountdown}s</span>
                         )}
                       </div>
                     </div>
@@ -885,7 +915,7 @@ const PrintfulStudioComplete = () => {
                         style={{ width: `${(mockupGenerationStatus.completed / mockupGenerationStatus.total) * 100}%` }}
                       />
                     </div>
-                    <div className="text-[10px] text-gray-600 mt-1">
+                    <div className="text-[10px] text-gray-300 mt-1">
                       {mockupGenerationStatus.completed} / {mockupGenerationStatus.total} completed • {mockupGenerationStatus.failed} skipped
                     </div>
 
@@ -966,12 +996,12 @@ const PrintfulStudioComplete = () => {
                               {/* Legend */}
                               <div className="flex items-center gap-3 mt-1.5 text-[9px] text-gray-600">
                                 <div className="flex items-center gap-1">
-                                  <div className="w-2 h-2 bg-black rounded-full"></div>
-                                  <span>Generation</span>
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                  <span className="text-white">Generation</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                                  <span>Rate limit pause</span>
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                  <span className="text-white">Rate limit pause</span>
                                 </div>
                               </div>
                             </>

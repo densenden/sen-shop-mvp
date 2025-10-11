@@ -208,10 +208,14 @@ export class PrintfulPodProductService extends MedusaService({
 
     const data = await res.json()
     const products = data.data || []
-    const total = data.total || products.length
+    const total = data.paging?.total || data.total || products.length
     const hasMore = data.paging?.has_more || false
 
-    console.log(`[PrintfulService] Fetched ${products.length}/${total} catalog products`)
+    console.log(`[PrintfulService] Fetched ${products.length}/${total} catalog products`, {
+      has_more: hasMore,
+      paging: data.paging,
+      will_fetch_all: hasMore && !options?.offset && !options?.limit
+    })
 
     // If there are more products and no pagination was requested, fetch all
     if (hasMore && !options?.offset && !options?.limit) {
