@@ -11,12 +11,13 @@ import { Sparkles, Loader2, ArrowRight, ArrowLeft, Check, ExternalLink, Edit } f
 
 const PrintfulStudioComplete = () => {
   const [step, setStep] = useState(1)
-  const [provider, setProvider] = useState<'printful-v1' | 'printful-v2' | 'gelato'>('printful-v2')
+  const [provider, setProvider] = useState<'printful-v1' | 'printful-v2' | 'printify'>('printful-v2')
   const [artworks, setArtworks] = useState<any[]>([])
   const [allArtworks, setAllArtworks] = useState<any[]>([])
   const [collections, setCollections] = useState<any[]>([])
   const [selectedCollection, setSelectedCollection] = useState<string>("all")
   const [products, setProducts] = useState<any[]>([])
+  const [allProducts, setAllProducts] = useState<any[]>([]) // Store all products for client-side filtering
   const [selectedArtwork, setSelectedArtwork] = useState<any>(null)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [selectedSizes, setSelectedSizes] = useState<number[]>([])
@@ -34,6 +35,12 @@ const PrintfulStudioComplete = () => {
   const [createdProduct, setCreatedProduct] = useState<any>(null)
   const [recentProducts, setRecentProducts] = useState<any[]>([])
   const [generatingProgress, setGeneratingProgress] = useState("")
+
+  // Pagination and filtering state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(50)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedBrand, setSelectedBrand] = useState<string>("all")
   const [mockupGenerationStatus, setMockupGenerationStatus] = useState<{
     total: number
     completed: number
@@ -207,12 +214,15 @@ const PrintfulStudioComplete = () => {
   // Load products based on provider
   const loadProducts = () => {
     setLoading(true)
+    setCurrentPage(1) // Reset to first page
+    setSearchTerm("") // Reset search
+    setSelectedBrand("all") // Reset brand filter
 
     let endpoint = '/admin/printful-studio/v2/catalog'
     if (provider === 'printful-v1') {
       endpoint = '/admin/printful-studio/v1/catalog'
-    } else if (provider === 'gelato') {
-      endpoint = '/admin/printful-studio/gelato/templates' // Gelato uses templates
+    } else if (provider === 'printify') {
+      endpoint = '/admin/printful-studio/printify/catalog'
     }
 
     console.log('[Studio] Loading products from:', endpoint, 'provider:', provider)
@@ -227,11 +237,12 @@ const PrintfulStudioComplete = () => {
           productsList = d.products || []
         } else if (provider === 'printful-v2') {
           productsList = d.catalog || []
-        } else if (provider === 'gelato') {
-          productsList = d.products || [] // Gelato returns products array
+        } else if (provider === 'printify') {
+          productsList = d.products || []
         }
         console.log('[Studio] Parsed products list:', productsList.length, 'products')
-        setProducts(productsList)
+        setAllProducts(productsList)
+        setProducts(productsList) // Initially show all
       })
       .finally(() => setLoading(false))
   }
@@ -243,6 +254,54 @@ const PrintfulStudioComplete = () => {
     }
   }, [provider])
 
+  // Get unique brands for filter dropdown
+  const uniqueBrands = useMemo(() => {
+    const brands = new Set<string>()
+    allProducts.forEach(p => {
+      if (p.brand) brands.add(p.brand)
+    })
+    return Array.from(brands).sort()
+  }, [allProducts])
+
+  // Filter and paginate products
+  const { filteredProducts, paginatedProducts, totalPages } = useMemo(() => {
+    // Apply filters
+    let filtered = allProducts
+
+    // Search filter (name, title, brand, model)
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      filtered = filtered.filter(p =>
+        (p.name?.toLowerCase().includes(search)) ||
+        (p.title?.toLowerCase().includes(search)) ||
+        (p.brand?.toLowerCase().includes(search)) ||
+        (p.model?.toLowerCase().includes(search))
+      )
+    }
+
+    // Brand filter
+    if (selectedBrand !== "all") {
+      filtered = filtered.filter(p => p.brand === selectedBrand)
+    }
+
+    // Calculate pagination
+    const total = Math.ceil(filtered.length / itemsPerPage)
+    const startIdx = (currentPage - 1) * itemsPerPage
+    const endIdx = startIdx + itemsPerPage
+    const paginated = filtered.slice(startIdx, endIdx)
+
+    return {
+      filteredProducts: filtered,
+      paginatedProducts: paginated,
+      totalPages: total
+    }
+  }, [allProducts, searchTerm, selectedBrand, currentPage, itemsPerPage])
+
+  // Update products state when filters change
+  useEffect(() => {
+    setProducts(paginatedProducts)
+  }, [paginatedProducts])
+
   // Load product details with placement groups
   const selectProduct = async (product: any) => {
     setLoading(true)
@@ -250,25 +309,27 @@ const PrintfulStudioComplete = () => {
       let fullProduct: any
       let mockupStyles: any[] = []
 
-      if (provider === 'printful-v1' || provider === 'printful-v2') {
-        // Printful: fetch full product details and mockup styles
+      // Fetch product details based on provider
+      let res, data
+      if (provider === 'printify') {
+        res = await fetch(`/admin/printful-studio/printify/blueprints/${product.id}`, { credentials: "include" })
+        data = await res.json()
+        // Printify blueprints don't have mockup styles in the same way
+        mockupStyles = []
+      } else {
         const catalogPath = provider === 'printful-v1' ? 'v1' : 'v2'
-        const res = await fetch(`/admin/printful-studio/${catalogPath}/catalog/${product.id}`, { credentials: "include" })
-        const data = await res.json()
+        res = await fetch(`/admin/printful-studio/${catalogPath}/catalog/${product.id}`, { credentials: "include" })
+        data = await res.json()
 
-        // Fetch mockup styles (V2 only)
+        // Fetch mockup styles (Printful V2 only)
         if (provider === 'printful-v2') {
           const stylesRes = await fetch(`/admin/printful-studio/v2/catalog/${product.id}/mockup-styles`, { credentials: "include" })
           const stylesData = await stylesRes.json()
           mockupStyles = stylesData.styles || []
         }
-
-        fullProduct = data.product
-      } else if (provider === 'gelato') {
-        // Gelato: product from templates endpoint already has all needed data
-        fullProduct = product
-        mockupStyles = [] // Gelato uses templates, no mockup styles selection
       }
+
+      fullProduct = data.product
 
       console.log('[Studio] Fetched mockup styles:', {
         product_id: product.id,
@@ -748,33 +809,33 @@ const PrintfulStudioComplete = () => {
           ))}
         </div>
 
-        <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 min-h-[600px]">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-8 min-h-[600px]">
           {/* Step 1 */}
           {step === 1 && (
             <div>
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <Heading level="h2" className="text-white">Choose Your Design</Heading>
-                  <div className="text-sm text-gray-400">{artworks.length} artworks</div>
+                  <Heading level="h2" className="text-gray-900 dark:text-white">Choose Your Design</Heading>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{artworks.length} artworks</div>
                 </div>
 
                 {/* Visual Collection Selector */}
                 <div className="grid grid-cols-6 gap-3 mb-6">
                   <div
                     onClick={() => setSelectedCollection("all")}
-                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "all" ? "border-black bg-gray-100" : "border-gray-200 hover:border-gray-400"}`}
+                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "all" ? "border-black dark:border-white bg-gray-100 dark:bg-gray-800" : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"}`}
                   >
-                    <div className="w-full h-20 bg-gray-700 rounded mb-2 flex items-center justify-center text-white font-bold text-lg">ALL</div>
-                    <div className="text-xs font-medium truncate text-white">All Artworks</div>
-                    <div className="text-xs text-gray-400">{allArtworks.length}</div>
+                    <div className="w-full h-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 flex items-center justify-center text-gray-900 dark:text-white font-bold text-lg">ALL</div>
+                    <div className="text-xs font-medium truncate text-gray-900 dark:text-white">All Artworks</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">{allArtworks.length}</div>
                   </div>
                   <div
                     onClick={() => setSelectedCollection("uncategorized")}
-                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "uncategorized" ? "border-black bg-gray-100" : "border-gray-200 hover:border-gray-400"}`}
+                    className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === "uncategorized" ? "border-black dark:border-white bg-gray-100 dark:bg-gray-800" : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"}`}
                   >
-                    <div className="w-full h-20 bg-gray-700 rounded mb-2 flex items-center justify-center text-gray-400 text-xl">?</div>
-                    <div className="text-xs font-medium truncate text-white">Uncategorized</div>
-                    <div className="text-xs text-gray-400">{allArtworks.filter(a => !a.collection_id).length}</div>
+                    <div className="w-full h-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 flex items-center justify-center text-gray-400 dark:text-gray-400 text-xl">?</div>
+                    <div className="text-xs font-medium truncate text-gray-900 dark:text-white">Uncategorized</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">{allArtworks.filter(a => !a.collection_id).length}</div>
                   </div>
                   {collections.map(col => {
                     const firstArtwork = allArtworks.find(a => a.collection_id === col.id)
@@ -783,15 +844,15 @@ const PrintfulStudioComplete = () => {
                       <div
                         key={col.id}
                         onClick={() => setSelectedCollection(col.id)}
-                        className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-black bg-gray-100" : "border-gray-200 hover:border-gray-400"}`}
+                        className={`cursor-pointer border-2 rounded-lg p-2 text-center ${selectedCollection === col.id ? "border-black dark:border-white bg-gray-100 dark:bg-gray-800" : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"}`}
                       >
                         {thumbnailUrl ? (
                           <img src={thumbnailUrl} className="w-full h-20 object-cover rounded mb-2" loading="lazy" />
                         ) : (
-                          <div className="w-full h-20 bg-gray-100 rounded mb-2" />
+                          <div className="w-full h-20 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
                         )}
-                        <div className="text-xs font-medium truncate text-white" title={col.name}>{col.name}</div>
-                        <div className="text-xs text-gray-400">{allArtworks.filter(a => a.collection_id === col.id).length}</div>
+                        <div className="text-xs font-medium truncate text-gray-900 dark:text-white" title={col.name}>{col.name}</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">{allArtworks.filter(a => a.collection_id === col.id).length}</div>
                       </div>
                     )
                   })}
@@ -806,7 +867,7 @@ const PrintfulStudioComplete = () => {
                       setStep(2)
                       if (products.length === 0) loadProducts()
                     }}
-                    className={`cursor-pointer border-2 rounded-lg p-3 ${selectedArtwork?.id === art.id ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-400"}`}
+                    className={`cursor-pointer border-2 rounded-lg p-3 ${selectedArtwork?.id === art.id ? "border-black dark:border-white bg-gray-50 dark:bg-gray-800" : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"}`}
                   >
                     <img
                       src={`/admin/artworks/${art.id}/preview`}
@@ -846,27 +907,98 @@ const PrintfulStudioComplete = () => {
                     Printful V1 (200+)
                   </Button>
                   <Button
-                    variant={provider === 'gelato' ? 'primary' : 'secondary'}
+                    variant={provider === 'printify' ? 'primary' : 'secondary'}
                     size="small"
-                    onClick={() => setProvider('gelato')}
+                    onClick={() => setProvider('printify')}
                   >
-                    Gelato Templates
+                    Printify
                   </Button>
                 </div>
               </div>
+
+              {/* Filters and Search */}
+              <div className="mb-6 flex gap-4 items-end">
+                <div className="flex-1">
+                  <Label className="text-white mb-2">Search</Label>
+                  <Input
+                    type="text"
+                    placeholder="Search by name, brand, or model..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value)
+                      setCurrentPage(1) // Reset to first page when searching
+                    }}
+                    className="w-full"
+                  />
+                </div>
+                {uniqueBrands.length > 0 && (
+                  <div className="w-64">
+                    <Label className="text-white mb-2">Brand</Label>
+                    <select
+                      value={selectedBrand}
+                      onChange={(e) => {
+                        setSelectedBrand(e.target.value)
+                        setCurrentPage(1) // Reset to first page when filtering
+                      }}
+                      className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white"
+                    >
+                      <option value="all">All Brands ({allProducts.length})</option>
+                      {uniqueBrands.map(brand => (
+                        <option key={brand} value={brand}>
+                          {brand} ({allProducts.filter(p => p.brand === brand).length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="text-sm text-gray-400">
+                  Showing {paginatedProducts.length} of {filteredProducts.length} products
+                </div>
+              </div>
+
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="w-12 h-12 animate-spin" />
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-4">
-                  {products.map(prod => (
-                    <div key={prod.id} onClick={() => selectProduct(prod)} className="cursor-pointer border rounded-lg p-4 hover:border-black">
-                      <img src={prod.thumbnail_url || prod.image} className="w-full h-48 object-cover rounded mb-3" />
-                      <p className="font-medium text-center">{prod.name}</p>
+                <>
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {products.map(prod => (
+                      <div key={prod.id} onClick={() => selectProduct(prod)} className="cursor-pointer border rounded-lg p-4 hover:border-black dark:hover:border-white">
+                        <img src={prod.thumbnail_url || prod.image} className="w-full h-48 object-cover rounded mb-3" loading="lazy" />
+                        <p className="font-medium text-center">{prod.title || prod.name}</p>
+                        {prod.brand && <p className="text-xs text-gray-500 text-center mt-1">{prod.brand}</p>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between py-4 border-t border-gray-700">
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="text-sm text-gray-400">
+                        Page {currentPage} of {totalPages}
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </Button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -875,78 +1007,18 @@ const PrintfulStudioComplete = () => {
           {step === 3 && selectedProduct && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <Heading level="h2" className="text-white">
-                  {provider === 'gelato' ? 'Select Variants' : 'Select Mockups'}
-                </Heading>
+                <Heading level="h2" className="text-white">Select Mockups</Heading>
                 <div className="text-xs text-gray-600">
-                  {provider === 'gelato'
-                    ? `${selectedSizes.length} variants selected`
-                    : `${selectedCombinations.size} selected • ~${Math.ceil(selectedCombinations.size * 35 / 60)} min`
-                  }
+                  {selectedCombinations.size} selected • ~{Math.ceil(selectedCombinations.size * 35 / 60)} min
                 </div>
               </div>
 
               {/* Info panel */}
-              {provider !== 'gelato' && (
-                <div className="mb-4 bg-gray-800 border border-gray-600 rounded p-2 text-xs text-gray-300">
-                  <span className="font-medium text-white">Variant-specific mockups</span> - Select individual variant×style combinations • Each variant gets unique image
-                </div>
-              )}
-
-              {/* Gelato: Simple variant selection (no styles) */}
-              {provider === 'gelato' && (
-                <div className="space-y-4">
-                  <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3 text-sm text-blue-200">
-                    ℹ️ Gelato templates already include mockup configuration. Just select which product variants you want to offer.
-                  </div>
-                  <div className="flex gap-2 mb-4">
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => {
-                        const allIds = selectedProduct.variants?.map((v: any) => v.id) || []
-                        setSelectedSizes(allIds)
-                      }}
-                    >
-                      Select All Variants
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => setSelectedSizes([])}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedProduct.variants?.map((variant: any) => {
-                      const isSelected = selectedSizes.includes(variant.id)
-                      return (
-                        <div
-                          key={variant.id}
-                          onClick={() => {
-                            setSelectedSizes(prev =>
-                              isSelected
-                                ? prev.filter(id => id !== variant.id)
-                                : [...prev, variant.id]
-                            )
-                          }}
-                          className={`cursor-pointer border rounded p-3 transition ${
-                            isSelected
-                              ? 'border-blue-500 bg-blue-900/20'
-                              : 'border-gray-700 bg-gray-900 hover:border-gray-500'
-                          }`}
-                        >
-                          <p className="text-sm font-medium text-white">{variant.title || variant.name || `Variant ${variant.id}`}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+              <div className="mb-4 bg-gray-800 border border-gray-600 rounded p-2 text-xs text-gray-300">
+                <span className="font-medium text-white">Variant-specific mockups</span> - Select individual variant×style combinations • Each variant gets unique image
+              </div>
 
               {/* Printful: Quick selection buttons */}
-              {provider !== 'gelato' && (
               <div className="mb-4 flex gap-2 flex-wrap">
                 <Button
                   variant="secondary"
@@ -1009,10 +1081,8 @@ const PrintfulStudioComplete = () => {
                   Clear
                 </Button>
               </div>
-              )}
 
               {/* Printful: Unified variant×style combination grid */}
-              {provider !== 'gelato' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm">
@@ -1028,7 +1098,7 @@ const PrintfulStudioComplete = () => {
                 </div>
 
                 {/* Build all variant×style combination tiles */}
-                <div className="grid grid-cols-8 gap-1 max-h-[70vh] overflow-y-auto pr-2 bg-gray-800 p-2 rounded">
+                <div className="grid grid-cols-8 gap-1 max-h-[70vh] overflow-y-auto pr-2 bg-gray-100 dark:bg-gray-800 p-2 rounded">
                   {selectedProduct.variants?.flatMap((variant: any) =>
                     compatibleStyles
                       .filter((style: any) => {
@@ -1229,94 +1299,36 @@ const PrintfulStudioComplete = () => {
                     )}
                   </div>
                 )}
-              </div>
 
-              {!loading && (
-                <Button
-                  className="mt-4"
-                  disabled={selectedCombinations.size === 0}
-                  onClick={async () => {
-                    // Build combinations array directly from selectedCombinations Set
-                    const combinations: Array<{ variantId: number, styleId: number | null }> = []
-
-                    selectedCombinations.forEach(comboKey => {
-                      const [variantId, styleId] = comboKey.split('-').map(Number)
-                      combinations.push({ variantId, styleId })
-                    })
-
-                    if (combinations.length === 0) {
-                      console.log('[Studio] No combinations selected')
-                      return
-                    }
-
-                    console.log('[Studio] Generating variant-specific mockups:', combinations.length, 'combinations')
-
-                    // Call generatePreview with the combinations
-                    await generatePreview(combinations)
-                  }}
-                >
-                  Generate {selectedCombinations.size} Mockup{selectedCombinations.size !== 1 ? 's' : ''} <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              )}
-              )}
-
-              {/* Gelato: Create product from template to get mockups */}
-              {provider === 'gelato' && selectedSizes.length > 0 && (
-                <div className="flex justify-end mt-4">
+                {/* Generate mockups button */}
+                {!loading && (
                   <Button
+                    className="mt-4"
+                    disabled={selectedCombinations.size === 0}
                     onClick={async () => {
-                      if (!selectedProduct || !selectedArtwork) return
+                      // Build combinations array directly from selectedCombinations Set
+                      const combinations: Array<{ variantId: number, styleId: number | null }> = []
 
-                      setLoading(true)
-                      try {
-                        // Create Gelato product from template with artwork
-                        const res = await fetch('/admin/printful-studio/gelato/create-product', {
-                          method: 'POST',
-                          credentials: 'include',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            template_id: selectedProduct.id,
-                            artwork_url: selectedArtwork.image_url,
-                            variant_ids: selectedSizes
-                          })
-                        })
+                      selectedCombinations.forEach(comboKey => {
+                        const [variantId, styleId] = comboKey.split('-').map(Number)
+                        combinations.push({ variantId, styleId })
+                      })
 
-                        if (!res.ok) {
-                          const error = await res.json()
-                          throw new Error(error.message || 'Failed to create Gelato product')
-                        }
-
-                        const data = await res.json()
-                        console.log('[Studio] Gelato product created:', data)
-
-                        // Extract mockup URLs from the response
-                        const mockupUrls = data.mockup_urls || []
-                        setMockups(mockupUrls)
-
-                        // Move to details step
-                        setStep(4)
-                      } catch (error: any) {
-                        console.error('[Studio] Error creating Gelato product:', error)
-                        alert(`Failed to create product: ${error.message}`)
-                      } finally {
-                        setLoading(false)
+                      if (combinations.length === 0) {
+                        console.log('[Studio] No combinations selected')
+                        return
                       }
+
+                      console.log('[Studio] Generating variant-specific mockups:', combinations.length, 'combinations')
+
+                      // Call generatePreview with the combinations
+                      await generatePreview(combinations)
                     }}
-                    disabled={loading}
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Creating Product...
-                      </>
-                    ) : (
-                      <>
-                        Generate Mockups <ArrowRight className="w-4 h-4 ml-2" />
-                      </>
-                    )}
+                    Generate {selectedCombinations.size} Mockup{selectedCombinations.size !== 1 ? 's' : ''} <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 

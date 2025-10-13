@@ -543,7 +543,7 @@ const PODEditPage = () => {
                   id="image-upload"
                   type="file"
                   multiple
-                  accept="image/*"
+                  accept="image/*,video/mp4"
                   onChange={handleImageUpload}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                   disabled={uploading}

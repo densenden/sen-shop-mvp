@@ -87,8 +87,8 @@ export default defineConfig({
       }
     },
     {
-      resolve: "./src/modules/gelato",
-      alias: "gelatoModule",
+      resolve: "./src/modules/printify",
+      alias: "printifyModule",
       definition: {
         isQueryable: true
       }

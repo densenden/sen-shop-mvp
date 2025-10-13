@@ -83,9 +83,9 @@ const EditArtworkCollection = () => {
       
       const data = await response.json()
       console.log("Received data:", data)
-      
-      // The API returns the collection directly
-      const collectionData = data
+
+      // The API returns { collection: {...} }
+      const collectionData = data.collection || data
       
       // Make sure all fields are properly set, including basic ones
       const formData = {

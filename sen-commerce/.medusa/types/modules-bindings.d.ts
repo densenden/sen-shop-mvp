@@ -25,7 +25,7 @@ import type { IFileModuleService } from '@medusajs/framework/types'
 import type ArtworkModuleService from '../../src/modules/artwork-module'
 import type DigitalProductModuleService from '../../src/modules/digital-product'
 import type PrintfulModule from '../../src/modules/printful'
-import type Gelato from '../../src/modules/gelato'
+import type PrintifyService from '../../src/modules/printify'
 
 declare module '@medusajs/framework/types' {
   interface ModuleImplementations {
@@ -56,6 +56,6 @@ declare module '@medusajs/framework/types' {
     'artworkModuleService': InstanceType<(typeof ArtworkModuleService)['service']>,
     'digitalProductModuleService': InstanceType<(typeof DigitalProductModuleService)['service']>,
     'printfulModule': InstanceType<(typeof PrintfulModule)['service']>,
-    'gelato': InstanceType<(typeof Gelato)['service']>
+    'printifyService': InstanceType<(typeof PrintifyService)['service']>
   }
 }
