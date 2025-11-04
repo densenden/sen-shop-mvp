@@ -13,9 +13,10 @@ class GelatoService extends MedusaService({}) {
 
     this.apiKey = process.env.GELATO_API_KEY || ""
 
-    if (!this.apiKey) {
-      console.warn("[GelatoService] GELATO_API_KEY not configured")
-    }
+    // Gelato integration is optional - no warning needed
+    // if (!this.apiKey) {
+    //   console.warn("[GelatoService] GELATO_API_KEY not configured")
+    // }
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {

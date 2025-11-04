@@ -36,6 +36,11 @@ const PrintfulStudioComplete = () => {
   const [recentProducts, setRecentProducts] = useState<any[]>([])
   const [generatingProgress, setGeneratingProgress] = useState("")
 
+  // AI Content Generation state
+  const [generatingAI, setGeneratingAI] = useState(false)
+  const [aiVariations, setAiVariations] = useState<Array<{title: string, description: string}>>([])
+  const [showAIModal, setShowAIModal] = useState(false)
+
   // Pagination and filtering state
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(50)
@@ -648,27 +653,157 @@ const PrintfulStudioComplete = () => {
     return currency === "EUR" ? withMarkup * EUR_RATE : withMarkup
   }
 
+  // AI Content Generation
+  const generateAIContent = async () => {
+    if (!selectedArtwork || !selectedProduct) return
+
+    // Get collection info if artwork belongs to a collection
+    const artworkCollection = selectedArtwork.collection_id
+      ? collections.find(c => c.id === selectedArtwork.collection_id)
+      : null
+
+    // Extract product type (e.g., "T-Shirt" instead of full technical name)
+    const productType = selectedProduct.name?.split('|')[0]?.trim() || selectedProduct.name
+
+    setGeneratingAI(true)
+    try {
+      const response = await fetch("/admin/ai/generate-content", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_context: {
+            name: selectedArtwork.title, // Use artwork title as main focus
+            artwork_title: selectedArtwork.title,
+            artwork_description: selectedArtwork.description || '',
+            artwork_tags: selectedArtwork.tags || [],
+            collection_name: artworkCollection?.title || artworkCollection?.name || '',
+            collection_description: artworkCollection?.description || '',
+            collection_topic: artworkCollection?.topic || '',
+            collection_purpose: artworkCollection?.purpose || '',
+            brand_story: artworkCollection?.brand_story || '',
+            genesis_story: artworkCollection?.genesis_story || '',
+            design_philosophy: artworkCollection?.design_philosophy || '',
+            core_values: artworkCollection?.core_values || [],
+            visual_themes: artworkCollection?.visual_themes || [],
+            lifestyle_concepts: artworkCollection?.lifestyle_concepts || [],
+            target_audience_messaging: artworkCollection?.target_audience_messaging || '',
+            brand_tagline: artworkCollection?.brand_tagline || '',
+            product_type: productType,
+            provider: provider,
+            keywords: [
+              selectedArtwork.title,
+              artworkCollection?.title || artworkCollection?.name,
+              productType,
+              ...(selectedArtwork.tags || []),
+              ...(artworkCollection?.core_values || []),
+              ...(artworkCollection?.visual_themes || [])
+            ].filter(Boolean)
+          },
+          generation_options: {
+            variation_count: 3,
+            tone: 'creative', // More engaging than 'professional'
+            length: 'medium',
+            include_seo: true,
+            focus_keywords: [selectedArtwork.title, artworkCollection?.title].filter(Boolean)
+          },
+          output_format: 'json'
+        })
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Session expired. Please refresh the page and log in again.')
+        }
+        throw new Error(`Failed to generate AI content (${response.status})`)
+      }
+
+      const data = await response.json()
+      console.log('AI Response:', data)
+      setAiVariations(data.variations || [])
+      setShowAIModal(true)
+    } catch (error) {
+      console.error('AI generation error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to generate AI content. Please try again.')
+    } finally {
+      setGeneratingAI(false)
+    }
+  }
+
+  const selectAIVariation = (variation: {title: string, description: string}) => {
+    setTitle(variation.title)
+    setDescription(variation.description)
+    setShowAIModal(false)
+    setAiVariations([])
+  }
+
   // Create product
   const createProduct = async () => {
-    if (!selectedProduct || !selectedArtwork || selectedSizes.length === 0) return
+    // Validation with helpful error messages
+    if (!selectedArtwork) {
+      alert("Please select an artwork first (Step 1)")
+      return
+    }
+    if (!selectedProduct) {
+      alert("Please select a product first (Step 2)")
+      return
+    }
+    if (!title.trim()) {
+      alert("Please enter a product title")
+      return
+    }
+
+    // Auto-select all variants if none are manually selected
+    const variantsToUse = selectedSizes.length > 0
+      ? selectedSizes
+      : (selectedProduct.variants?.map((v: any) => v.id) || [])
+
+    if (variantsToUse.length === 0) {
+      alert("No variants available for this product")
+      return
+    }
+
+    console.log('[CreateProduct] Starting product creation...', {
+      artwork: selectedArtwork.title,
+      product: selectedProduct.name,
+      variants: variantsToUse.length,
+      auto_selected: selectedSizes.length === 0,
+      title,
+      mockups: mockups.length
+    })
+
     setCreating(true)
     try {
+      console.log('[CreateProduct] Step 1: Creating composer session...')
       const sessionRes = await fetch("/admin/printful-studio/composer", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ artwork_id: selectedArtwork.id })
       })
+
+      if (!sessionRes.ok) {
+        throw new Error(`Failed to create session: ${sessionRes.status} ${sessionRes.statusText}`)
+      }
+
       const session = await sessionRes.json()
+      console.log('[CreateProduct] Session created:', session.session_id)
 
       const retailPrices: any = {}
-      selectedSizes.forEach(id => {
+      variantsToUse.forEach(id => {
         const variant = selectedProduct.variants.find((v: any) => v.id === id)
         const basePrice = variant?.retail_price || variant?.price || "20.00"
         retailPrices[String(id)] = parseFloat(basePrice) * (1 + markup / 100)
       })
 
-      await fetch(`/admin/printful-studio/composer/${session.session_id}`, {
+      console.log('[CreateProduct] Step 2: Updating session with product details...', {
+        product_id: selectedProduct.id,
+        variants: variantsToUse.length,
+        mockups: mockups.length,
+        retail_prices: Object.keys(retailPrices).length
+      })
+
+      const updateRes = await fetch(`/admin/printful-studio/composer/${session.session_id}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -676,7 +811,7 @@ const PrintfulStudioComplete = () => {
           product: {
             catalog_product_id: selectedProduct.id,
             catalog_product_name: selectedProduct.name,
-            selected_variant_ids: selectedSizes.map(String)
+            selected_variant_ids: variantsToUse.map(String)
           },
           design: {
             placement: placementGroups[0]?.placement || "default",
@@ -697,6 +832,14 @@ const PrintfulStudioComplete = () => {
         })
       })
 
+      if (!updateRes.ok) {
+        const errorText = await updateRes.text()
+        throw new Error(`Failed to update session: ${updateRes.status} - ${errorText}`)
+      }
+
+      console.log('[CreateProduct] Session updated successfully')
+      console.log('[CreateProduct] Step 3: Creating final product in Medusa...')
+
       const createRes = await fetch(`/admin/printful-studio/composer/${session.session_id}/create-product`, {
         method: "POST",
         credentials: "include",
@@ -707,19 +850,30 @@ const PrintfulStudioComplete = () => {
         })
       })
 
+      if (!createRes.ok) {
+        const errorText = await createRes.text()
+        throw new Error(`Failed to create product: ${createRes.status} - ${errorText}`)
+      }
+
       const result = await createRes.json()
+      console.log('[CreateProduct] API Response:', result)
+
       if (result.success) {
+        console.log('[CreateProduct] ✅ Product created successfully!', result.product_id || result.medusa_product_id)
         setCreatedProduct(result)
         await loadRecentProducts()
         setStep(5)
       } else {
+        console.error('[CreateProduct] ❌ Product creation failed:', result.errors)
         alert(`Error: ${result.errors?.join(", ") || "Unknown error"}`)
       }
     } catch (err) {
-      console.error(err)
-      alert("Failed to create product")
+      console.error('[CreateProduct] ❌ Error:', err)
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      alert(`Failed to create product: ${errorMessage}`)
     } finally {
       setCreating(false)
+      console.log('[CreateProduct] Finished (creating state reset)')
     }
   }
 
@@ -1300,33 +1454,55 @@ const PrintfulStudioComplete = () => {
                   </div>
                 )}
 
-                {/* Generate mockups button */}
+                {/* Generate mockups button and Skip option */}
                 {!loading && (
-                  <Button
-                    className="mt-4"
-                    disabled={selectedCombinations.size === 0}
-                    onClick={async () => {
-                      // Build combinations array directly from selectedCombinations Set
-                      const combinations: Array<{ variantId: number, styleId: number | null }> = []
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      className="flex-1"
+                      disabled={selectedCombinations.size === 0}
+                      onClick={async () => {
+                        // Build combinations array directly from selectedCombinations Set
+                        const combinations: Array<{ variantId: number, styleId: number | null }> = []
 
-                      selectedCombinations.forEach(comboKey => {
-                        const [variantId, styleId] = comboKey.split('-').map(Number)
-                        combinations.push({ variantId, styleId })
-                      })
+                        selectedCombinations.forEach(comboKey => {
+                          const [variantId, styleId] = comboKey.split('-').map(Number)
+                          combinations.push({ variantId, styleId })
+                        })
 
-                      if (combinations.length === 0) {
-                        console.log('[Studio] No combinations selected')
-                        return
-                      }
+                        if (combinations.length === 0) {
+                          console.log('[Studio] No combinations selected')
+                          return
+                        }
 
-                      console.log('[Studio] Generating variant-specific mockups:', combinations.length, 'combinations')
+                        console.log('[Studio] Generating variant-specific mockups:', combinations.length, 'combinations')
 
-                      // Call generatePreview with the combinations
-                      await generatePreview(combinations)
-                    }}
-                  >
-                    Generate {selectedCombinations.size} Mockup{selectedCombinations.size !== 1 ? 's' : ''} <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                        // Call generatePreview with the combinations
+                        await generatePreview(combinations)
+                      }}
+                    >
+                      Generate {selectedCombinations.size} Mockup{selectedCombinations.size !== 1 ? 's' : ''} <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={selectedCombinations.size === 0}
+                      onClick={() => {
+                        // Skip mockup generation - use artwork image as fallback
+                        if (selectedArtwork?.image_url) {
+                          setMockups([selectedArtwork.image_url])
+                        }
+                        // Auto-fill product name and description
+                        if (!title) {
+                          setTitle(`${selectedArtwork?.title || 'Artwork'} - ${selectedProduct?.name?.split('|')[0]?.trim() || 'Product'}`)
+                        }
+                        if (!description) {
+                          setDescription(`Custom ${selectedProduct?.name?.split('|')[0]?.trim() || 'product'} featuring ${selectedArtwork?.title || 'unique artwork'}. High-quality print-on-demand item with selected variants.`)
+                        }
+                        setStep(4)
+                      }}
+                    >
+                      Skip <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1343,7 +1519,21 @@ const PrintfulStudioComplete = () => {
                     <Input value={title} onChange={e => setTitle(e.target.value)} />
                   </div>
                   <div>
-                    <Label>Description</Label>
+                    <Label className="flex items-center justify-between">
+                      <span>Description</span>
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        onClick={generateAIContent}
+                        disabled={generatingAI}
+                      >
+                        {generatingAI ? (
+                          <><Loader2 className="w-3 h-3 animate-spin mr-1" />Generating...</>
+                        ) : (
+                          <><Sparkles className="w-3 h-3 mr-1" />AI Generate</>
+                        )}
+                      </Button>
+                    </Label>
                     <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={5} />
                   </div>
                   <div>
@@ -1354,20 +1544,65 @@ const PrintfulStudioComplete = () => {
                     </select>
                   </div>
                   <div>
-                    <Label>Markup (%)</Label>
-                    <Input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value))} />
+                    {(() => {
+                      // Calculate example based on first selected variant's actual price
+                      const firstVariant = selectedProduct.variants?.find((v: any) => selectedSizes.includes(v.id))
+                      const exampleCost = firstVariant ? parseFloat(firstVariant.retail_price || firstVariant.price || "20.00") : 20
+                      const exampleProfit = exampleCost * (markup / 100)
+                      const exampleRetail = exampleCost * (1 + markup / 100)
+                      const finalExampleCost = currency === "EUR" ? exampleCost * EUR_RATE : exampleCost
+                      const finalExampleProfit = currency === "EUR" ? exampleProfit * EUR_RATE : exampleProfit
+                      const finalExampleRetail = currency === "EUR" ? exampleRetail * EUR_RATE : exampleRetail
+                      const currencySymbol = currency === "EUR" ? "€" : "$"
+
+                      return (
+                        <>
+                          <Label>
+                            Markup ({markup}%) - Your Profit: +{currencySymbol}{finalExampleProfit.toFixed(2)} per item
+                          </Label>
+                          <Input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value))} />
+                          <p className="text-xs text-gray-400 mt-1">
+                            {currencySymbol}{finalExampleCost.toFixed(2)} Printful cost + {markup}% = {currencySymbol}{finalExampleRetail.toFixed(2)} retail price (you earn {currencySymbol}{finalExampleProfit.toFixed(2)} profit per sale)
+                          </p>
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="border-t pt-4">
-                    <Label className="mb-2 block">Prices:</Label>
-                    {selectedProduct.variants?.filter((v: any) => selectedSizes.includes(v.id)).map((v: any) => {
-                      const basePrice = v.retail_price || v.price || "20.00"
-                      return (
-                        <div key={v.id} className="flex justify-between text-sm py-1">
-                          <span>{v.size || v.name}</span>
-                          <span className="font-medium">{currency === "EUR" ? "€" : "$"}{calculatePrice(basePrice).toFixed(2)}</span>
-                        </div>
-                      )
-                    })}
+                    <Label className="mb-3 block text-base font-semibold">Pricing Breakdown:</Label>
+                    <div className="space-y-3">
+                      {selectedProduct.variants?.filter((v: any) => selectedSizes.includes(v.id)).map((v: any) => {
+                        const basePriceNum = parseFloat(v.retail_price || v.price || "20.00")
+                        const markupAmount = basePriceNum * (markup / 100)
+                        const retailPrice = basePriceNum * (1 + markup / 100)
+                        const finalRetailPrice = currency === "EUR" ? retailPrice * EUR_RATE : retailPrice
+                        const finalBaseCost = currency === "EUR" ? basePriceNum * EUR_RATE : basePriceNum
+                        const finalProfit = currency === "EUR" ? markupAmount * EUR_RATE : markupAmount
+                        const currencySymbol = currency === "EUR" ? "€" : "$"
+
+                        return (
+                          <div key={v.id} className="bg-gray-800/50 rounded-lg p-3 space-y-1">
+                            <div className="font-medium text-white mb-2">{v.size || v.name}</div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">Printful Cost:</span>
+                              <span className="text-gray-300">{currencySymbol}{finalBaseCost.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">+ Your Markup ({markup}%):</span>
+                              <span className="text-green-400">+{currencySymbol}{finalProfit.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-semibold pt-1 border-t border-gray-700">
+                              <span className="text-white">Retail Price:</span>
+                              <span className="text-white">{currencySymbol}{finalRetailPrice.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs pt-1">
+                              <span className="text-gray-400">Your Profit per Item:</span>
+                              <span className="text-green-400 font-medium">{currencySymbol}{finalProfit.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -1424,34 +1659,111 @@ const PrintfulStudioComplete = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <Button variant="secondary" onClick={() => createdProduct?.medusa_product_id && window.open(`/app/products/${createdProduct.medusa_product_id}`, '_blank')}>
-                  <Edit className="w-4 h-4 mr-2" />Edit Product
-                </Button>
-                <Button variant="secondary" onClick={() => {
-                  const url = window.location.hostname === 'localhost' ? `http://localhost:3000` : `https://shop.sen.studio`
-                  window.open(url, '_blank')
-                }}>
-                  <ExternalLink className="w-4 h-4 mr-2" />View Shop
-                </Button>
+              {/* Primary Actions */}
+              <div className="grid grid-cols-2 gap-4 mb-3">
                 <Button onClick={() => {
                   setStep(2)
                   setSelectedProduct(null)
                   setSelectedSizes([])
                   setSelectedMockupStyles([])
+                  setSelectedCombinations(new Set())
                   setMockups([])
+                  setTitle("")
+                  setDescription("")
                   loadProducts()
                 }}>
-                  <Sparkles className="w-4 h-4 mr-2" />Same Artwork
+                  <Sparkles className="w-4 h-4 mr-2" />Create Another with Same Art
                 </Button>
                 <Button onClick={reset}>
-                  <Sparkles className="w-4 h-4 mr-2" />New Product
+                  <Sparkles className="w-4 h-4 mr-2" />Start New Design
+                </Button>
+              </div>
+
+              {/* Secondary Actions */}
+              <div className="grid grid-cols-2 gap-4">
+                <Button variant="secondary" onClick={() => createdProduct?.medusa_product_id && window.open(`/app/products/${createdProduct.medusa_product_id}`, '_blank')}>
+                  <Edit className="w-4 h-4 mr-2" />Edit in Medusa
+                </Button>
+                <Button variant="secondary" onClick={() => {
+                  const url = window.location.hostname === 'localhost' ? `http://localhost:3000` : `https://shop.sen.studio`
+                  window.open(url, '_blank')
+                }}>
+                  <ExternalLink className="w-4 h-4 mr-2" />Preview in Shop
                 </Button>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* AI Content Generation Modal */}
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAIModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <Heading level="h3">AI Generated Content</Heading>
+              <Button variant="secondary" size="small" onClick={() => setShowAIModal(false)}>Close</Button>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">Select a variation to use for your product</p>
+            <div className="space-y-4">
+              {aiVariations.map((variation, idx) => (
+                <div key={idx} className="border rounded-lg p-4 hover:border-black transition-colors" onClick={() => selectAIVariation(variation)}>
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-lg">{variation.title}</h4>
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">Option {idx + 1}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-3">{variation.description}</p>
+
+                  {/* SEO Details */}
+                  {(variation.keywords || variation.meta_description || variation.url_slug) && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase">SEO Details</p>
+                      {variation.meta_description && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600">Meta Description: </span>
+                          <span className="text-xs text-gray-500">{variation.meta_description}</span>
+                        </div>
+                      )}
+                      {variation.keywords && variation.keywords.length > 0 && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600">Keywords: </span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {variation.keywords.map((keyword: string, kidx: number) => (
+                              <span key={kidx} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                                {keyword}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {variation.url_slug && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600">URL Slug: </span>
+                          <code className="text-xs bg-gray-100 px-2 py-0.5 rounded">{variation.url_slug}</code>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex justify-end">
+                    <Button size="small" onClick={(e) => { e.stopPropagation(); selectAIVariation(variation); }}>
+                      Use This
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-between">
+              <Button variant="secondary" onClick={generateAIContent} disabled={generatingAI}>
+                {generatingAI ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Generating...</> : <><Sparkles className="w-4 h-4 mr-2" />Generate More</>}
+              </Button>
+              <Button variant="secondary" onClick={() => setShowAIModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Container>
   )
 }

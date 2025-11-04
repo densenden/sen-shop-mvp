@@ -38,13 +38,46 @@ export class PrintifyProvider implements PODProvider {
   private printifyService: PrintifyService
   private shopId: string
   private lastRequestTime = 0
+  private shopIdInitialized = false
 
   constructor(container: any) {
     this.printifyService = new PrintifyService(container)
     this.shopId = process.env.PRINTIFY_SHOP_ID || ''
 
-    if (!this.shopId) {
-      console.warn('[PrintifyProvider] PRINTIFY_SHOP_ID not configured, some operations may fail')
+    // Shop ID will be auto-fetched on first use if not configured
+    // if (!this.shopId) {
+    //   console.warn('[PrintifyProvider] PRINTIFY_SHOP_ID not configured, will auto-fetch from first available shop')
+    // }
+  }
+
+  // Auto-fetch shop ID from available shops if not configured
+  private async ensureShopId(): Promise<void> {
+    if (this.shopId || this.shopIdInitialized) {
+      return
+    }
+
+    try {
+      const shops = await this.printifyService.listShops()
+      const shopName = process.env.PRINTIFY_SHOP_NAME || 'SenCommerce'
+
+      // Try to find shop by name first
+      const matchingShop = shops.find((shop: any) =>
+        shop.title?.toLowerCase() === shopName.toLowerCase()
+      )
+
+      // Use matching shop or first available shop
+      const selectedShop = matchingShop || shops[0]
+
+      if (selectedShop?.id) {
+        this.shopId = selectedShop.id.toString()
+        console.log(`[PrintifyProvider] Auto-configured shop: ${selectedShop.title} (ID: ${this.shopId})`)
+      } else {
+        console.warn('[PrintifyProvider] No Printify shops found')
+      }
+    } catch (error) {
+      console.error('[PrintifyProvider] Failed to fetch shop ID:', error)
+    } finally {
+      this.shopIdInitialized = true
     }
   }
 
@@ -87,6 +120,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async fetchProducts(): Promise<PODProduct[]> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -105,6 +140,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async getProduct(productId: string): Promise<PODProduct | null> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -121,6 +158,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async createProduct(productData: PODProductData): Promise<PODProduct> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -138,6 +177,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async updateProduct(productId: string, productData: Partial<PODProductData>): Promise<PODProduct> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -155,6 +196,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async deleteProduct(productId: string): Promise<boolean> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -171,6 +214,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async createOrder(orderData: PODOrderData): Promise<PODOrder> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -188,6 +233,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async getOrder(orderId: string): Promise<PODOrder | null> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }
@@ -204,6 +251,8 @@ export class PrintifyProvider implements PODProvider {
   }
 
   async cancelOrder(orderId: string): Promise<boolean> {
+    await this.ensureShopId()
+
     if (!this.shopId) {
       throw new Error('Printify shop ID not configured')
     }

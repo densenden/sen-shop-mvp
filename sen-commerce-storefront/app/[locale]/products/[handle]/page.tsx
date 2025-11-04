@@ -598,12 +598,22 @@ export default function ProductPage() {
 
             <div className="mt-6">
               <TranslatedContent context="product_details">
-                <div className="text-base text-gray-700 space-y-6">
-                  <p>
-                    <TranslatedVariable name="description">
-                      {product.description || 'No description available.'}
-                    </TranslatedVariable>
-                  </p>
+                <div className="text-base text-gray-700 space-y-4">
+                  {product.description ? (
+                    product.description.split('\n\n').filter(p => p.trim()).map((paragraph, index) => (
+                      <p key={index} className="leading-relaxed">
+                        <TranslatedVariable name={`description_p${index + 1}`}>
+                          {paragraph.trim()}
+                        </TranslatedVariable>
+                      </p>
+                    ))
+                  ) : (
+                    <p>
+                      <TranslatedVariable name="description">
+                        No description available.
+                      </TranslatedVariable>
+                    </p>
+                  )}
                 </div>
               </TranslatedContent>
             </div>
@@ -788,37 +798,98 @@ export default function ProductPage() {
           {/* Tab Content */}
           <div className="py-8">
             {activeTab === 'artwork' && (
-              <div className="max-w-4xl">
+              <div className="max-w-6xl">
                 {artwork ? (
-                  <div className="space-y-6">
-                    {/* Artwork Preview */}
-                    <div>
+                  <div className="grid md:grid-cols-2 gap-8 items-start">
+                    {/* Enlarged Artwork Display */}
+                    <div className="sticky top-8">
                       {artwork.image_url && (
-                        <img
-                          src={artwork.image_url}
-                          alt={artwork.title}
-                          className="w-full max-w-md h-auto border border-gray-200 mb-6"
-                        />
+                        <div className="relative group">
+                          <img
+                            src={artwork.image_url}
+                            alt={artwork.title}
+                            className="w-full h-auto rounded-lg shadow-lg border-2 border-gray-200 hover:border-gray-400 transition-colors"
+                          />
+                          <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity rounded-lg pointer-events-none"></div>
+                        </div>
                       )}
                     </div>
-                    
+
                     {/* Artwork Details */}
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <TranslatedContent context="artwork_details">
-                        <h3 className="text-xl font-medium text-gray-900">
-                          <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
-                        </h3>
+                        <div>
+                          <h3 className="text-3xl font-bold text-gray-900 mb-2">
+                            <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
+                          </h3>
+                          {artwork.collection && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                              <span className="font-medium">Collection:</span>
+                              <span className="text-blue-600">{artwork.collection.name}</span>
+                            </div>
+                          )}
+                        </div>
+
                         {artwork.description && (
-                          <p className="text-gray-700 leading-relaxed">
-                            <TranslatedVariable name="description">{artwork.description}</TranslatedVariable>
-                          </p>
+                          <div className="prose prose-gray max-w-none">
+                            <div className="text-gray-700 leading-relaxed text-lg">
+                              <TranslatedVariable name="description">{artwork.description}</TranslatedVariable>
+                            </div>
+                          </div>
+                        )}
+
+                        {!artwork.description && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p className="text-blue-800 text-sm">
+                              This artwork is featured in this product. Explore more products with this design in our collection.
+                            </p>
+                          </div>
                         )}
                       </TranslatedContent>
+
+                      {/* Related Products Section */}
+                      {relatedProducts.length > 0 && (
+                        <div className="pt-6 border-t border-gray-200">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                            More Products with This Artwork
+                          </h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {relatedProducts.slice(0, 4).map((relatedProduct) => (
+                              <Link
+                                key={relatedProduct.id}
+                                href={`/products/${relatedProduct.handle}`}
+                                className="group"
+                              >
+                                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
+                                  {relatedProduct.thumbnail ? (
+                                    <img
+                                      src={relatedProduct.thumbnail}
+                                      alt={relatedProduct.title}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                      No Image
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 line-clamp-2">
+                                  {relatedProduct.title}
+                                </p>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <div className="py-8">
-                    <p className="text-gray-600">No artwork information available for this product.</p>
+                  <div className="py-12 text-center">
+                    <div className="max-w-md mx-auto">
+                      <Palette className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Artwork Information</h3>
+                      <p className="text-gray-600">This product doesn't have artwork information available.</p>
+                    </div>
                   </div>
                 )}
               </div>

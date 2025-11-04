@@ -145,11 +145,39 @@ const ArtworkDetail = () => {
     try {
       const imageUrl = await uploadImageToSupabase(file)
       setArtwork({ ...artwork, image_url: imageUrl })
+
+      // Auto-analyze the image and generate description
+      await analyzeImage(imageUrl)
     } catch (error) {
       console.error("Error uploading image:", error)
       alert("Failed to upload image. Please try again.")
     } finally {
       setUploading(false)
+    }
+  }
+
+  const analyzeImage = async (imageUrl: string) => {
+    try {
+      console.log("[Artwork Upload] Analyzing image with AI...")
+      const response = await fetch("/admin/artworks/analyze-image", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image_url: imageUrl }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.description) {
+          console.log("[Artwork Upload] AI description received:", data.description)
+          setArtwork(prev => ({ ...prev, description: data.description }))
+        }
+      }
+    } catch (error) {
+      console.error("[Artwork Upload] Error analyzing image:", error)
+      // Don't show error to user - just skip the AI description
     }
   }
 
@@ -188,6 +216,33 @@ const ArtworkDetail = () => {
         // Upload to Supabase
         const imageUrl = await uploadImageToSupabase(image.file)
 
+        // AI analyze image to get description (if bulk description is empty)
+        let description = bulkDescription
+        if (!description) {
+          try {
+            console.log(`[Bulk Upload] Analyzing image ${i + 1}/${uploadedImages.length} with AI...`)
+            const analysisResponse = await fetch("/admin/artworks/analyze-image", {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ image_url: imageUrl }),
+            })
+
+            if (analysisResponse.ok) {
+              const analysisData = await analysisResponse.json()
+              if (analysisData.description) {
+                description = analysisData.description
+                console.log(`[Bulk Upload] AI description generated for image ${i + 1}`)
+              }
+            }
+          } catch (error) {
+            console.error(`[Bulk Upload] Failed to analyze image ${i + 1}:`, error)
+            // Continue without AI description
+          }
+        }
+
         // Create artwork
         const title = bulkTitlePrefix
           ? `${bulkTitlePrefix} ${image.title}`
@@ -195,7 +250,7 @@ const ArtworkDetail = () => {
 
         const artworkData = {
           title,
-          description: bulkDescription,
+          description,
           image_url: imageUrl,
           artwork_collection_id: artwork.artwork_collection_id,
           product_ids: artwork.product_ids
@@ -217,7 +272,7 @@ const ArtworkDetail = () => {
         }
       }
 
-      alert(`Successfully created ${createdArtworks.length} artworks!`)
+      alert(`Successfully created ${createdArtworks.length} artworks${!bulkDescription ? ' with AI-generated descriptions' : ''}!`)
       navigate("/artworks")
     } catch (error) {
       console.error("Error during bulk upload:", error)
@@ -303,12 +358,12 @@ const ArtworkDetail = () => {
               </div>
 
               <div>
-                <Label>Description (for all artworks)</Label>
+                <Label>Description (optional - AI will generate if empty)</Label>
                 <Textarea
                   value={bulkDescription}
                   onChange={(e) => setBulkDescription(e.target.value)}
                   rows={3}
-                  placeholder="This description will be applied to all artworks"
+                  placeholder="Leave empty to automatically generate AI descriptions for each artwork"
                 />
               </div>
 
@@ -379,11 +434,12 @@ const ArtworkDetail = () => {
             </div>
 
             <div>
-              <Label>Description</Label>
+              <Label>Description {uploading && "(AI analyzing image...)"}</Label>
               <Textarea
                 value={artwork.description}
                 onChange={(e) => setArtwork({ ...artwork, description: e.target.value })}
                 rows={4}
+                placeholder="Upload an image to automatically generate an AI description, or write your own"
               />
             </div>
 

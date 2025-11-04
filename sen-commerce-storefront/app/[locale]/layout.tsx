@@ -1,5 +1,6 @@
 import {NextIntlClientProvider} from 'next-intl'
 import {getMessages} from 'next-intl/server'
+import { GTProvider } from './GTProvider'
 import '../globals.css'
 
 export const dynamic = 'force-dynamic'
@@ -23,9 +24,11 @@ export default async function LocaleLayout({
         />
       </head>
       <body className="antialiased">
-        <NextIntlClientProvider messages={messages} locale={locale}>
-          {children}
-        </NextIntlClientProvider>
+        <GTProvider projectId={process.env.NEXT_PUBLIC_GT_PROJECT_ID!} apiKey={process.env.NEXT_PUBLIC_GT_API_KEY!}>
+          <NextIntlClientProvider messages={messages} locale={locale}>
+            {children}
+          </NextIntlClientProvider>
+        </GTProvider>
       </body>
     </html>
   )
