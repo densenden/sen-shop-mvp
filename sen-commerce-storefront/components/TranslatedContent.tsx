@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { ErrorBoundary } from './ErrorBoundary'
 import dynamic from 'next/dynamic'
 
@@ -21,8 +21,20 @@ interface TranslatedContentProps {
 }
 
 export function TranslatedContent({ children, context }: TranslatedContentProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Hybrid approach: GT only for database content (product titles, descriptions, artwork details)
   // Static UI text uses next-intl, dynamic DB content uses GT instant translation
+
+  // Only render translation components after mount to avoid hydration mismatches
+  if (!mounted) {
+    return <>{children}</>
+  }
+
   return (
     <ErrorBoundary fallback={<>{children}</>}>
       <T context={context}>{children}</T>
@@ -36,6 +48,17 @@ interface TranslatedVariableProps {
 }
 
 export function TranslatedVariable({ children, name }: TranslatedVariableProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Only render translation components after mount to avoid hydration mismatches
+  if (!mounted) {
+    return <>{children}</>
+  }
+
   // GT is now configured and enabled
   return (
     <ErrorBoundary fallback={<>{children}</>}>

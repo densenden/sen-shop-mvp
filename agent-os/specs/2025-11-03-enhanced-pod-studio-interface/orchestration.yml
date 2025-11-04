@@ -1,0 +1,37 @@
+task_groups:
+  - name: Provider Facade Enhancement
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Template System Data Layer
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Unified API Endpoints
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: OpenAI Content Generation
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Unified Dashboard UI
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Bulk Operations Interface
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Template Management UI
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Optimization and UX Improvements
+    claude_code_subagent: implementer
+    standards:
+      - all
+  - name: Integration Testing and Gap Analysis
+    claude_code_subagent: implementation-verifier
+    standards:
+      - all

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Loader2, ChevronRight, Package, Shirt, Home, Coffee } from "lucide-react";
+import { TemplatePicker } from "./TemplatePicker";
 
 interface Template {
   id: string;
@@ -46,7 +47,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
         setIsLoading(true);
         setError(null);
 
-        const url = activeCategory === "all" 
+        const url = activeCategory === "all"
           ? "/api/studio/templates"
           : `/api/studio/templates?category=${activeCategory}`;
 
@@ -60,7 +61,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
 
         if (data.success) {
           setTemplates(data.templates);
-          
+
           // Extract unique categories
           const uniqueCategories = Array.from(
             new Set(data.templates.map((t: Template) => t.category))
@@ -82,7 +83,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
   const syncTemplates = async () => {
     try {
       setIsLoading(true);
-      
+
       const response = await fetch("/api/studio/templates", {
         method: "POST",
       });
@@ -134,7 +135,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
         >
           All Products
         </button>
-        
+
         {categories.map((category) => (
           <button
             key={category}
@@ -184,7 +185,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
                     <Package className="w-16 h-16 text-gray-400" />
                   </div>
                 )}
-                
+
                 {/* Category Badge */}
                 <div className="absolute top-2 left-2">
                   <span className="px-2 py-1 bg-white bg-opacity-90 rounded text-xs font-medium capitalize">
@@ -198,7 +199,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
                 <h3 className="font-semibold text-gray-900 mb-1">
                   {template.name}
                 </h3>
-                
+
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                   {template.description || template.product_type}
                 </p>
@@ -207,7 +208,7 @@ export const StudioTemplateSelector: React.FC<StudioTemplateSelectorProps> = ({
                   <span className="text-sm text-gray-500 capitalize">
                     {template.product_type}
                   </span>
-                  
+
                   <ChevronRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -230,38 +231,12 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   onClose,
   onSelectTemplate,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Choose a Product Template
-          </h2>
-          <p className="mt-2 text-gray-600">
-            Select a template to start designing your custom product
-          </p>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          <StudioTemplateSelector
-            onSelectTemplate={(templateId) => {
-              onSelectTemplate(templateId);
-              onClose();
-            }}
-          />
-        </div>
-
-        <div className="p-6 border-t flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+    <TemplatePicker
+      isOpen={isOpen}
+      onClose={onClose}
+      onSelectTemplate={onSelectTemplate}
+      mode="selection"
+    />
   );
 };

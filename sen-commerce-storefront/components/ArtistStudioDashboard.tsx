@@ -1,20 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Plus, 
-  Package, 
-  DollarSign, 
-  Eye, 
-  Edit, 
+import {
+  Plus,
+  Package,
+  DollarSign,
+  Eye,
+  Edit,
   Trash2,
   BarChart,
   Settings,
   Palette,
-  ShoppingCart
+  ShoppingCart,
+  Layout
 } from "lucide-react";
 import { StudioModal } from "./PrintfulStudioEmbed";
 import { TemplateModal } from "./StudioTemplateSelector";
+import { TemplateManagement } from "./TemplateManagement";
 
 interface StudioProduct {
   id: string;
@@ -38,11 +40,11 @@ export const ArtistStudioDashboard: React.FC<ArtistStudioDashboardProps> = ({
   artistId,
   artistName = "Artist",
 }) => {
-  const [activeTab, setActiveTab] = useState<"products" | "designs" | "analytics">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "designs" | "templates" | "analytics">("products");
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showStudioModal, setShowStudioModal] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  
+
   // Mock data - replace with actual API calls
   const [products] = useState<StudioProduct[]>([
     {
@@ -101,7 +103,7 @@ export const ArtistStudioDashboard: React.FC<ArtistStudioDashboardProps> = ({
                 Welcome back, {artistName}
               </p>
             </div>
-            
+
             <button
               onClick={() => setShowTemplateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -183,7 +185,7 @@ export const ArtistStudioDashboard: React.FC<ArtistStudioDashboardProps> = ({
                 Products
               </div>
             </button>
-            
+
             <button
               onClick={() => setActiveTab("designs")}
               className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -197,7 +199,21 @@ export const ArtistStudioDashboard: React.FC<ArtistStudioDashboardProps> = ({
                 Designs
               </div>
             </button>
-            
+
+            <button
+              onClick={() => setActiveTab("templates")}
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "templates"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Layout className="w-5 h-5" />
+                Templates
+              </div>
+            </button>
+
             <button
               onClick={() => setActiveTab("analytics")}
               className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -230,7 +246,7 @@ export const ArtistStudioDashboard: React.FC<ArtistStudioDashboardProps> = ({
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
-                    
+
                     {/* Status Badge */}
                     <div className="absolute top-2 right-2">
                       <span className={`px-2 py-1 text-xs font-medium rounded ${
@@ -312,6 +328,10 @@ export const ArtistStudioDashboard: React.FC<ArtistStudioDashboardProps> = ({
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-gray-500">Your saved designs will appear here</p>
           </div>
+        )}
+
+        {activeTab === "templates" && (
+          <TemplateManagement />
         )}
 
         {activeTab === "analytics" && (

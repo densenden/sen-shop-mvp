@@ -2,31 +2,69 @@ import { MedusaService } from "@medusajs/framework/utils"
 import { PrintfulPodProductService } from "./printful-pod-product-service"
 import { PrintfulOrderService } from "./printful-order-service"
 import { PrintfulFulfillmentService } from "./printful-fulfillment-service"
+import { PrintifyProvider } from "../../printify/services/printify-provider"
+import { GelatoProvider } from "../../gelato/services/gelato-provider"
+import {
+  ProviderComparisonUtils,
+  ProductPricingComparison,
+  VariantAvailabilityResult,
+  FeatureCompatibilityMatrix
+} from "./provider-comparison-utils"
+
+// Provider capability types
+export interface ProviderCapability {
+  products: boolean
+  orders: boolean
+  fulfillment: boolean
+  webhooks: boolean
+  catalogBrowsing: boolean
+  bulkOperations: boolean
+  customSizing: boolean
+  mockupGeneration: boolean
+}
+
+export interface ProviderHealthStatus {
+  isHealthy: boolean
+  lastChecked: Date
+  responseTime?: number
+  errorMessage?: string
+}
+
+export interface RateLimitConfig {
+  requestsPerSecond: number
+  burstLimit: number
+  cooldownPeriod: number
+}
 
 // Generic POD provider interface
 export interface PODProvider {
   name: string
   type: string
   isEnabled: boolean
-  
+  capabilities: ProviderCapability
+  rateLimitConfig: RateLimitConfig
+
   // Product operations
   fetchProducts(): Promise<PODProduct[]>
   getProduct(productId: string): Promise<PODProduct | null>
   createProduct(productData: PODProductData): Promise<PODProduct>
   updateProduct(productId: string, productData: Partial<PODProductData>): Promise<PODProduct>
   deleteProduct(productId: string): Promise<boolean>
-  
+
   // Order operations
   createOrder(orderData: PODOrderData): Promise<PODOrder>
   getOrder(orderId: string): Promise<PODOrder | null>
   cancelOrder(orderId: string): Promise<boolean>
-  
+
   // Fulfillment operations
   processFulfillment(medusaOrder: any): Promise<PODFulfillmentResult>
   checkFulfillmentStatus(orderId: string): Promise<PODFulfillmentStatus>
-  
+
   // Webhook operations
   processWebhook(payload: string, signature?: string): Promise<{ success: boolean; message?: string }>
+
+  // Health check
+  healthCheck(): Promise<ProviderHealthStatus>
 }
 
 // Generic POD data interfaces
@@ -38,6 +76,7 @@ export interface PODProduct {
   price?: number
   variants?: PODVariant[]
   metadata?: Record<string, any>
+  provider?: string
 }
 
 export interface PODVariant {
@@ -57,6 +96,7 @@ export interface PODProductData {
   image_url: string
   variants?: PODVariant[]
   artwork_id?: string
+  metadata?: Record<string, any>
 }
 
 export interface PODOrderData {
@@ -129,6 +169,23 @@ export class PrintfulProvider implements PODProvider {
   type = 'printful'
   isEnabled = true
 
+  capabilities: ProviderCapability = {
+    products: true,
+    orders: true,
+    fulfillment: true,
+    webhooks: true,
+    catalogBrowsing: true,
+    bulkOperations: true,
+    customSizing: true,
+    mockupGeneration: true
+  }
+
+  rateLimitConfig: RateLimitConfig = {
+    requestsPerSecond: 5,
+    burstLimit: 10,
+    cooldownPeriod: 1000
+  }
+
   private productService: PrintfulPodProductService
   private orderService: PrintfulOrderService
   private fulfillmentService: PrintfulFulfillmentService
@@ -143,26 +200,60 @@ export class PrintfulProvider implements PODProvider {
     return this.productService;
   }
 
+  async healthCheck(): Promise<ProviderHealthStatus> {
+    const startTime = Date.now()
+    try {
+      // Try to fetch a small amount of data to test connection
+      await this.productService.fetchCatalogProducts()
+      const responseTime = Date.now() - startTime
+
+      return {
+        isHealthy: true,
+        lastChecked: new Date(),
+        responseTime
+      }
+    } catch (error) {
+      return {
+        isHealthy: false,
+        lastChecked: new Date(),
+        responseTime: Date.now() - startTime,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
   async fetchProducts(): Promise<PODProduct[]> {
     const products = await this.productService.fetchStoreProducts()
-    return products.map(this.mapPrintfulToPODProduct)
+    return products.map(product => ({
+      ...this.mapPrintfulToPODProduct(product),
+      provider: this.type
+    }))
   }
 
   async getProduct(productId: string): Promise<PODProduct | null> {
     const product = await this.productService.getStoreProduct(productId)
-    return product ? this.mapPrintfulToPODProduct(product) : null
+    return product ? {
+      ...this.mapPrintfulToPODProduct(product),
+      provider: this.type
+    } : null
   }
 
   async createProduct(productData: PODProductData): Promise<PODProduct> {
     const printfulData = this.mapPODDataToPrintful(productData)
     const product = await this.productService.createStoreProduct(printfulData)
-    return this.mapPrintfulToPODProduct(product)
+    return {
+      ...this.mapPrintfulToPODProduct(product),
+      provider: this.type
+    }
   }
 
   async updateProduct(productId: string, productData: Partial<PODProductData>): Promise<PODProduct> {
     const printfulData = this.mapPODDataToPrintful(productData)
     const product = await this.productService.updateStoreProduct(productId, printfulData)
-    return this.mapPrintfulToPODProduct(product)
+    return {
+      ...this.mapPrintfulToPODProduct(product),
+      provider: this.type
+    }
   }
 
   async deleteProduct(productId: string): Promise<boolean> {
@@ -263,89 +354,20 @@ export class PrintfulProvider implements PODProvider {
   }
 }
 
-// Example of another POD provider (Gooten)
-export class GootenProvider implements PODProvider {
-  name = 'Gooten'
-  type = 'gooten'
-  isEnabled = false // Disabled by default
-
-  async fetchProducts(): Promise<PODProduct[]> {
-    // Implement Gooten API calls
-    console.log('Fetching products from Gooten...')
-    return []
-  }
-
-  async getProduct(productId: string): Promise<PODProduct | null> {
-    console.log(`Getting product ${productId} from Gooten...`)
-    return null
-  }
-
-  async createProduct(productData: PODProductData): Promise<PODProduct> {
-    console.log('Creating product in Gooten...')
-    throw new Error('Not implemented')
-  }
-
-  async updateProduct(productId: string, productData: Partial<PODProductData>): Promise<PODProduct> {
-    console.log(`Updating product ${productId} in Gooten...`)
-    throw new Error('Not implemented')
-  }
-
-  async deleteProduct(productId: string): Promise<boolean> {
-    console.log(`Deleting product ${productId} from Gooten...`)
-    return false
-  }
-
-  async createOrder(orderData: PODOrderData): Promise<PODOrder> {
-    console.log('Creating order in Gooten...')
-    throw new Error('Not implemented')
-  }
-
-  async getOrder(orderId: string): Promise<PODOrder | null> {
-    console.log(`Getting order ${orderId} from Gooten...`)
-    return null
-  }
-
-  async cancelOrder(orderId: string): Promise<boolean> {
-    console.log(`Cancelling order ${orderId} in Gooten...`)
-    return false
-  }
-
-  async processFulfillment(medusaOrder: any): Promise<PODFulfillmentResult> {
-    console.log('Processing fulfillment with Gooten...')
-    return {
-      success: false,
-      provider_order_id: '',
-      status: 'failed',
-      error: 'Not implemented'
-    }
-  }
-
-  async checkFulfillmentStatus(orderId: string): Promise<PODFulfillmentStatus> {
-    console.log(`Checking fulfillment status for ${orderId} in Gooten...`)
-    return {
-      status: 'unknown',
-      updated_at: new Date().toISOString()
-    }
-  }
-
-  async processWebhook(payload: string, signature?: string): Promise<{ success: boolean; message?: string }> {
-    console.log('Processing Gooten webhook...')
-    return { success: true, message: 'Webhook processed' }
-  }
-}
-
 // POD Provider Manager - Main facade class
 export class PODProviderManager extends MedusaService({}) {
   private providers: Map<string, PODProvider> = new Map()
   private defaultProvider: string = 'printful'
+  private healthStatuses: Map<string, ProviderHealthStatus> = new Map()
 
   constructor(container: any, options?: any) {
     super(container, options)
-    
+
     // Initialize providers
     this.providers.set('printful', new PrintfulProvider(container))
-    this.providers.set('gooten', new GootenProvider())
-    
+    this.providers.set('printify', new PrintifyProvider(container))
+    this.providers.set('gelato', new GelatoProvider(container))
+
     // Set default provider from environment
     this.defaultProvider = process.env.DEFAULT_POD_PROVIDER || 'printful'
   }
@@ -354,16 +376,21 @@ export class PODProviderManager extends MedusaService({}) {
   getProvider(providerName?: string): PODProvider {
     const name = providerName || this.defaultProvider
     const provider = this.providers.get(name)
-    
+
     if (!provider) {
       throw new Error(`POD provider '${name}' not found`)
     }
-    
+
     if (!provider.isEnabled) {
       throw new Error(`POD provider '${name}' is disabled`)
     }
-    
+
     return provider
+  }
+
+  // Get all providers (including disabled ones)
+  getAllProviders(): PODProvider[] {
+    return Array.from(this.providers.values())
   }
 
   // Get all enabled providers
@@ -382,6 +409,142 @@ export class PODProviderManager extends MedusaService({}) {
     if (provider) {
       provider.isEnabled = enabled
     }
+  }
+
+  // Provider capability matrix
+  getProviderCapabilities(): Record<string, ProviderCapability> {
+    const capabilities: Record<string, ProviderCapability> = {}
+
+    for (const [name, provider] of this.providers) {
+      capabilities[name] = provider.capabilities
+    }
+
+    return capabilities
+  }
+
+  // Health check methods
+  async checkProviderHealth(providerName: string): Promise<ProviderHealthStatus> {
+    const provider = this.providers.get(providerName)
+    if (!provider) {
+      throw new Error(`Provider '${providerName}' not found`)
+    }
+
+    const healthStatus = await provider.healthCheck()
+    this.healthStatuses.set(providerName, healthStatus)
+    return healthStatus
+  }
+
+  async checkAllProvidersHealth(): Promise<Record<string, ProviderHealthStatus>> {
+    const healthStatuses: Record<string, ProviderHealthStatus> = {}
+
+    for (const [name, provider] of this.providers) {
+      try {
+        const status = await provider.healthCheck()
+        healthStatuses[name] = status
+        this.healthStatuses.set(name, status)
+      } catch (error) {
+        const failedStatus: ProviderHealthStatus = {
+          isHealthy: false,
+          lastChecked: new Date(),
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        }
+        healthStatuses[name] = failedStatus
+        this.healthStatuses.set(name, failedStatus)
+      }
+    }
+
+    return healthStatuses
+  }
+
+  getLastHealthStatus(providerName: string): ProviderHealthStatus | null {
+    return this.healthStatuses.get(providerName) || null
+  }
+
+  // Multi-provider operations
+  async fetchProductsFromAllProviders(): Promise<PODProduct[]> {
+    const allProducts: PODProduct[] = []
+    const enabledProviders = this.getEnabledProviders()
+
+    for (const provider of enabledProviders) {
+      try {
+        const products = await provider.fetchProducts()
+        allProducts.push(...products)
+      } catch (error) {
+        console.warn(`Failed to fetch products from ${provider.name}:`, error)
+      }
+    }
+
+    return allProducts
+  }
+
+  async fetchProductsFromProviders(providerNames: string[]): Promise<PODProduct[]> {
+    const allProducts: PODProduct[] = []
+
+    for (const providerName of providerNames) {
+      try {
+        const provider = this.getProvider(providerName)
+        const products = await provider.fetchProducts()
+        allProducts.push(...products)
+      } catch (error) {
+        console.warn(`Failed to fetch products from ${providerName}:`, error)
+      }
+    }
+
+    return allProducts
+  }
+
+  // Provider comparison utilities
+  async compareProductPricing(providerNames?: string[]): Promise<ProductPricingComparison[]> {
+    const products = providerNames
+      ? await this.fetchProductsFromProviders(providerNames)
+      : await this.fetchProductsFromAllProviders()
+
+    return ProviderComparisonUtils.compareProductPricing(products)
+  }
+
+  async checkVariantAvailability(
+    variantCriteria: { size?: string; color?: string },
+    providerNames?: string[]
+  ): Promise<VariantAvailabilityResult[]> {
+    const products = providerNames
+      ? await this.fetchProductsFromProviders(providerNames)
+      : await this.fetchProductsFromAllProviders()
+
+    return ProviderComparisonUtils.checkVariantAvailability(products, variantCriteria)
+  }
+
+  buildFeatureCompatibilityMatrix(requiredFeatures: (keyof ProviderCapability)[]): FeatureCompatibilityMatrix {
+    const capabilities = this.getProviderCapabilities()
+    return ProviderComparisonUtils.buildFeatureCompatibilityMatrix(capabilities, requiredFeatures)
+  }
+
+  async findBestValueProducts(requiredFeatures: (keyof ProviderCapability)[] = []): Promise<Array<{
+    productName: string
+    recommendedProvider: string
+    reason: string
+    price: number
+    compatibilityScore: number
+  }>> {
+    const pricingComparisons = await this.compareProductPricing()
+    const featureMatrix = this.buildFeatureCompatibilityMatrix(requiredFeatures)
+
+    return ProviderComparisonUtils.findBestValueProducts(pricingComparisons, featureMatrix)
+  }
+
+  async getPricingStatistics(providerNames?: string[]): Promise<{
+    [providerName: string]: {
+      averagePrice: number
+      minPrice: number
+      maxPrice: number
+      productCount: number
+      currency: string
+    }
+  }> {
+    const products = providerNames
+      ? await this.fetchProductsFromProviders(providerNames)
+      : await this.fetchProductsFromAllProviders()
+
+    return ProviderComparisonUtils.getPricingStatistics(products)
   }
 
   // Proxy methods to default provider
