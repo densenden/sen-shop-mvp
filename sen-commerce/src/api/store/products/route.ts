@@ -157,16 +157,19 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           for (const product of result) {
             if (product.variants && product.variants.length > 0) {
               for (const variant of product.variants) {
-                // Get EUR price from price_set, prioritize EUR currency
+                // Get price from price_set, prioritize EUR currency but accept any currency
                 const eurPrice = variant.price_set?.prices?.find(p => p.currency_code === 'eur')
-                const fallbackPrice = variant.price_set?.prices?.[0]
-                
+                const usdPrice = variant.price_set?.prices?.find(p => p.currency_code === 'usd')
+                const anyPrice = variant.price_set?.prices?.[0]
+
+                const selectedPrice = eurPrice || usdPrice || anyPrice
+
                 // Log price data for debugging
-                console.log(`[Products] Product ${product.title}, Variant: eurPrice=${eurPrice?.amount}, fallbackPrice=${fallbackPrice?.amount}`)
-                
+                console.log(`[Products] Product ${product.title}, Variant: eurPrice=${eurPrice?.amount}, usdPrice=${usdPrice?.amount}, fallbackPrice=${anyPrice?.amount}`)
+
                 variant.calculated_price = {
-                  amount: eurPrice?.amount || fallbackPrice?.amount || 10, // Default to 10 cents (€0.10) if no price found
-                  currency_code: 'eur'
+                  amount: selectedPrice?.amount || 10, // Default to 10 cents if no price found
+                  currency_code: selectedPrice?.currency_code || 'eur'
                 }
               }
             }
@@ -178,9 +181,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           // Get price from first variant with proper price set data
           const firstVariant = product.variants?.[0]
           const prices = firstVariant?.price_set?.prices || []
-          const defaultPrice = prices.find((p: any) => p.currency_code === 'eur') || prices[0]
+          const eurPrice = prices.find((p: any) => p.currency_code === 'eur')
+          const usdPrice = prices.find((p: any) => p.currency_code === 'usd')
+          const defaultPrice = eurPrice || usdPrice || prices[0]
           const price = defaultPrice?.amount || 0
-          const currency_code = 'eur' // Force EUR for all products
+          const currency_code = defaultPrice?.currency_code || 'eur'
           
           console.log(`[Store Products] Product ${product.title}: price=${price}, currency=${currency_code}, prices=${prices.length}`)
           

@@ -7,6 +7,7 @@ import Layout from '../../../components/Layout'
 import AddToCartButton from '../../../components/AddToCartButton'
 import { ArrowLeft, ExternalLink, ShoppingBag, Eye, Heart } from 'lucide-react'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../../lib/config'
+import { TranslatedContent, TranslatedVariable } from '../../../../components/TranslatedContent'
 
 interface Product {
   id: string
@@ -243,16 +244,22 @@ export default function ArtworkDetailPage() {
             <span>/</span>
             {collection && (
               <>
-                <Link 
+                <Link
                   href={`/artworks/collections/${collection.id}`}
                   className="hover:text-gray-700 transition-colors"
                 >
-                  {collection.name}
+                  <TranslatedContent context="collection">
+                    <TranslatedVariable name="name">{collection.name}</TranslatedVariable>
+                  </TranslatedContent>
                 </Link>
                 <span>/</span>
               </>
             )}
-            <span className="text-gray-900 font-medium">{artwork.title}</span>
+            <span className="text-gray-900 font-medium">
+              <TranslatedContent context="artwork">
+                <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
+              </TranslatedContent>
+            </span>
           </div>
 
           {/* Back Button */}
@@ -353,11 +360,15 @@ export default function ArtworkDetailPage() {
             {/* Right Column - Details */}
             <div className="space-y-8">
               <div>
-                <h1 className="text-3xl font-light text-gray-900 mb-4">{artwork.title}</h1>
+                <TranslatedContent context="artwork_details">
+                  <h1 className="text-3xl font-light text-gray-900 mb-4">
+                    <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
+                  </h1>
+                </TranslatedContent>
                 {artwork.artist_name && (
                   <p className="text-lg text-gray-600 mb-6">by {artwork.artist_name}</p>
                 )}
-                
+
                 {collection && (
                   <div className="mb-6">
                     <Link
@@ -365,25 +376,33 @@ export default function ArtworkDetailPage() {
                       className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
                     >
                       <span>Part of </span>
-                      <span className="font-medium ml-1">{collection.name}</span>
+                      <TranslatedContent context="collection">
+                        <span className="font-medium ml-1">
+                          <TranslatedVariable name="name">{collection.name}</TranslatedVariable>
+                        </span>
+                      </TranslatedContent>
                       <span className="ml-1">collection</span>
                     </Link>
                   </div>
                 )}
 
                 {artwork.description && (
-                  <div className="prose prose-sm max-w-none text-gray-600">
-                    <p>{artwork.description}</p>
-                  </div>
+                  <TranslatedContent context="artwork_details">
+                    <div className="prose prose-sm max-w-none text-gray-600">
+                      <p><TranslatedVariable name="description">{artwork.description}</TranslatedVariable></p>
+                    </div>
+                  </TranslatedContent>
                 )}
               </div>
 
               {artwork.brand_story && (
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-3">Story</h3>
-                  <div className="prose prose-sm max-w-none text-gray-600">
-                    <p>{artwork.brand_story}</p>
-                  </div>
+                  <TranslatedContent context="artwork_details">
+                    <div className="prose prose-sm max-w-none text-gray-600">
+                      <p><TranslatedVariable name="brand_story">{artwork.brand_story}</TranslatedVariable></p>
+                    </div>
+                  </TranslatedContent>
                 </div>
               )}
 
@@ -444,9 +463,11 @@ export default function ArtworkDetailPage() {
                       <div className="space-y-3">
                         <div>
                           <Link href={`/products/${product.handle}`}>
-                            <h3 className="text-sm font-medium text-gray-900 group-hover:text-gray-700 transition-colors">
-                              {product.title}
-                            </h3>
+                            <TranslatedContent context="product">
+                              <h3 className="text-sm font-medium text-gray-900 group-hover:text-gray-700 transition-colors">
+                                <TranslatedVariable name="title">{product.title}</TranslatedVariable>
+                              </h3>
+                            </TranslatedContent>
                           </Link>
                           {price && (
                             <p className="text-sm text-gray-600 mt-1">

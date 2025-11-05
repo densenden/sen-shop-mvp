@@ -6,7 +6,7 @@ interface DiagramSlideProps {
   content: {
     diagram: string
     description: string
-    components: Array<{
+    components?: Array<{
       layer: string
       items: string[]
     }>
@@ -28,7 +28,7 @@ export default function DiagramSlide({ title, subtitle, content }: DiagramSlideP
           {/* Architecture Diagram */}
           <div className="bg-white border-2 border-gray-200 rounded-lg p-8">
             <div className="grid grid-cols-1 gap-6">
-              {content.components.map((component, index) => (
+              {content.components?.map((component, index) => (
                 <div key={index} className="border border-gray-300 rounded-lg p-6">
                   <div className="font-semibold text-lg mb-4 text-center text-gray-800">
                     {component.layer}

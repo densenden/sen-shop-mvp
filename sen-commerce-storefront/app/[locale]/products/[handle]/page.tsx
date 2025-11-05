@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Heart, ShoppingBag, Download, Truck, Star, Share2, Palette, Grid3x3, Info, Package } from 'lucide-react'
+import { ArrowLeft, Heart, ShoppingBag, Download, Truck, Star, Share2, Palette } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '../../../components/Layout'
 import { MEDUSA_API_CONFIG, getHeaders } from '../../../../lib/config'
 import { cartService } from '../../../../lib/cart'
 import { digitalOwnershipService, OwnedDigitalProduct } from '../../../../lib/digital-ownership'
-import { TranslatedContent, TranslatedVariable, TranslatedProductContent } from '../../../../components/TranslatedContent'
+import { TranslatedContent, TranslatedVariable } from '../../../../components/TranslatedContent'
 
 interface Product {
   id: string
@@ -89,10 +89,13 @@ export default function ProductPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [artwork, setArtwork] = useState<Artwork | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [collectionProducts, setCollectionProducts] = useState<Product[]>([])
   const [activeTab, setActiveTab] = useState<'artwork' | 'collection' | 'product' | 'shipping'>('artwork')
   const [isOwned, setIsOwned] = useState(false)
   const [ownedProductDetails, setOwnedProductDetails] = useState<OwnedDigitalProduct | null>(null)
   const [checkingOwnership, setCheckingOwnership] = useState(false)
+  const [showZoom, setShowZoom] = useState(false)
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     if (handle) {
@@ -111,6 +114,64 @@ export default function ProductPage() {
       fetchArtworkByProductId(product.id)
     }
   }, [product?.id])
+
+  // Update SEO metadata dynamically
+  useEffect(() => {
+    if (product) {
+      // Update document title
+      document.title = `${product.title} | SenCommerce`
+
+      // Update meta description
+      const description = product.description
+        ? product.description.substring(0, 160)
+        : `Buy ${product.title} - ${product.metadata?.fulfillment_type === 'digital_download' ? 'Digital Download' : 'Print on Demand'} product available at SenCommerce`
+
+      let metaDescription = document.querySelector('meta[name="description"]')
+      if (!metaDescription) {
+        metaDescription = document.createElement('meta')
+        metaDescription.setAttribute('name', 'description')
+        document.head.appendChild(metaDescription)
+      }
+      metaDescription.setAttribute('content', description)
+
+      // Update Open Graph tags
+      const updateMetaTag = (property: string, content: string) => {
+        let tag = document.querySelector(`meta[property="${property}"]`)
+        if (!tag) {
+          tag = document.createElement('meta')
+          tag.setAttribute('property', property)
+          document.head.appendChild(tag)
+        }
+        tag.setAttribute('content', content)
+      }
+
+      updateMetaTag('og:title', product.title)
+      updateMetaTag('og:description', description)
+      updateMetaTag('og:type', 'product')
+      if (product.thumbnail) {
+        updateMetaTag('og:image', product.thumbnail)
+      }
+      updateMetaTag('og:url', window.location.href)
+
+      // Update Twitter Card tags
+      const updateTwitterTag = (name: string, content: string) => {
+        let tag = document.querySelector(`meta[name="${name}"]`)
+        if (!tag) {
+          tag = document.createElement('meta')
+          tag.setAttribute('name', name)
+          document.head.appendChild(tag)
+        }
+        tag.setAttribute('content', content)
+      }
+
+      updateTwitterTag('twitter:card', 'summary_large_image')
+      updateTwitterTag('twitter:title', product.title)
+      updateTwitterTag('twitter:description', description)
+      if (product.thumbnail) {
+        updateTwitterTag('twitter:image', product.thumbnail)
+      }
+    }
+  }, [product])
 
   const fetchProduct = async () => {
     try {
@@ -223,54 +284,31 @@ export default function ProductPage() {
 
   const fetchArtworkByProductId = async (productId: string) => {
     try {
-      console.log(`[Product Detail] Searching for artwork containing product ${productId}`)
-      
       // Search all artworks for one that contains this product ID (single source of truth)
-      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/admin/artworks`, {
+      // Use /store/artworks to get watermarked image URLs
+      const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/artworks`, {
         headers: getHeaders()
       })
-      
+
       if (response.ok) {
         const data = await response.json()
-        const artworkData = data.artworks?.find((a: any) => 
+        const artworkData = data.artworks?.find((a: any) =>
           a.product_ids && Array.isArray(a.product_ids) && a.product_ids.includes(productId)
         )
-        
+
         if (artworkData) {
-          console.log(`[Product Detail] Found artwork: ${artworkData.title}`)
-          
-          // Fetch collection data if artwork has a collection
-          if (artworkData.artwork_collection_id) {
-            try {
-              console.log(`[Collection Debug] Fetching collection ${artworkData.artwork_collection_id}`)
-              const collectionResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/admin/artwork-collections/${artworkData.artwork_collection_id}`, {
-                headers: getHeaders()
-              })
-              console.log(`[Collection Debug] Collection response status: ${collectionResponse.status}`)
-              if (collectionResponse.ok) {
-                const collectionData = await collectionResponse.json()
-                console.log(`[Collection Debug] Collection data received:`, collectionData)
-                artworkData.collection = collectionData.collection
-              } else {
-                const errorText = await collectionResponse.text()
-                console.error(`[Collection Debug] Collection fetch failed:`, errorText)
-              }
-            } catch (error) {
-              console.error('[Collection Debug] Error fetching collection:', error)
-            }
-          } else {
-            console.log(`[Collection Debug] No artwork_collection_id found for artwork ${artworkData.id}`)
-          }
-          
           setArtwork(artworkData)
           fetchRelatedProducts(artworkData.id)
+
+          // Fetch collection products if artwork has a collection
+          if (artworkData.collection?.id) {
+            fetchCollectionProducts(artworkData.collection.id)
+          }
         } else {
-          console.log(`[Product Detail] No artwork found for product ${productId}`)
           setArtwork(null)
         }
       }
     } catch (error) {
-      console.error('Error fetching artwork:', error)
       setArtwork(null)
     }
   }
@@ -280,7 +318,7 @@ export default function ProductPage() {
       const response = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/products?artwork_id=${artworkId}`, {
         headers: getHeaders()
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         const related = data.products?.filter((p: Product) => p.id !== product?.id) || []
@@ -288,6 +326,45 @@ export default function ProductPage() {
       }
     } catch (error) {
       console.error('Error fetching related products:', error)
+    }
+  }
+
+  const fetchCollectionProducts = async (collectionId: string) => {
+    try {
+      // First, fetch all artworks in this collection
+      const artworksResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/artworks`, {
+        headers: getHeaders()
+      })
+
+      if (artworksResponse.ok) {
+        const artworksData = await artworksResponse.json()
+        const collectionArtworks = artworksData.artworks?.filter((a: any) =>
+          a.collection?.id === collectionId || a.artwork_collection_id === collectionId
+        ) || []
+
+        // Collect all unique product IDs from these artworks
+        const productIds = new Set<string>()
+        collectionArtworks.forEach((artwork: any) => {
+          if (artwork.product_ids && Array.isArray(artwork.product_ids)) {
+            artwork.product_ids.forEach((pid: string) => productIds.add(pid))
+          }
+        })
+
+        // Fetch all products
+        const productsResponse = await fetch(`${MEDUSA_API_CONFIG.baseUrl}/store/products`, {
+          headers: getHeaders()
+        })
+
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json()
+          const collectionProds = productsData.products?.filter((p: Product) =>
+            productIds.has(p.id) && p.id !== product?.id
+          ) || []
+          setCollectionProducts(collectionProds)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching collection products:', error)
     }
   }
 
@@ -800,39 +877,73 @@ export default function ProductPage() {
             {activeTab === 'artwork' && (
               <div className="max-w-6xl">
                 {artwork ? (
-                  <div className="grid md:grid-cols-2 gap-8 items-start">
-                    {/* Enlarged Artwork Display */}
-                    <div className="sticky top-8">
-                      {artwork.image_url && (
-                        <div className="relative group">
+                  <div className="flex gap-8 items-start">
+                    {/* Artwork Image - Left Side with Zoom */}
+                    <div className="flex-shrink-0 w-64">
+                      {artwork.image_url ? (
+                        <div
+                          className="relative group cursor-zoom-in bg-gray-50"
+                          onMouseEnter={() => setShowZoom(true)}
+                          onMouseLeave={() => setShowZoom(false)}
+                          onMouseMove={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            const x = ((e.clientX - rect.left) / rect.width) * 100
+                            const y = ((e.clientY - rect.top) / rect.height) * 100
+                            setZoomPosition({ x, y })
+                          }}
+                        >
                           <img
                             src={artwork.image_url}
                             alt={artwork.title}
-                            className="w-full h-auto rounded-lg shadow-lg border-2 border-gray-200 hover:border-gray-400 transition-colors"
+                            className="w-full h-auto rounded-lg shadow-md border border-gray-200 hover:border-gray-400 transition-colors"
                           />
-                          <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity rounded-lg pointer-events-none"></div>
+
+                          {/* Zoom Loupe */}
+                          {showZoom && (
+                            <div
+                              className="absolute w-32 h-32 border-2 border-blue-500 rounded-full pointer-events-none shadow-xl overflow-hidden bg-white"
+                              style={{
+                                left: `${zoomPosition.x}%`,
+                                top: `${zoomPosition.y}%`,
+                                transform: 'translate(-50%, -50%)',
+                                backgroundImage: `url(${artwork.image_url})`,
+                                backgroundSize: '400%',
+                                backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                                zIndex: 10
+                              }}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full h-64 bg-red-100 rounded-lg flex items-center justify-center border-2 border-red-300">
+                          <p className="text-red-600 font-bold">No artwork image URL!</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Artwork Details */}
-                    <div className="space-y-6">
+                    {/* Artwork Details - Right Side */}
+                    <div className="flex-1 space-y-6">
                       <TranslatedContent context="artwork_details">
                         <div>
-                          <h3 className="text-3xl font-bold text-gray-900 mb-2">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-3">
                             <TranslatedVariable name="title">{artwork.title}</TranslatedVariable>
                           </h3>
                           {artwork.collection && (
                             <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                               <span className="font-medium">Collection:</span>
-                              <span className="text-blue-600">{artwork.collection.name}</span>
+                              <button
+                                onClick={() => setActiveTab('collection')}
+                                className="text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {artwork.collection.name}
+                              </button>
                             </div>
                           )}
                         </div>
 
                         {artwork.description && (
                           <div className="prose prose-gray max-w-none">
-                            <div className="text-gray-700 leading-relaxed text-lg">
+                            <div className="text-gray-700 leading-relaxed">
                               <TranslatedVariable name="description">{artwork.description}</TranslatedVariable>
                             </div>
                           </div>
@@ -853,29 +964,35 @@ export default function ProductPage() {
                           <h4 className="text-lg font-semibold text-gray-900 mb-4">
                             More Products with This Artwork
                           </h4>
-                          <div className="grid grid-cols-2 gap-4">
-                            {relatedProducts.slice(0, 4).map((relatedProduct) => (
+                          <div className="space-y-2">
+                            {relatedProducts.map((relatedProduct) => (
                               <Link
                                 key={relatedProduct.id}
                                 href={`/products/${relatedProduct.handle}`}
-                                className="group"
+                                className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group/product"
                               >
-                                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
+                                <div className="flex items-center space-x-3">
                                   {relatedProduct.thumbnail ? (
                                     <img
                                       src={relatedProduct.thumbnail}
                                       alt={relatedProduct.title}
-                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                      className="w-8 h-8 object-cover rounded"
                                     />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                      No Image
+                                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                                      <Palette className="w-4 h-4 text-gray-400" />
                                     </div>
                                   )}
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900 group-hover/product:text-gray-700">
+                                      {relatedProduct.title}
+                                    </p>
+                                    <p className="text-xs text-gray-600">
+                                      {relatedProduct.price ? `€${(relatedProduct.price / 100).toFixed(2)}` : '€0.00'}
+                                    </p>
+                                  </div>
                                 </div>
-                                <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 line-clamp-2">
-                                  {relatedProduct.title}
-                                </p>
+                                <ShoppingBag className="w-4 h-4 text-gray-400 group-hover/product:text-gray-600" />
                               </Link>
                             ))}
                           </div>
@@ -963,6 +1080,47 @@ export default function ProductPage() {
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Created</h4>
                         <p className="text-gray-700">{artwork.collection.month_created}</p>
+                      </div>
+                    )}
+
+                    {/* Collection Products Section */}
+                    {collectionProducts.length > 0 && (
+                      <div className="pt-6 border-t border-gray-200">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                          Products in This Collection
+                        </h4>
+                        <div className="space-y-2">
+                          {collectionProducts.map((collectionProduct) => (
+                            <Link
+                              key={collectionProduct.id}
+                              href={`/products/${collectionProduct.handle}`}
+                              className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group/product"
+                            >
+                              <div className="flex items-center space-x-3">
+                                {collectionProduct.thumbnail ? (
+                                  <img
+                                    src={collectionProduct.thumbnail}
+                                    alt={collectionProduct.title}
+                                    className="w-8 h-8 object-cover rounded"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+                                    <Palette className="w-4 h-4 text-gray-400" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900 group-hover/product:text-gray-700">
+                                    {collectionProduct.title}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    {collectionProduct.price ? `€${(collectionProduct.price / 100).toFixed(2)}` : '€0.00'}
+                                  </p>
+                                </div>
+                              </div>
+                              <ShoppingBag className="w-4 h-4 text-gray-400 group-hover/product:text-gray-600" />
+                            </Link>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -1,12 +1,9 @@
 const createNextIntlPlugin = require('next-intl/plugin')
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
-// Temporarily disable GT until proper API keys are configured
-// const { withGTConfig } = require('gt-next/config')
-// const withGT = withGTConfig({
-//   apiKey: process.env.GT_API_KEY || 'your-general-translation-api-key',
-//   projectId: process.env.GT_PROJECT_ID || 'your-project-id'
-// })
+// General Translation for dynamic database content
+// GT works via GTProvider in layout.tsx and doesn't require next.config wrapping
+// The client-side GT components (T, Var) and GTProvider handle translations
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -82,4 +79,6 @@ const nextConfig = {
   },
 }
 
+// Apply next-intl for static UI translations
+// GT translations work via GTProvider in layout.tsx for dynamic content
 module.exports = withNextIntl(nextConfig)

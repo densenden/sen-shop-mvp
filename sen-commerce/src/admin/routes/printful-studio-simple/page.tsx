@@ -827,7 +827,7 @@ const PrintfulStudioComplete = () => {
             markup_type: "percentage",
             markup_value: markup,
             retail_prices: retailPrices,
-            currency: "USD"
+            currency: "EUR"  // Changed from USD to match store frontend
           }
         })
       })
@@ -910,7 +910,7 @@ const PrintfulStudioComplete = () => {
         <div className="flex items-center justify-between">
           <div className="flex-1 text-center">
             <Heading level="h1" className="text-3xl mb-2 text-white">Create POD Product</Heading>
-            <p className="text-ui-fg-subtle">Professional 5-step process</p>
+            <p className="text-ui-fg-subtle">SenCommerce Product Studio • 5 Steps</p>
           </div>
           {step > 1 && (
             <Button

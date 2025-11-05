@@ -22,13 +22,14 @@ export const GET = async (
         {}
       )
 
-      // Enrich artworks with product data
+      // Enrich artworks with product data and collection info
       const enrichedArtworks = await Promise.all(
         dbArtworks.map(async (artwork) => {
           let products: ProductDTO[] = []
-          
+          let collection = null
+
           console.log(`Processing artwork ${artwork.id}, product_ids:`, artwork.product_ids, 'type:', typeof artwork.product_ids)
-          
+
           // Handle different formats of product_ids
           let productIds: string[] = []
           if (artwork.product_ids) {
@@ -43,9 +44,9 @@ export const GET = async (
               }
             }
           }
-          
+
           console.log(`Resolved product IDs for artwork ${artwork.id}:`, productIds)
-          
+
           if (productIds.length > 0) {
             try {
               const productResult: ProductDTO[] = await productService.listProducts({
@@ -58,13 +59,26 @@ export const GET = async (
             }
           }
 
-          // Generate watermarked image URL
+          // Fetch collection data if artwork belongs to a collection
+          if (artwork.artwork_collection_id) {
+            try {
+              // Use listArtworkCollections with filter
+              const collections = await artworkModuleService.listArtworkCollections({ id: artwork.artwork_collection_id })
+              collection = collections?.[0]
+              console.log(`Fetched collection for artwork ${artwork.id}: ${collection?.name}`)
+            } catch (collectionError) {
+              console.error(`Error fetching collection for artwork ${artwork.id}:`, collectionError.message)
+            }
+          }
+
+          // Generate watermarked image URL (using public endpoint to avoid auth middleware)
           const baseUrl = `${req.protocol}://${req.get('host')}`
           return {
             ...artwork,
-            image_url: `${baseUrl}/store/artworks/${artwork.id}/image`, // Watermarked version
+            image_url: `${baseUrl}/public/artworks/${artwork.id}/image`, // Watermarked version (public endpoint)
             image_url_original: artwork.image_url, // Keep original for reference
             products,
+            collection,
           }
         })
       )

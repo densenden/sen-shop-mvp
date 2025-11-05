@@ -18,7 +18,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     }
 
     const artworkModuleService = req.scope.resolve(ARTWORK_MODULE)
-    const artwork = await artworkModuleService.retrieveArtwork(id)
+
+    // Use listArtworks with filter since retrieveArtwork might not be available
+    const artworks = await artworkModuleService.listArtworks({ id })
+    const artwork = artworks?.[0]
 
     if (!artwork || !artwork.image_url) {
       return res.status(404).json({ error: "Artwork not found" })
